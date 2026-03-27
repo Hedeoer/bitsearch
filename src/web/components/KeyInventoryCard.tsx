@@ -80,7 +80,7 @@ export function KeyInventoryCard(props: KeyCardProps) {
   }, [props.item.note]);
 
   return (
-    <article className={`key-card ${props.selected ? "key-card-selected" : ""}`}>
+    <article className={`key-card interactive-card ${props.selected ? "key-card-selected" : ""}`}>
       <div className="key-card-head">
         <label className="selection-toggle">
           <input

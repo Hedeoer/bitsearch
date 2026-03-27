@@ -17,6 +17,7 @@
   --warning: #d8aa57;
   --danger: #ff8e7d;
   --shadow: 0 28px 60px rgba(0, 0, 0, 0.28);
+  --input-bg: rgba(29, 38, 49, 0.88);
 }
 
 * {
@@ -67,11 +68,12 @@ textarea,
 select {
   width: 100%;
   color: var(--text);
-  background: rgba(10, 14, 20, 0.88);
+  background: var(--input-bg);
   border: 1px solid var(--border);
   border-radius: 16px;
   padding: 0.9rem 1rem;
   outline: none;
+  transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
 }
 
 input:focus,
@@ -165,4 +167,31 @@ code {
 .status-pill.danger {
   color: var(--danger);
   background: rgba(255, 142, 125, 0.12);
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--surface-bright);
+  border: 2px solid var(--bg);
+  border-radius: 6px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-soft);
+}
+
+/* Hover effect for interactive elements */
+.interactive-card {
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+.interactive-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow);
+  border-color: rgba(0, 215, 243, 0.2);
 }

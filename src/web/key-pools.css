@@ -74,6 +74,20 @@
   margin: 0;
 }
 
+.sticky-toolbar {
+  position: sticky;
+  top: 1rem;
+  z-index: 10;
+  display: grid;
+  gap: 1.25rem;
+  padding: 1.25rem;
+  margin: 0 -1.25rem;
+  background: rgba(22, 28, 36, 0.95);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
 .inventory-toolbar {
   display: grid;
   gap: 1rem;

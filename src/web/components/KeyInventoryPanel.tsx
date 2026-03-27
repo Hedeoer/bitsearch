@@ -101,42 +101,43 @@ export function KeyInventoryPanel(props: KeyInventoryPanelProps) {
         </span>
       </div>
       <SummaryCards loading={props.loading} summary={props.summary} />
-      <div className="inventory-toolbar">
-        <div className="inventory-block">
-          <div className="eyebrow">Batch Actions</div>
-          <div className="toolbar-actions">
-            <button className="primary-button" disabled={props.busy} onClick={() => props.onTest(props.selectedIds)}>
-              Test Selected
-            </button>
-            <button className="secondary-button" disabled={props.busy} onClick={() => props.onSyncQuota(props.selectedIds)}>
-              Refresh Quota
-            </button>
-            <button className="secondary-button" disabled={props.busy} onClick={() => props.onDelete(props.selectedIds)}>
-              Delete Selected
-            </button>
-            <button className="secondary-button" disabled={props.busy} onClick={props.onSelectAll}>
-              Select Visible
-            </button>
-            <button className="secondary-button" disabled={props.busy} onClick={props.onClearSelection}>
-              Clear
-            </button>
+      <div className="sticky-toolbar">
+        <div className="inventory-toolbar">
+          <div className="inventory-block">
+            <div className="eyebrow">Batch Actions</div>
+            <div className="toolbar-actions">
+              <button className="primary-button" disabled={props.busy} onClick={() => props.onTest(props.selectedIds)}>
+                Test Selected
+              </button>
+              <button className="secondary-button" disabled={props.busy} onClick={() => props.onSyncQuota(props.selectedIds)}>
+                Refresh Quota
+              </button>
+              <button className="secondary-button" disabled={props.busy} onClick={() => props.onDelete(props.selectedIds)}>
+                Delete Selected
+              </button>
+              <button className="secondary-button" disabled={props.busy} onClick={props.onSelectAll}>
+                Select Visible
+              </button>
+              <button className="secondary-button" disabled={props.busy} onClick={props.onClearSelection}>
+                Clear
+              </button>
+            </div>
+          </div>
+          <div className="inventory-block">
+            <div className="eyebrow">Selection State</div>
+            <div className="selection-summary">
+              {props.selectedIds.length} selected
+            </div>
+            <div className="toolbar-actions">
+              <button className="secondary-button" disabled={props.busy} onClick={() => props.onBulkToggle(true)}>
+                Enable
+              </button>
+              <button className="secondary-button" disabled={props.busy} onClick={() => props.onBulkToggle(false)}>
+                Disable
+              </button>
+            </div>
           </div>
         </div>
-        <div className="inventory-block">
-          <div className="eyebrow">Selection State</div>
-          <div className="selection-summary">
-            {props.selectedIds.length} selected
-          </div>
-          <div className="toolbar-actions">
-            <button className="secondary-button" disabled={props.busy} onClick={() => props.onBulkToggle(true)}>
-              Enable
-            </button>
-            <button className="secondary-button" disabled={props.busy} onClick={() => props.onBulkToggle(false)}>
-              Disable
-            </button>
-          </div>
-        </div>
-      </div>
       <div className="inventory-filters">
         <label className="field inventory-field">
           <span>Status</span>
@@ -165,6 +166,7 @@ export function KeyInventoryPanel(props: KeyInventoryPanelProps) {
             placeholder="Search key / fingerprint / note"
           />
         </label>
+        </div>
       </div>
       {props.keys.length === 0 ? (
         <p className="warning-banner compact">No keys match the current filters.</p>

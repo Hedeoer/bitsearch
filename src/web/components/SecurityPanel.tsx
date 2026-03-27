@@ -33,35 +33,39 @@ export function SecurityPanel(props: SecurityPanelProps) {
           <strong>{props.profile?.passwordUpdatedAt ?? "-"}</strong>
         </div>
       </div>
-      <div className="split-fields">
+      <div className="security-form">
+        <div className="split-fields">
+          <label className="field">
+            <span>Current Password</span>
+            <input
+              type="password"
+              value={props.currentPassword}
+              onChange={(event) => props.onCurrentPasswordChange(event.target.value)}
+            />
+          </label>
+          <label className="field">
+            <span>New Password</span>
+            <input
+              type="password"
+              value={props.nextPassword}
+              onChange={(event) => props.onNextPasswordChange(event.target.value)}
+            />
+          </label>
+        </div>
         <label className="field">
-          <span>Current Password</span>
+          <span>Confirm New Password</span>
           <input
             type="password"
-            value={props.currentPassword}
-            onChange={(event) => props.onCurrentPasswordChange(event.target.value)}
+            value={props.confirmPassword}
+            onChange={(event) => props.onConfirmPasswordChange(event.target.value)}
           />
         </label>
-        <label className="field">
-          <span>New Password</span>
-          <input
-            type="password"
-            value={props.nextPassword}
-            onChange={(event) => props.onNextPasswordChange(event.target.value)}
-          />
-        </label>
+        <div>
+          <button className="primary-button" onClick={props.onSubmit}>
+            Update Password
+          </button>
+        </div>
       </div>
-      <label className="field">
-        <span>Confirm New Password</span>
-        <input
-          type="password"
-          value={props.confirmPassword}
-          onChange={(event) => props.onConfirmPasswordChange(event.target.value)}
-        />
-      </label>
-      <button className="primary-button" onClick={props.onSubmit}>
-        Update Password
-      </button>
     </article>
   );
 }

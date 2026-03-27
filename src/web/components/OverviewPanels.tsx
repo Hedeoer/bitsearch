@@ -163,7 +163,7 @@ export function ProviderGrid(props: ProviderGridProps) {
           return null;
         }
         return (
-          <article key={provider.provider} className="surface-card provider-card">
+          <article key={provider.provider} className="surface-card provider-card interactive-card">
             <div className="section-heading compact">
               <div>
                 <div className="eyebrow">Provider</div>

@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import type { DashboardSummary, ProviderConfigRecord, SystemSettings } from "@shared/contracts";
 import type { SessionState } from "../types";
 
@@ -22,6 +23,16 @@ const SECTION_LINKS = [
 ];
 
 export function ConsoleSidebar(props: SidebarProps) {
+  const [activeHash, setActiveHash] = useState(() => window.location.hash || "#overview");
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      setActiveHash(window.location.hash || "#overview");
+    };
+    window.addEventListener("hashchange", handleHashChange);
+    return () => window.removeEventListener("hashchange", handleHashChange);
+  }, []);
+
   const providerSummary = props.providers
     .map((item) => `${item.provider}:${item.keyCount}`)
     .join(" · ");
@@ -37,23 +48,29 @@ export function ConsoleSidebar(props: SidebarProps) {
       </div>
       <nav className="sidebar-nav">
         {SECTION_LINKS.map((item) => (
-          <a key={item.href} href={item.href} className="nav-link">
+          <a
+            key={item.href}
+            href={item.href}
+            className={`nav-link ${activeHash === item.href ? "active" : ""}`}
+          >
             {item.label}
           </a>
         ))}
       </nav>
-      <section className="sidebar-panel">
-        <div className="panel-label">Current Mode</div>
-        <div className="panel-value">{props.system.fetchMode}</div>
-        <div className="panel-label">Provider Order</div>
-        <div className="panel-value mono">{props.system.providerPriority.join(" → ")}</div>
-      </section>
-      <section className="sidebar-panel">
-        <div className="panel-label">Key Pools</div>
-        <div className="panel-value mono">{providerSummary}</div>
-        <div className="panel-label">Requests</div>
-        <div className="panel-value">{props.dashboard?.totalRequests ?? 0}</div>
-      </section>
+      <div className="sidebar-footer">
+        <section className="sidebar-panel">
+          <div className="panel-label">Current Mode</div>
+          <div className="panel-value">{props.system.fetchMode}</div>
+          <div className="panel-label">Provider Order</div>
+          <div className="panel-value mono">{props.system.providerPriority.join(" → ")}</div>
+        </section>
+        <section className="sidebar-panel">
+          <div className="panel-label">Key Pools</div>
+          <div className="panel-value mono">{providerSummary}</div>
+          <div className="panel-label">Requests</div>
+          <div className="panel-value">{props.dashboard?.totalRequests ?? 0}</div>
+        </section>
+      </div>
     </aside>
   );
 }
