@@ -6,7 +6,8 @@ CREATE TABLE IF NOT EXISTS admin_users (
   id TEXT PRIMARY KEY,
   username TEXT NOT NULL UNIQUE,
   password_hash TEXT NOT NULL,
-  created_at TEXT NOT NULL
+  created_at TEXT NOT NULL,
+  password_updated_at TEXT
 );
 
 CREATE TABLE IF NOT EXISTS system_settings (
@@ -51,6 +52,10 @@ CREATE TABLE IF NOT EXISTS request_logs (
   status TEXT NOT NULL,
   duration_ms INTEGER NOT NULL,
   error_summary TEXT,
+  input_json TEXT,
+  result_preview TEXT,
+  provider_order_json TEXT NOT NULL DEFAULT '[]',
+  metadata_json TEXT NOT NULL DEFAULT '{}',
   created_at TEXT NOT NULL
 );
 
@@ -64,6 +69,8 @@ CREATE TABLE IF NOT EXISTS request_attempt_logs (
   status_code INTEGER,
   duration_ms INTEGER NOT NULL,
   error_summary TEXT,
+  error_type TEXT,
+  provider_base_url TEXT,
   created_at TEXT NOT NULL,
   FOREIGN KEY(request_log_id) REFERENCES request_logs(id) ON DELETE CASCADE
 );

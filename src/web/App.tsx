@@ -8,11 +8,12 @@ import {
   ProviderGrid,
   StrategyPanel,
 } from "./components/OverviewPanels";
+import { SecurityPanel } from "./components/SecurityPanel";
 import {
   KeyPoolPanel,
   KeyTablePanel,
 } from "./components/KeyManagement";
-import { AttemptPanel, LogPanel } from "./components/ActivityPanels";
+import { ActivityHub } from "./components/ActivityHub";
 import type {
   AppDataBundle,
   ProviderDrafts,
@@ -46,15 +47,18 @@ function createProviderDrafts(
 export function App() {
   const [session, setSession] = useState<SessionState | null>(null);
   const [dashboard, setDashboard] = useState<AppDataBundle["dashboard"]>(null);
+  const [profile, setProfile] = useState<AppDataBundle["profile"]>(null);
   const [providers, setProviders] = useState<AppDataBundle["providers"]>([]);
   const [providerDrafts, setProviderDrafts] = useState<ProviderDrafts>({});
   const [keys, setKeys] = useState<AppDataBundle["keys"]>([]);
   const [system, setSystem] = useState<SystemSettings>(EMPTY_SYSTEM);
-  const [logs, setLogs] = useState<AppDataBundle["logs"]>([]);
-  const [attempts, setAttempts] = useState<AppDataBundle["attempts"]>([]);
+  const [activity, setActivity] = useState<AppDataBundle["activity"]>([]);
   const [selectedProvider, setSelectedProvider] = useState<"tavily" | "firecrawl">("tavily");
   const [rawKeys, setRawKeys] = useState("");
   const [tags, setTags] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [nextPassword, setNextPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [username, setUsername] = useState("admin");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
@@ -75,23 +79,23 @@ export function App() {
   }
 
   async function refreshAll() {
-    const [dashboardData, providerData, keyData, systemData, logData, attemptData] =
+    const [profileData, dashboardData, providerData, keyData, systemData, activityData] =
       await Promise.all([
+        apiRequest<AppDataBundle["profile"]>("/api/admin/profile"),
         apiRequest<AppDataBundle["dashboard"]>("/api/admin/dashboard"),
         apiRequest<AppDataBundle["providers"]>("/api/admin/providers"),
         apiRequest<AppDataBundle["keys"]>("/api/admin/keys"),
         apiRequest<SystemSettings>("/api/admin/system"),
-        apiRequest<AppDataBundle["logs"]>("/api/admin/logs?limit=50"),
-        apiRequest<AppDataBundle["attempts"]>("/api/admin/logs/attempts?limit=50"),
+        apiRequest<AppDataBundle["activity"]>("/api/admin/activity?limit=80"),
       ]);
 
+    setProfile(profileData);
     setDashboard(dashboardData);
     setProviders(providerData);
     setProviderDrafts(createProviderDrafts(providerData));
     setKeys(keyData);
     setSystem(systemData);
-    setLogs(logData);
-    setAttempts(attemptData);
+    setActivity(activityData);
   }
 
   async function login() {
@@ -166,6 +170,36 @@ export function App() {
     await refreshAll();
   }
 
+  async function updatePassword() {
+    if (nextPassword !== confirmPassword) {
+      setMessage("新密码与确认密码不一致。");
+      return;
+    }
+    try {
+      await apiRequest("/api/admin/profile/password", {
+        method: "PUT",
+        body: JSON.stringify({ currentPassword, nextPassword }),
+      });
+      setCurrentPassword("");
+      setNextPassword("");
+      setConfirmPassword("");
+      setMessage("Password updated.");
+      await refreshAll();
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error.message.includes("current_password_incorrect")) {
+          setMessage("当前密码不正确。");
+          return;
+        }
+        if (error.message.includes("password_too_short")) {
+          setMessage("新密码至少需要 8 位。");
+          return;
+        }
+      }
+      setMessage("密码更新失败。");
+    }
+  }
+
   if (!session?.loggedIn) {
     return (
       <LoginView
@@ -203,6 +237,18 @@ export function App() {
             onSave={() => void saveSystem()}
           />
         </section>
+        <section className="settings-grid">
+          <SecurityPanel
+            profile={profile}
+            currentPassword={currentPassword}
+            nextPassword={nextPassword}
+            confirmPassword={confirmPassword}
+            onCurrentPasswordChange={setCurrentPassword}
+            onNextPasswordChange={setNextPassword}
+            onConfirmPasswordChange={setConfirmPassword}
+            onSubmit={() => void updatePassword()}
+          />
+        </section>
         <ProviderGrid
           providers={providers}
           drafts={providerDrafts}
@@ -227,10 +273,7 @@ export function App() {
             onDeleteKey={(id) => void deleteKey(id)}
           />
         </section>
-        <section className="activity-grid">
-          <LogPanel logs={logs} />
-          <AttemptPanel attempts={attempts} />
-        </section>
+        <ActivityHub activity={activity} />
       </div>
     </main>
   );

@@ -44,6 +44,12 @@ export interface DashboardSummary {
   latestErrors: RequestLogRecord[];
 }
 
+export interface AdminProfile {
+  username: string;
+  createdAt: string;
+  passwordUpdatedAt: string | null;
+}
+
 export interface SystemSettings {
   fetchMode: FetchMode;
   providerPriority: KeyPoolProvider[];
@@ -62,6 +68,8 @@ export interface RequestAttemptRecord {
   statusCode: number | null;
   durationMs: number;
   errorSummary: string | null;
+  errorType: string | null;
+  providerBaseUrl: string | null;
   createdAt: string;
 }
 
@@ -76,7 +84,16 @@ export interface RequestLogRecord {
   status: RequestStatus;
   durationMs: number;
   errorSummary: string | null;
+  inputJson: Record<string, unknown> | null;
+  resultPreview: string | null;
+  providerOrder: RemoteProvider[];
+  metadata: Record<string, unknown>;
   createdAt: string;
+}
+
+export interface RequestActivityRecord {
+  request: RequestLogRecord;
+  attempts: RequestAttemptRecord[];
 }
 
 export interface SearchSessionRecord {

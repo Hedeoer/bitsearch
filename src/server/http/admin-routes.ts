@@ -1,7 +1,9 @@
 import { Router } from "express";
 import type { AppContext } from "../app-context.js";
 import {
+  getRequestActivity,
   getDashboardSummary,
+  listRequestActivities,
   listRequestAttempts,
   listRequestLogs,
 } from "../repos/log-repo.js";
@@ -14,6 +16,7 @@ import {
   setKeysEnabled,
 } from "../repos/provider-repo.js";
 import { getSystemSettings, saveSystemSettings } from "../repos/settings-repo.js";
+import { getAdminProfile, updateAdminPassword } from "../repos/admin-repo.js";
 
 function parseTags(raw: unknown): string[] {
   return String(raw ?? "")
@@ -42,6 +45,38 @@ export function createAdminRouter(context: AppContext): Router {
 
   router.get("/dashboard", (_req, res) => {
     res.json(getDashboardSummary(context.db));
+  });
+
+  router.get("/profile", (req, res) => {
+    const profile = req.session.adminUserId
+      ? getAdminProfile(context.db, req.session.adminUserId)
+      : null;
+    if (!profile) {
+      res.status(404).json({ error: "admin_profile_not_found" });
+      return;
+    }
+    res.json(profile);
+  });
+
+  router.put("/profile/password", (req, res) => {
+    const userId = req.session.adminUserId;
+    if (!userId) {
+      res.status(401).json({ error: "unauthorized" });
+      return;
+    }
+    const currentPassword = String(req.body?.currentPassword ?? "");
+    const nextPassword = String(req.body?.nextPassword ?? "");
+    const result = updateAdminPassword(
+      context.db,
+      userId,
+      currentPassword,
+      nextPassword,
+    );
+    if (!result.ok) {
+      res.status(400).json(result);
+      return;
+    }
+    res.json({ ok: true });
   });
 
   router.get("/system", (_req, res) => {
@@ -123,6 +158,20 @@ export function createAdminRouter(context: AppContext): Router {
   router.get("/logs", (req, res) => {
     const limit = Number(req.query.limit ?? 100);
     res.json(listRequestLogs(context.db, Math.min(limit, 500)));
+  });
+
+  router.get("/activity", (req, res) => {
+    const limit = Number(req.query.limit ?? 100);
+    res.json(listRequestActivities(context.db, Math.min(limit, 500)));
+  });
+
+  router.get("/activity/:requestId", (req, res) => {
+    const activity = getRequestActivity(context.db, req.params.requestId);
+    if (!activity) {
+      res.status(404).json({ error: "activity_not_found" });
+      return;
+    }
+    res.json(activity);
   });
 
   router.get("/logs/attempts", (req, res) => {

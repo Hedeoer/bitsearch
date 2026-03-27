@@ -11,8 +11,71 @@ export interface AppDatabase {
   now(): string;
 }
 
+function columnExists(db: DatabaseSync, table: string, column: string): boolean {
+  const rows = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{
+    name: string;
+  }>;
+  return rows.some((row) => row.name === column);
+}
+
+function ensureColumn(
+  db: DatabaseSync,
+  table: string,
+  column: string,
+  alterSql: string,
+): void {
+  if (!columnExists(db, table, column)) {
+    db.exec(alterSql);
+  }
+}
+
 function ensureDataDirectory(databasePath: string): void {
   fs.mkdirSync(path.dirname(databasePath), { recursive: true });
+}
+
+function applyMigrations(db: DatabaseSync): void {
+  ensureColumn(
+    db,
+    "admin_users",
+    "password_updated_at",
+    "ALTER TABLE admin_users ADD COLUMN password_updated_at TEXT",
+  );
+  ensureColumn(
+    db,
+    "request_logs",
+    "input_json",
+    "ALTER TABLE request_logs ADD COLUMN input_json TEXT",
+  );
+  ensureColumn(
+    db,
+    "request_logs",
+    "result_preview",
+    "ALTER TABLE request_logs ADD COLUMN result_preview TEXT",
+  );
+  ensureColumn(
+    db,
+    "request_logs",
+    "provider_order_json",
+    "ALTER TABLE request_logs ADD COLUMN provider_order_json TEXT NOT NULL DEFAULT '[]'",
+  );
+  ensureColumn(
+    db,
+    "request_logs",
+    "metadata_json",
+    "ALTER TABLE request_logs ADD COLUMN metadata_json TEXT NOT NULL DEFAULT '{}'",
+  );
+  ensureColumn(
+    db,
+    "request_attempt_logs",
+    "error_type",
+    "ALTER TABLE request_attempt_logs ADD COLUMN error_type TEXT",
+  );
+  ensureColumn(
+    db,
+    "request_attempt_logs",
+    "provider_base_url",
+    "ALTER TABLE request_attempt_logs ADD COLUMN provider_base_url TEXT",
+  );
 }
 
 function seedAdminUser(db: DatabaseSync, config: BootstrapConfig, now: string): void {
@@ -24,8 +87,8 @@ function seedAdminUser(db: DatabaseSync, config: BootstrapConfig, now: string): 
   }
 
   db.prepare(
-    "INSERT INTO admin_users (id, username, password_hash, created_at) VALUES (?, ?, ?, ?)",
-  ).run(nanoid(), config.adminUsername, bcrypt.hashSync(config.adminPassword, 10), now);
+    "INSERT INTO admin_users (id, username, password_hash, created_at, password_updated_at) VALUES (?, ?, ?, ?, ?)",
+  ).run(nanoid(), config.adminUsername, bcrypt.hashSync(config.adminPassword, 10), now, now);
 }
 
 function seedSystemSettings(db: DatabaseSync, now: string): void {
@@ -57,6 +120,7 @@ export function createDatabase(config: BootstrapConfig): AppDatabase {
   ensureDataDirectory(config.databasePath);
   const sqlite = new DatabaseSync(config.databasePath);
   sqlite.exec(SCHEMA_SQL);
+  applyMigrations(sqlite);
   const now = new Date().toISOString();
   seedAdminUser(sqlite, config, now);
   seedSystemSettings(sqlite, now);

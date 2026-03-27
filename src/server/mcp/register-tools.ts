@@ -52,8 +52,12 @@ function logSearchRequest(
     status: "success" | "failed";
     startedAt: number;
     errorSummary?: string | null;
+    inputJson?: Record<string, unknown>;
+    resultPreview?: string | null;
+    metadata?: Record<string, unknown>;
   },
 ): void {
+  const settings = getSystemSettings(context.db);
   insertRequestLog(context.db, {
     id: nanoid(),
     toolName: payload.toolName,
@@ -65,6 +69,10 @@ function logSearchRequest(
     status: payload.status,
     durationMs: Date.now() - payload.startedAt,
     errorSummary: payload.errorSummary ?? null,
+    inputJson: payload.inputJson ?? null,
+    resultPreview: payload.resultPreview ?? null,
+    providerOrder: settings.providerPriority,
+    metadata: payload.metadata ?? {},
   });
 }
 
@@ -241,6 +249,7 @@ export function createMcpServer(context: AppContext): McpServer {
               status: "failed",
               startedAt,
               errorSummary: invalidResult.content,
+              inputJson: { query, platform, model, extra_sources },
             });
             return toolJsonResult(invalidResult);
           }
@@ -257,6 +266,12 @@ export function createMcpServer(context: AppContext): McpServer {
           toolName: "web_search",
           status: "success",
           startedAt,
+          inputJson: { query, platform, model, extra_sources },
+          resultPreview: answer.slice(0, 280),
+          metadata: {
+            sourcesCount: mergedSources.length,
+            extraSourcesRequested: extra_sources,
+          },
         });
         return toolJsonResult({
           session_id: sessionId,
@@ -271,6 +286,7 @@ export function createMcpServer(context: AppContext): McpServer {
           status: "failed",
           startedAt,
           errorSummary: message,
+          inputJson: { query, platform, model, extra_sources },
         });
         return toolJsonResult({
           session_id: sessionId,

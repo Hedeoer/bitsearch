@@ -26,6 +26,36 @@ interface RouterResult<TResult> {
   error?: string;
 }
 
+function previewResult(result: unknown): string | null {
+  if (typeof result === "string") {
+    return result.slice(0, 280);
+  }
+  try {
+    return JSON.stringify(result).slice(0, 280);
+  } catch {
+    return null;
+  }
+}
+
+function classifyErrorType(error: unknown): string {
+  if (error instanceof HttpRequestError) {
+    if (error.statusCode === 429) {
+      return "rate_limit";
+    }
+    if (error.statusCode === 408) {
+      return "timeout";
+    }
+    if (error.statusCode !== null && error.statusCode >= 500) {
+      return "upstream_5xx";
+    }
+    return "http_error";
+  }
+  if (error instanceof DOMException && error.name === "TimeoutError") {
+    return "timeout";
+  }
+  return "network_error";
+}
+
 function resolveProviders(mode: FetchMode, priority: KeyPoolProvider[]): KeyPoolProvider[] {
   if (mode === "strict_firecrawl") {
     return ["firecrawl"];
@@ -63,6 +93,7 @@ export async function runWithKeyPool<TInput, TResult>(
   const settings = getSystemSettings(context.db);
   const requestId = nanoid();
   const startedAt = Date.now();
+  const providerOrder = resolveProviders(settings.fetchMode, settings.providerPriority);
   const attemptLogs: Array<{
     requestLogId: string;
     provider: KeyPoolProvider;
@@ -72,9 +103,11 @@ export async function runWithKeyPool<TInput, TResult>(
     statusCode: number | null;
     durationMs: number;
     errorSummary: string | null;
+    errorType: string | null;
+    providerBaseUrl: string | null;
   }> = [];
 
-  const providers = resolveProviders(settings.fetchMode, settings.providerPriority);
+  const providers = providerOrder;
   let attemptNo = 0;
 
   for (const provider of providers) {
@@ -99,6 +132,8 @@ export async function runWithKeyPool<TInput, TResult>(
           statusCode: 200,
           durationMs: Date.now() - attemptStarted,
           errorSummary: null,
+          errorType: null,
+          providerBaseUrl: providerConfig.baseUrl,
         });
         insertRequestLog(context.db, {
           id: requestId,
@@ -111,6 +146,12 @@ export async function runWithKeyPool<TInput, TResult>(
           status: "success",
           durationMs: Date.now() - startedAt,
           errorSummary: null,
+          inputJson: input as Record<string, unknown>,
+          resultPreview: previewResult(result),
+          providerOrder,
+          metadata: {
+            fetchMode: settings.fetchMode,
+          },
         });
         insertAttemptLogs(context.db, attemptLogs);
         return { ok: true, data: result };
@@ -126,6 +167,8 @@ export async function runWithKeyPool<TInput, TResult>(
           statusCode: info.statusCode,
           durationMs: Date.now() - attemptStarted,
           errorSummary: info.message,
+          errorType: classifyErrorType(error),
+          providerBaseUrl: providerConfig.baseUrl,
         });
         if (!info.retryable) {
           break;
@@ -148,6 +191,12 @@ export async function runWithKeyPool<TInput, TResult>(
     status: "failed",
     durationMs: Date.now() - startedAt,
     errorSummary,
+    inputJson: input as Record<string, unknown>,
+    resultPreview: null,
+    providerOrder,
+    metadata: {
+      fetchMode: settings.fetchMode,
+    },
   });
   insertAttemptLogs(context.db, attemptLogs);
   return { ok: false, error: errorSummary };

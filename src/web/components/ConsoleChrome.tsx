@@ -17,6 +17,7 @@ const SECTION_LINKS = [
   { href: "#overview", label: "Overview" },
   { href: "#providers", label: "Providers" },
   { href: "#keys", label: "Key Pools" },
+  { href: "#security", label: "Security" },
   { href: "#activity", label: "Activity" },
 ];
 
