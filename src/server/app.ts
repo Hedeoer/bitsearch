@@ -1,14 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
 import express from "express";
-import session from "express-session";
-import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import type { AppContext } from "./app-context.js";
 import { createAuthRouter } from "./http/auth-routes.js";
 import { createAdminRouter } from "./http/admin-routes.js";
 import {
-  requireAdmin,
+  requireAdminAuth,
   requireAllowedOrigin,
   requireMcpAuth,
 } from "./http/middleware.js";
@@ -28,27 +26,14 @@ export function createApp(context: AppContext) {
       contentSecurityPolicy: false,
     }),
   );
-  app.use(cookieParser());
   app.use(express.json({ limit: "2mb" }));
-  app.use(
-    session({
-      secret: context.bootstrap.sessionSecret,
-      resave: false,
-      saveUninitialized: false,
-      cookie: {
-        httpOnly: true,
-        sameSite: "lax",
-        secure: process.env.NODE_ENV === "production",
-      },
-    }),
-  );
 
   app.get("/healthz", (_req, res) => {
     res.json({ ok: true });
   });
 
   app.use("/api/admin", createAuthRouter(context));
-  app.use("/api/admin", requireAdmin(context), createAdminRouter(context));
+  app.use("/api/admin", requireAdminAuth(context), createAdminRouter(context));
 
   app.post("/mcp", requireMcpAuth(context), requireAllowedOrigin(context), (req, res, next) => {
     handleMcpPost(context, req, res).catch(next);

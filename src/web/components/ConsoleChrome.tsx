@@ -18,7 +18,6 @@ const SECTION_LINKS = [
   { href: "#overview", label: "Overview" },
   { href: "#providers", label: "Providers" },
   { href: "#keys", label: "Key Pools" },
-  { href: "#security", label: "Security" },
   { href: "#activity", label: "Activity" },
 ];
 
@@ -82,7 +81,7 @@ export function ShellHeader(props: HeaderProps) {
         <div className="eyebrow">Operations Center</div>
         <h2>Unified Streamable HTTP MCP Console</h2>
         <p className="supporting">
-          管理员 `{props.session.username}`，对外端点为 <code>/mcp</code>。
+          使用后台授权密钥访问控制台，对外端点为 <code>/mcp</code>。
         </p>
       </div>
       <div className="action-row">

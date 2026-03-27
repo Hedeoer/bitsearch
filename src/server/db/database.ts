@@ -1,8 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { nanoid } from "nanoid";
-import bcrypt from "bcryptjs";
 import type { BootstrapConfig } from "../bootstrap.js";
 import { SCHEMA_SQL } from "./schema.js";
 
@@ -120,19 +118,6 @@ function applyMigrations(db: DatabaseSync): void {
   );
 }
 
-function seedAdminUser(db: DatabaseSync, config: BootstrapConfig, now: string): void {
-  const count = db.prepare("SELECT COUNT(*) AS count FROM admin_users").get() as {
-    count: number;
-  };
-  if (count.count > 0) {
-    return;
-  }
-
-  db.prepare(
-    "INSERT INTO admin_users (id, username, password_hash, created_at, password_updated_at) VALUES (?, ?, ?, ?, ?)",
-  ).run(nanoid(), config.adminUsername, bcrypt.hashSync(config.adminPassword, 10), now, now);
-}
-
 function seedSystemSettings(db: DatabaseSync, now: string): void {
   const defaults = [
     ["fetch_mode", JSON.stringify("auto_ordered")],
@@ -164,7 +149,6 @@ export function createDatabase(config: BootstrapConfig): AppDatabase {
   sqlite.exec(SCHEMA_SQL);
   applyMigrations(sqlite);
   const now = new Date().toISOString();
-  seedAdminUser(sqlite, config, now);
   seedSystemSettings(sqlite, now);
   seedProviderConfigs(sqlite, now);
   return {

@@ -4,10 +4,8 @@ export interface BootstrapConfig {
   port: number;
   host: string;
   databasePath: string;
-  sessionSecret: string;
   encryptionKey: string;
-  adminUsername: string;
-  adminPassword: string;
+  adminAuthKey: string;
   mcpBearerToken: string;
 }
 
@@ -43,10 +41,8 @@ export function readBootstrapConfig(): BootstrapConfig {
     port: readPort(),
     host: readString("APP_HOST", "0.0.0.0"),
     databasePath: readString("DATABASE_PATH", DEFAULT_DATABASE_PATH),
-    sessionSecret: readSecret("SESSION_SECRET", "dev-session-secret"),
     encryptionKey: readSecret("APP_ENCRYPTION_KEY", "dev-encryption-secret"),
-    adminUsername: readString("ADMIN_USERNAME", "admin"),
-    adminPassword: readSecret("ADMIN_PASSWORD", "admin123456"),
+    adminAuthKey: readSecret("ADMIN_AUTH_KEY", "bitsearch-admin-dev-key"),
     mcpBearerToken: readSecret("MCP_BEARER_TOKEN", "bitsearch-dev-token"),
   };
 }

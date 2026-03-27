@@ -132,12 +132,6 @@ export interface DashboardSummary {
   latestErrors: RequestLogRecord[];
 }
 
-export interface AdminProfile {
-  username: string;
-  createdAt: string;
-  passwordUpdatedAt: string | null;
-}
-
 export interface SystemSettings {
   fetchMode: FetchMode;
   providerPriority: KeyPoolProvider[];
@@ -195,5 +189,4 @@ export interface SearchSessionRecord {
 
 export interface AdminSessionPayload {
   loggedIn: boolean;
-  username: string | null;
 }

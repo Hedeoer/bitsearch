@@ -1,36 +1,30 @@
 import { Router } from "express";
 import type { AppContext } from "../app-context.js";
-import { getAdminUsername, verifyAdminCredentials } from "../repos/admin-repo.js";
+import { hasMatchingBearerToken, hasMatchingSecret } from "../lib/auth.js";
 
 export function createAuthRouter(context: AppContext): Router {
   const router = Router();
 
   router.get("/session", (req, res) => {
-    const userId = req.session.adminUserId;
     res.json({
-      loggedIn: Boolean(userId),
-      username: userId ? getAdminUsername(context.db, userId) : null,
+      loggedIn: hasMatchingBearerToken(
+        req.header("authorization"),
+        context.bootstrap.adminAuthKey,
+      ),
     });
   });
 
   router.post("/login", (req, res) => {
-    const username = String(req.body?.username ?? "");
-    const password = String(req.body?.password ?? "");
-    const admin = verifyAdminCredentials(context.db, username, password);
-    if (!admin) {
-      res.status(401).json({ error: "invalid_credentials" });
+    const authKey = String(req.body?.authKey ?? "");
+    if (!hasMatchingSecret(authKey, context.bootstrap.adminAuthKey)) {
+      res.status(401).json({ error: "invalid_auth_key" });
       return;
     }
-    req.session.adminUserId = admin.id;
-    req.session.save(() => {
-      res.json({ loggedIn: true, username: admin.username });
-    });
+    res.json({ loggedIn: true });
   });
 
-  router.post("/logout", (req, res) => {
-    req.session.destroy(() => {
-      res.json({ loggedIn: false, username: null });
-    });
+  router.post("/logout", (_req, res) => {
+    res.json({ loggedIn: false });
   });
 
   return router;

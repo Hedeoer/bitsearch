@@ -1,5 +1,4 @@
 import type {
-  AdminProfile,
   DashboardSummary,
   ProviderConfigRecord,
   ProviderKeyRecord,
@@ -9,7 +8,6 @@ import type {
 
 export type SessionState = {
   loggedIn: boolean;
-  username: string | null;
 };
 
 export type ProviderDraft = {
@@ -22,7 +20,6 @@ export type ProviderDraft = {
 export type ProviderDrafts = Record<string, ProviderDraft>;
 
 export type AppDataBundle = {
-  profile: AdminProfile | null;
   dashboard: DashboardSummary | null;
   providers: ProviderConfigRecord[];
   keys: ProviderKeyRecord[];

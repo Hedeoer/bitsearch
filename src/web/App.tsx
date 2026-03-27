@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { SystemSettings } from "@shared/contracts";
-import { apiRequest } from "./api";
+import { apiRequest, clearStoredAuthKey, setStoredAuthKey } from "./api";
 import { LoginView } from "./LoginView";
 import { ConsoleSidebar, ShellHeader, StatusToast } from "./components/ConsoleChrome";
 import {
@@ -8,7 +8,6 @@ import {
   ProviderGrid,
   StrategyPanel,
 } from "./components/OverviewPanels";
-import { SecurityPanel } from "./components/SecurityPanel";
 import { ActivityHub } from "./components/ActivityHub";
 import { KeyPoolsWorkspace } from "./components/KeyPoolsWorkspace";
 import type {
@@ -44,16 +43,11 @@ function createProviderDrafts(
 export function App() {
   const [session, setSession] = useState<SessionState | null>(null);
   const [dashboard, setDashboard] = useState<AppDataBundle["dashboard"]>(null);
-  const [profile, setProfile] = useState<AppDataBundle["profile"]>(null);
   const [providers, setProviders] = useState<AppDataBundle["providers"]>([]);
   const [providerDrafts, setProviderDrafts] = useState<ProviderDrafts>({});
   const [system, setSystem] = useState<SystemSettings>(EMPTY_SYSTEM);
   const [activity, setActivity] = useState<AppDataBundle["activity"]>([]);
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [nextPassword, setNextPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [username, setUsername] = useState("admin");
-  const [password, setPassword] = useState("");
+  const [authKey, setAuthKey] = useState("");
   const [message, setMessage] = useState("");
   const [workspaceRefreshNonce, setWorkspaceRefreshNonce] = useState(0);
 
@@ -69,45 +63,60 @@ export function App() {
 
   async function loadSession() {
     const data = await apiRequest<SessionState>("/api/admin/session");
+    if (!data.loggedIn) {
+      setAuthKey("");
+    }
     setSession(data);
   }
 
   async function refreshAll() {
-    const [profileData, dashboardData, providerData, systemData, activityData] =
+    try {
+      const [dashboardData, providerData, systemData, activityData] =
       await Promise.all([
-        apiRequest<AppDataBundle["profile"]>("/api/admin/profile"),
         apiRequest<AppDataBundle["dashboard"]>("/api/admin/dashboard"),
         apiRequest<AppDataBundle["providers"]>("/api/admin/providers"),
         apiRequest<SystemSettings>("/api/admin/system"),
         apiRequest<AppDataBundle["activity"]>("/api/admin/activity?limit=80"),
       ]);
 
-    setProfile(profileData);
-    setDashboard(dashboardData);
-    setProviders(providerData);
-    setProviderDrafts(createProviderDrafts(providerData));
-    setSystem(systemData);
-    setActivity(activityData);
-    setWorkspaceRefreshNonce((current) => current + 1);
+      setDashboard(dashboardData);
+      setProviders(providerData);
+      setProviderDrafts(createProviderDrafts(providerData));
+      setSystem(systemData);
+      setActivity(activityData);
+      setWorkspaceRefreshNonce((current) => current + 1);
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("unauthorized")) {
+        clearStoredAuthKey();
+        setAuthKey("");
+        setSession({ loggedIn: false });
+        setMessage("后台授权已失效，请重新输入授权密钥。");
+        return;
+      }
+      throw error;
+    }
   }
 
   async function login() {
     try {
       await apiRequest("/api/admin/login", {
         method: "POST",
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ authKey }),
       });
-      setPassword("");
+      setStoredAuthKey(authKey);
+      setAuthKey("");
       setMessage("");
       await loadSession();
     } catch {
-      setMessage("登录失败，请检查用户名和密码。");
+      clearStoredAuthKey();
+      setMessage("登录失败，请检查授权密钥。");
     }
   }
 
-  async function logout() {
-    await apiRequest("/api/admin/logout", { method: "POST" });
-    setSession({ loggedIn: false, username: null });
+  function logout() {
+    clearStoredAuthKey();
+    setAuthKey("");
+    setSession({ loggedIn: false });
   }
 
   async function saveProvider(provider: string) {
@@ -128,44 +137,12 @@ export function App() {
     await refreshAll();
   }
 
-  async function updatePassword() {
-    if (nextPassword !== confirmPassword) {
-      setMessage("新密码与确认密码不一致。");
-      return;
-    }
-    try {
-      await apiRequest("/api/admin/profile/password", {
-        method: "PUT",
-        body: JSON.stringify({ currentPassword, nextPassword }),
-      });
-      setCurrentPassword("");
-      setNextPassword("");
-      setConfirmPassword("");
-      setMessage("Password updated.");
-      await refreshAll();
-    } catch (error) {
-      if (error instanceof Error) {
-        if (error.message.includes("current_password_incorrect")) {
-          setMessage("当前密码不正确。");
-          return;
-        }
-        if (error.message.includes("password_too_short")) {
-          setMessage("新密码至少需要 8 位。");
-          return;
-        }
-      }
-      setMessage("密码更新失败。");
-    }
-  }
-
   if (!session?.loggedIn) {
     return (
       <LoginView
-        username={username}
-        password={password}
+        authKey={authKey}
         message={message}
-        onUsernameChange={setUsername}
-        onPasswordChange={setPassword}
+        onAuthKeyChange={setAuthKey}
         onLogin={() => void login()}
       />
     );
@@ -182,7 +159,7 @@ export function App() {
         <ShellHeader
           session={session}
           onRefresh={() => void refreshAll()}
-          onLogout={() => void logout()}
+          onLogout={logout}
         />
         <StatusToast message={message} />
         <section className="overview-grid">
@@ -191,18 +168,6 @@ export function App() {
             system={system}
             setSystem={setSystem}
             onSave={() => void saveSystem()}
-          />
-        </section>
-        <section className="settings-grid">
-          <SecurityPanel
-            profile={profile}
-            currentPassword={currentPassword}
-            nextPassword={nextPassword}
-            confirmPassword={confirmPassword}
-            onCurrentPasswordChange={setCurrentPassword}
-            onNextPasswordChange={setNextPassword}
-            onConfirmPasswordChange={setConfirmPassword}
-            onSubmit={() => void updatePassword()}
           />
         </section>
         <ProviderGrid

@@ -22,7 +22,6 @@ import {
   updateKeyNote,
 } from "../repos/key-pool-repo.js";
 import { getSystemSettings, saveSystemSettings } from "../repos/settings-repo.js";
-import { getAdminProfile, updateAdminPassword } from "../repos/admin-repo.js";
 import { syncKeyQuotas, testKeys } from "../services/key-pool-service.js";
 
 const KEY_POOL_PROVIDERS = new Set(["tavily", "firecrawl"]);
@@ -80,38 +79,6 @@ export function createAdminRouter(context: AppContext): Router {
 
   router.get("/dashboard", (_req, res) => {
     res.json(getDashboardSummary(context.db));
-  });
-
-  router.get("/profile", (req, res) => {
-    const profile = req.session.adminUserId
-      ? getAdminProfile(context.db, req.session.adminUserId)
-      : null;
-    if (!profile) {
-      res.status(404).json({ error: "admin_profile_not_found" });
-      return;
-    }
-    res.json(profile);
-  });
-
-  router.put("/profile/password", (req, res) => {
-    const userId = req.session.adminUserId;
-    if (!userId) {
-      res.status(401).json({ error: "unauthorized" });
-      return;
-    }
-    const currentPassword = String(req.body?.currentPassword ?? "");
-    const nextPassword = String(req.body?.nextPassword ?? "");
-    const result = updateAdminPassword(
-      context.db,
-      userId,
-      currentPassword,
-      nextPassword,
-    );
-    if (!result.ok) {
-      res.status(400).json(result);
-      return;
-    }
-    res.json({ ok: true });
   });
 
   router.get("/system", (_req, res) => {
