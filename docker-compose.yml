@@ -1,0 +1,27 @@
+services:
+  bitsearch:
+    build: .
+    image: bitsearch:latest
+    container_name: bitsearch
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8097}:${APP_PORT:-8097}"
+    environment:
+      NODE_ENV: production
+      APP_PORT: ${APP_PORT:-8097}
+      APP_HOST: 0.0.0.0
+      DATABASE_PATH: /app/data/bitsearch.db
+      APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY}
+      ADMIN_AUTH_KEY: ${ADMIN_AUTH_KEY}
+      MCP_BEARER_TOKEN: ${MCP_BEARER_TOKEN}
+    volumes:
+      - bitsearch_data:/app/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:${APP_PORT:-8097}/healthz"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+
+volumes:
+  bitsearch_data:

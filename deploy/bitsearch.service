@@ -1,0 +1,24 @@
+[Unit]
+Description=BitSearch MCP Server
+After=network.target
+
+[Service]
+Type=simple
+User=bitsearch
+WorkingDirectory=/opt/bitsearch
+EnvironmentFile=/opt/bitsearch/.env
+ExecStart=/usr/bin/node /opt/bitsearch/dist/server/main.js
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=bitsearch
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/opt/bitsearch/data
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
