@@ -1,0 +1,28 @@
+# Build artifacts
+dist/
+
+# Development dependencies and cache
+node_modules/
+.npm/
+
+# Data (never bake the database into the image)
+data/
+
+# Environment files (secrets must be injected at runtime)
+.env
+.env.local
+.env.*.local
+
+# Editor and OS noise
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Git
+.git/
+.gitignore
+
+# Docs and test files
+llmdoc/
+*.md
