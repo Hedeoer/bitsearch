@@ -9,11 +9,8 @@ import {
   StrategyPanel,
 } from "./components/OverviewPanels";
 import { SecurityPanel } from "./components/SecurityPanel";
-import {
-  KeyPoolPanel,
-  KeyTablePanel,
-} from "./components/KeyManagement";
 import { ActivityHub } from "./components/ActivityHub";
+import { KeyPoolsWorkspace } from "./components/KeyPoolsWorkspace";
 import type {
   AppDataBundle,
   ProviderDrafts,
@@ -50,18 +47,15 @@ export function App() {
   const [profile, setProfile] = useState<AppDataBundle["profile"]>(null);
   const [providers, setProviders] = useState<AppDataBundle["providers"]>([]);
   const [providerDrafts, setProviderDrafts] = useState<ProviderDrafts>({});
-  const [keys, setKeys] = useState<AppDataBundle["keys"]>([]);
   const [system, setSystem] = useState<SystemSettings>(EMPTY_SYSTEM);
   const [activity, setActivity] = useState<AppDataBundle["activity"]>([]);
-  const [selectedProvider, setSelectedProvider] = useState<"tavily" | "firecrawl">("tavily");
-  const [rawKeys, setRawKeys] = useState("");
-  const [tags, setTags] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
   const [nextPassword, setNextPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [username, setUsername] = useState("admin");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
+  const [workspaceRefreshNonce, setWorkspaceRefreshNonce] = useState(0);
 
   useEffect(() => {
     void loadSession();
@@ -79,12 +73,11 @@ export function App() {
   }
 
   async function refreshAll() {
-    const [profileData, dashboardData, providerData, keyData, systemData, activityData] =
+    const [profileData, dashboardData, providerData, systemData, activityData] =
       await Promise.all([
         apiRequest<AppDataBundle["profile"]>("/api/admin/profile"),
         apiRequest<AppDataBundle["dashboard"]>("/api/admin/dashboard"),
         apiRequest<AppDataBundle["providers"]>("/api/admin/providers"),
-        apiRequest<AppDataBundle["keys"]>("/api/admin/keys"),
         apiRequest<SystemSettings>("/api/admin/system"),
         apiRequest<AppDataBundle["activity"]>("/api/admin/activity?limit=80"),
       ]);
@@ -93,9 +86,9 @@ export function App() {
     setDashboard(dashboardData);
     setProviders(providerData);
     setProviderDrafts(createProviderDrafts(providerData));
-    setKeys(keyData);
     setSystem(systemData);
     setActivity(activityData);
+    setWorkspaceRefreshNonce((current) => current + 1);
   }
 
   async function login() {
@@ -132,41 +125,6 @@ export function App() {
       body: JSON.stringify(system),
     });
     setMessage("Saved system settings");
-    await refreshAll();
-  }
-
-  async function importTextKeys() {
-    await apiRequest("/api/admin/keys/import-text", {
-      method: "POST",
-      body: JSON.stringify({
-        provider: selectedProvider,
-        rawKeys,
-        tags,
-      }),
-    });
-    setRawKeys("");
-    setMessage("Imported keys");
-    await refreshAll();
-  }
-
-  async function bulkToggle(enabled: boolean) {
-    const ids = keys
-      .filter((item) => item.provider === selectedProvider)
-      .map((item) => item.id);
-    await apiRequest("/api/admin/keys/bulk", {
-      method: "PATCH",
-      body: JSON.stringify({ ids, enabled }),
-    });
-    setMessage(enabled ? "Enabled all selected provider keys" : "Disabled all selected provider keys");
-    await refreshAll();
-  }
-
-  async function deleteKey(id: string) {
-    await apiRequest("/api/admin/keys", {
-      method: "DELETE",
-      body: JSON.stringify({ ids: [id] }),
-    });
-    setMessage("Deleted key");
     await refreshAll();
   }
 
@@ -213,8 +171,6 @@ export function App() {
     );
   }
 
-  const selectedKeys = keys.filter((item) => item.provider === selectedProvider);
-
   return (
     <main className="console-shell">
       <ConsoleSidebar
@@ -255,24 +211,10 @@ export function App() {
           setDrafts={setProviderDrafts}
           onSave={(provider) => void saveProvider(provider)}
         />
-        <section className="workspace-grid">
-          <KeyPoolPanel
-            selectedProvider={selectedProvider}
-            setSelectedProvider={setSelectedProvider}
-            rawKeys={rawKeys}
-            setRawKeys={setRawKeys}
-            tags={tags}
-            setTags={setTags}
-            selectedCount={selectedKeys.length}
-            onImport={() => void importTextKeys()}
-            onBulkToggle={(enabled) => void bulkToggle(enabled)}
-          />
-          <KeyTablePanel
-            selectedProvider={selectedProvider}
-            keys={selectedKeys}
-            onDeleteKey={(id) => void deleteKey(id)}
-          />
-        </section>
+        <KeyPoolsWorkspace
+          onMessage={setMessage}
+          refreshNonce={workspaceRefreshNonce}
+        />
         <ActivityHub activity={activity} />
       </div>
     </main>

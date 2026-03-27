@@ -6,6 +6,40 @@ export interface TavilyClientConfig {
   timeoutMs: number;
 }
 
+export interface TavilyUsageResponse {
+  key?: {
+    usage?: number;
+    limit?: number;
+    search_usage?: number;
+    extract_usage?: number;
+    crawl_usage?: number;
+    map_usage?: number;
+    research_usage?: number;
+  };
+  account?: {
+    current_plan?: string;
+    plan_usage?: number;
+    plan_limit?: number;
+    paygo_usage?: number;
+    paygo_limit?: number;
+    search_usage?: number;
+    extract_usage?: number;
+    crawl_usage?: number;
+    map_usage?: number;
+    research_usage?: number;
+  };
+}
+
+export async function tavilyUsage(
+  config: TavilyClientConfig,
+): Promise<TavilyUsageResponse> {
+  return requestJson<TavilyUsageResponse>(`${config.baseUrl.replace(/\/$/, "")}/usage`, {
+    method: "GET",
+    headers: { Authorization: `Bearer ${config.apiKey}` },
+    timeoutMs: config.timeoutMs,
+  });
+}
+
 export async function tavilyExtract(
   config: TavilyClientConfig,
   url: string,

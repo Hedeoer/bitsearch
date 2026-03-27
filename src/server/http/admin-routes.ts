@@ -15,8 +15,24 @@ import {
   saveProviderConfig,
   setKeysEnabled,
 } from "../repos/provider-repo.js";
+import {
+  getKeyPoolSummary,
+  getKeySecret,
+  listManagedKeys,
+  updateKeyNote,
+} from "../repos/key-pool-repo.js";
 import { getSystemSettings, saveSystemSettings } from "../repos/settings-repo.js";
 import { getAdminProfile, updateAdminPassword } from "../repos/admin-repo.js";
+import { syncKeyQuotas, testKeys } from "../services/key-pool-service.js";
+
+const KEY_POOL_PROVIDERS = new Set(["tavily", "firecrawl"]);
+const KEY_LIST_STATUSES = new Set([
+  "all",
+  "enabled",
+  "disabled",
+  "healthy",
+  "unhealthy",
+]);
 
 function parseTags(raw: unknown): string[] {
   return String(raw ?? "")
@@ -38,6 +54,25 @@ function parseCsvKeys(raw: string): string[] {
     .slice(1)
     .map((line) => line.split(",")[0]?.trim() ?? "")
     .filter(Boolean);
+}
+
+function parseKeyPoolProvider(raw: unknown): "tavily" | "firecrawl" {
+  if (!KEY_POOL_PROVIDERS.has(String(raw))) {
+    throw new Error("invalid_key_pool_provider");
+  }
+  return String(raw) as "tavily" | "firecrawl";
+}
+
+function parseKeyStatus(raw: unknown): "all" | "enabled" | "disabled" | "healthy" | "unhealthy" {
+  const value = String(raw ?? "all");
+  if (!KEY_LIST_STATUSES.has(value)) {
+    throw new Error("invalid_key_list_status");
+  }
+  return value as "all" | "enabled" | "disabled" | "healthy" | "unhealthy";
+}
+
+function parseIds(raw: unknown): string[] {
+  return Array.isArray(raw) ? raw.map(String).filter(Boolean) : [];
 }
 
 export function createAdminRouter(context: AppContext): Router {
@@ -105,32 +140,78 @@ export function createAdminRouter(context: AppContext): Router {
   });
 
   router.get("/keys", (req, res) => {
-    const provider = req.query.provider as "tavily" | "firecrawl" | undefined;
-    res.json(listProviderKeys(context.db, provider));
+    const provider = parseKeyPoolProvider(req.query.provider);
+    res.json(
+      listManagedKeys(
+        context.db,
+        {
+          provider,
+          status: parseKeyStatus(req.query.status),
+          query: String(req.query.query ?? ""),
+          tag: String(req.query.tag ?? ""),
+        },
+        context.bootstrap.encryptionKey,
+      ),
+    );
+  });
+
+  router.get("/keys/summary", (req, res) => {
+    const provider = parseKeyPoolProvider(req.query.provider);
+    res.json(getKeyPoolSummary(context.db, provider, context.bootstrap.encryptionKey));
   });
 
   router.post("/keys/import-text", (req, res) => {
-    const provider = req.body?.provider as "tavily" | "firecrawl";
+    const provider = parseKeyPoolProvider(req.body?.provider);
     const raw = String(req.body?.rawKeys ?? "");
     const tags = parseTags(req.body?.tags);
     res.json(importKeys(context.db, provider, parseKeyLines(raw), tags, context.bootstrap.encryptionKey));
   });
 
   router.post("/keys/import-csv", (req, res) => {
-    const provider = req.body?.provider as "tavily" | "firecrawl";
+    const provider = parseKeyPoolProvider(req.body?.provider);
     const csv = String(req.body?.csv ?? "");
     const tags = parseTags(req.body?.tags);
     res.json(importKeys(context.db, provider, parseCsvKeys(csv), tags, context.bootstrap.encryptionKey));
   });
 
+  router.patch("/keys/meta", (req, res) => {
+    const id = String(req.body?.id ?? "");
+    updateKeyNote(context.db, id, String(req.body?.note ?? ""));
+    res.json({ ok: true });
+  });
+
   router.patch("/keys/bulk", (req, res) => {
-    const ids = Array.isArray(req.body?.ids) ? req.body.ids.map(String) : [];
+    const ids = parseIds(req.body?.ids);
     const enabled = Boolean(req.body?.enabled);
     res.json({ changed: setKeysEnabled(context.db, ids, enabled) });
   });
 
+  router.post("/keys/test", (req, res, next) => {
+    const provider = parseKeyPoolProvider(req.body?.provider);
+    testKeys(context, provider, parseIds(req.body?.ids))
+      .then((result) => res.json(result))
+      .catch(next);
+  });
+
+  router.post("/keys/quota-sync", (req, res, next) => {
+    const provider = parseKeyPoolProvider(req.body?.provider);
+    syncKeyQuotas(context, provider, parseIds(req.body?.ids))
+      .then((result) => res.json(result))
+      .catch(next);
+  });
+
+  router.post("/keys/reveal", (req, res) => {
+    const id = String(req.body?.id ?? "");
+    const secret = getKeySecret(context.db, id, context.bootstrap.encryptionKey);
+    if (!secret) {
+      res.status(404).json({ error: "key_not_found" });
+      return;
+    }
+    res.json({ secret });
+  });
+
   router.delete("/keys", (req, res) => {
-    const ids = Array.isArray(req.body?.ids) ? req.body.ids.map(String) : [];
+    const ids = parseIds(req.body?.ids);
     res.json({ changed: deleteKeys(context.db, ids) });
   });
 

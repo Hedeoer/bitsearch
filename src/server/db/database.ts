@@ -82,6 +82,42 @@ function applyMigrations(db: DatabaseSync): void {
     "provider_base_url",
     "ALTER TABLE request_attempt_logs ADD COLUMN provider_base_url TEXT",
   );
+  ensureColumn(
+    db,
+    "provider_keys",
+    "note",
+    "ALTER TABLE provider_keys ADD COLUMN note TEXT NOT NULL DEFAULT ''",
+  );
+  ensureColumn(
+    db,
+    "provider_keys",
+    "last_check_status",
+    "ALTER TABLE provider_keys ADD COLUMN last_check_status TEXT NOT NULL DEFAULT 'unknown'",
+  );
+  ensureColumn(
+    db,
+    "provider_keys",
+    "last_checked_at",
+    "ALTER TABLE provider_keys ADD COLUMN last_checked_at TEXT",
+  );
+  ensureColumn(
+    db,
+    "provider_keys",
+    "last_check_error",
+    "ALTER TABLE provider_keys ADD COLUMN last_check_error TEXT",
+  );
+  ensureColumn(
+    db,
+    "provider_keys",
+    "quota_json",
+    "ALTER TABLE provider_keys ADD COLUMN quota_json TEXT NOT NULL DEFAULT '{}'",
+  );
+  ensureColumn(
+    db,
+    "provider_keys",
+    "quota_synced_at",
+    "ALTER TABLE provider_keys ADD COLUMN quota_synced_at TEXT",
+  );
 }
 
 function seedAdminUser(db: DatabaseSync, config: BootstrapConfig, now: string): void {

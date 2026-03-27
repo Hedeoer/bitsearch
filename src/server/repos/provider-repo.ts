@@ -25,9 +25,15 @@ interface ProviderKeyRow {
   enabled: number;
   encrypted_key: string;
   tags_json: string;
+  note?: string;
+  last_check_status?: string;
+  last_checked_at?: string | null;
+  last_check_error?: string | null;
   last_used_at: string | null;
   last_error: string | null;
   last_status_code: number | null;
+  quota_json?: string;
+  quota_synced_at?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -51,11 +57,26 @@ function mapProviderKey(row: ProviderKeyRow): ProviderKeyRecord {
     provider: row.provider,
     name: row.name,
     fingerprint: row.fingerprint,
+    maskedValue: row.fingerprint,
     enabled: Boolean(row.enabled),
     tags: JSON.parse(row.tags_json) as string[],
+    note: row.note ?? "",
+    healthStatus:
+      row.last_check_status === "healthy" || row.last_check_status === "unhealthy"
+        ? row.last_check_status
+        : "unknown",
+    lastCheckedAt: row.last_checked_at ?? null,
+    lastCheckError: row.last_check_error ?? null,
     lastUsedAt: row.last_used_at,
     lastError: row.last_error,
     lastStatusCode: row.last_status_code,
+    requestCount: 0,
+    failureCount: 0,
+    quota:
+      typeof row.quota_json === "string" && row.quota_json.length > 0
+        ? (JSON.parse(row.quota_json) as ProviderKeyRecord["quota"])
+        : null,
+    quotaSyncedAt: row.quota_synced_at ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

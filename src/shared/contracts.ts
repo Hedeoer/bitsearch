@@ -6,11 +6,69 @@ export const FETCH_MODES = [
   "auto_ordered",
 ] as const;
 export const REQUEST_STATUSES = ["success", "failed"] as const;
+export const KEY_HEALTH_STATUSES = ["unknown", "healthy", "unhealthy"] as const;
+export const KEY_LIST_STATUSES = [
+  "all",
+  "enabled",
+  "disabled",
+  "healthy",
+  "unhealthy",
+] as const;
 
 export type RemoteProvider = (typeof REMOTE_PROVIDERS)[number];
 export type KeyPoolProvider = (typeof KEY_POOL_PROVIDERS)[number];
 export type FetchMode = (typeof FETCH_MODES)[number];
 export type RequestStatus = (typeof REQUEST_STATUSES)[number];
+export type KeyHealthStatus = (typeof KEY_HEALTH_STATUSES)[number];
+export type KeyListStatus = (typeof KEY_LIST_STATUSES)[number];
+
+export interface TavilyKeyQuotaSnapshot {
+  usage: number;
+  limit: number;
+  searchUsage: number;
+  extractUsage: number;
+  crawlUsage: number;
+  mapUsage: number;
+  researchUsage: number;
+}
+
+export interface TavilyAccountQuotaSnapshot {
+  currentPlan: string | null;
+  planUsage: number;
+  planLimit: number;
+  paygoUsage: number;
+  paygoLimit: number;
+  searchUsage: number;
+  extractUsage: number;
+  crawlUsage: number;
+  mapUsage: number;
+  researchUsage: number;
+}
+
+export interface FirecrawlTeamQuotaSnapshot {
+  remainingCredits: number;
+  planCredits: number;
+  billingPeriodStart: string | null;
+  billingPeriodEnd: string | null;
+}
+
+export interface FirecrawlHistoricalQuotaSnapshot {
+  historicalCredits: number | null;
+  startDate: string | null;
+  endDate: string | null;
+  byApiKeyMatched: boolean;
+}
+
+export interface ProviderKeyQuotaSnapshot {
+  tavily?: {
+    key: TavilyKeyQuotaSnapshot;
+    account: TavilyAccountQuotaSnapshot | null;
+  };
+  firecrawl?: {
+    team: FirecrawlTeamQuotaSnapshot;
+    historical: FirecrawlHistoricalQuotaSnapshot | null;
+  };
+}
 
 export interface ProviderConfigRecord {
   provider: RemoteProvider;
@@ -27,13 +85,43 @@ export interface ProviderKeyRecord {
   provider: KeyPoolProvider;
   name: string;
   fingerprint: string;
+  maskedValue: string;
   enabled: boolean;
   tags: string[];
+  note: string;
+  healthStatus: KeyHealthStatus;
+  lastCheckedAt: string | null;
+  lastCheckError: string | null;
   lastUsedAt: string | null;
   lastError: string | null;
   lastStatusCode: number | null;
+  requestCount: number;
+  failureCount: number;
+  quota: ProviderKeyQuotaSnapshot | null;
+  quotaSyncedAt: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface KeyPoolSummary {
+  provider: KeyPoolProvider;
+  totalKeys: number;
+  enabledKeys: number;
+  healthyKeys: number;
+  totalRequests: number;
+  totalFailures: number;
+  tags: string[];
+  quotaSyncedAt: string | null;
+  quotaNote: string | null;
+  tavily: {
+    totalKeyUsage: number;
+    totalKeyLimit: number;
+    account: TavilyAccountQuotaSnapshot | null;
+  } | null;
+  firecrawl: {
+    team: FirecrawlTeamQuotaSnapshot | null;
+    historicalByKey: boolean;
+  } | null;
 }
 
 export interface DashboardSummary {

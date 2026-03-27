@@ -6,6 +6,51 @@ export interface FirecrawlClientConfig {
   timeoutMs: number;
 }
 
+export interface FirecrawlCreditUsageResponse {
+  data?: {
+    remainingCredits?: number;
+    planCredits?: number;
+    billingPeriodStart?: string;
+    billingPeriodEnd?: string;
+  };
+}
+
+export interface FirecrawlHistoricalCreditUsageResponse {
+  periods?: Array<{
+    startDate?: string;
+    endDate?: string;
+    apiKey?: string;
+    totalCredits?: number;
+  }>;
+}
+
+export async function firecrawlCreditUsage(
+  config: FirecrawlClientConfig,
+): Promise<FirecrawlCreditUsageResponse> {
+  return requestJson<FirecrawlCreditUsageResponse>(
+    `${config.baseUrl.replace(/\/$/, "")}/team/credit-usage`,
+    {
+      method: "GET",
+      headers: { Authorization: `Bearer ${config.apiKey}` },
+      timeoutMs: config.timeoutMs,
+    },
+  );
+}
+
+export async function firecrawlHistoricalCreditUsage(
+  config: FirecrawlClientConfig,
+): Promise<FirecrawlHistoricalCreditUsageResponse> {
+  const baseUrl = config.baseUrl.replace(/\/$/, "");
+  return requestJson<FirecrawlHistoricalCreditUsageResponse>(
+    `${baseUrl}/team/credit-usage/historical?byApiKey=true`,
+    {
+      method: "GET",
+      headers: { Authorization: `Bearer ${config.apiKey}` },
+      timeoutMs: config.timeoutMs,
+    },
+  );
+}
+
 export async function firecrawlScrape(
   config: FirecrawlClientConfig,
   url: string,
