@@ -5,18 +5,22 @@ import type {
   SystemSettings,
 } from "@shared/contracts";
 import type { ProviderDrafts } from "../types";
+import { LoadingOverlay } from "./Feedback";
 
 type OverviewProps = {
   dashboard: DashboardSummary | null;
+  loading: boolean;
 };
 
 type StrategyProps = {
+  loading: boolean;
   system: SystemSettings;
   setSystem: Dispatch<SetStateAction<SystemSettings>>;
   onSave: () => void;
 };
 
 type ProviderGridProps = {
+  loading: boolean;
   providers: ProviderConfigRecord[];
   drafts: ProviderDrafts;
   setDrafts: Dispatch<SetStateAction<ProviderDrafts>>;
@@ -29,9 +33,31 @@ const METRICS = [
   { key: "failedCount", label: "Failed Calls" },
 ] as const;
 
+function renderMetricValue(value: number | undefined, loading: boolean) {
+  if (loading && typeof value !== "number") {
+    return <span className="skeleton-text" />;
+  }
+  return value ?? 0;
+}
+
+function ProviderSkeletonCard({ index }: { index: number }) {
+  return (
+    <article key={index} className="surface-card provider-card interactive-card">
+      <LoadingOverlay label="Loading provider" />
+      <div className="section-heading compact">
+        <div>
+          <div className="eyebrow">Provider</div>
+          <h3>Loading...</h3>
+        </div>
+      </div>
+    </article>
+  );
+}
+
 export function OverviewPanel(props: OverviewProps) {
   return (
     <article className="surface-card" id="overview">
+      {props.loading ? <LoadingOverlay label="Refreshing overview" /> : null}
       <div className="section-heading">
         <div>
           <div className="eyebrow">Overview</div>
@@ -42,7 +68,7 @@ export function OverviewPanel(props: OverviewProps) {
         {METRICS.map((item) => (
           <div key={item.key} className="metric-card">
             <span>{item.label}</span>
-            <strong>{props.dashboard?.[item.key] ?? 0}</strong>
+            <strong>{renderMetricValue(props.dashboard?.[item.key], props.loading)}</strong>
           </div>
         ))}
       </div>
@@ -60,6 +86,7 @@ export function OverviewPanel(props: OverviewProps) {
 export function StrategyPanel(props: StrategyProps) {
   return (
     <article className="surface-card">
+      {props.loading ? <LoadingOverlay label="Refreshing strategy" /> : null}
       <div className="section-heading">
         <div>
           <div className="eyebrow">Routing</div>
@@ -69,6 +96,7 @@ export function StrategyPanel(props: StrategyProps) {
       <label className="field">
         <span>Fetch / Map Mode</span>
         <select
+          disabled={props.loading}
           value={props.system.fetchMode}
           onChange={(event) =>
             props.setSystem((current) => ({
@@ -85,6 +113,7 @@ export function StrategyPanel(props: StrategyProps) {
       <label className="field">
         <span>Default Grok Model</span>
         <input
+          disabled={props.loading}
           value={props.system.defaultGrokModel}
           onChange={(event) =>
             props.setSystem((current) => ({
@@ -98,6 +127,7 @@ export function StrategyPanel(props: StrategyProps) {
         <label className="field">
           <span>First Provider</span>
           <select
+            disabled={props.loading}
             value={props.system.providerPriority[0]}
             onChange={(event) => {
               const first = event.target.value as "tavily" | "firecrawl";
@@ -114,13 +144,14 @@ export function StrategyPanel(props: StrategyProps) {
         </label>
         <label className="field">
           <span>Second Provider</span>
-          <input value={props.system.providerPriority[1]} readOnly />
+          <input disabled={props.loading} value={props.system.providerPriority[1]} readOnly />
         </label>
       </div>
       <div className="split-fields">
         <label className="field">
           <span>Log Retention Days</span>
           <input
+            disabled={props.loading}
             type="number"
             value={props.system.logRetentionDays}
             onChange={(event) =>
@@ -134,6 +165,7 @@ export function StrategyPanel(props: StrategyProps) {
         <label className="field">
           <span>Allowed Origins</span>
           <input
+            disabled={props.loading}
             value={props.system.allowedOrigins.join(",")}
             onChange={(event) =>
               props.setSystem((current) => ({
@@ -147,7 +179,7 @@ export function StrategyPanel(props: StrategyProps) {
           />
         </label>
       </div>
-      <button className="primary-button" onClick={props.onSave}>
+      <button className="primary-button" disabled={props.loading} onClick={props.onSave}>
         Save Strategy
       </button>
     </article>
@@ -155,6 +187,15 @@ export function StrategyPanel(props: StrategyProps) {
 }
 
 export function ProviderGrid(props: ProviderGridProps) {
+  if (props.loading && props.providers.length === 0) {
+    return (
+      <section className="provider-grid" id="providers">
+        {[0, 1, 2].map((index) => (
+          <ProviderSkeletonCard key={index} index={index} />
+        ))}
+      </section>
+    );
+  }
   return (
     <section className="provider-grid" id="providers">
       {props.providers.map((provider) => {
@@ -164,6 +205,7 @@ export function ProviderGrid(props: ProviderGridProps) {
         }
         return (
           <article key={provider.provider} className="surface-card provider-card interactive-card">
+            {props.loading ? <LoadingOverlay label={`Refreshing ${provider.provider}`} /> : null}
             <div className="section-heading compact">
               <div>
                 <div className="eyebrow">Provider</div>
@@ -185,6 +227,7 @@ export function ProviderGrid(props: ProviderGridProps) {
             ) : null}
             <label className="checkbox-row">
               <input
+                disabled={props.loading}
                 type="checkbox"
                 checked={draft.enabled}
                 onChange={(event) =>
@@ -202,6 +245,7 @@ export function ProviderGrid(props: ProviderGridProps) {
             <label className="field">
               <span>Base URL</span>
               <input
+                disabled={props.loading}
                 value={draft.baseUrl}
                 onChange={(event) =>
                   props.setDrafts((current) => ({
@@ -217,6 +261,7 @@ export function ProviderGrid(props: ProviderGridProps) {
             <label className="field">
               <span>Timeout (ms)</span>
               <input
+                disabled={props.loading}
                 type="number"
                 value={draft.timeoutMs}
                 onChange={(event) =>
@@ -234,6 +279,7 @@ export function ProviderGrid(props: ProviderGridProps) {
               <label className="field">
                 <span>API Key</span>
                 <input
+                  disabled={props.loading}
                   type="password"
                   placeholder={provider.hasApiKey ? "Stored. Fill only to replace." : "Enter API key"}
                   value={draft.apiKey}
@@ -251,6 +297,7 @@ export function ProviderGrid(props: ProviderGridProps) {
             ) : null}
             <button
               className="secondary-button"
+              disabled={props.loading}
               onClick={() => props.onSave(provider.provider)}
             >
               Save Provider

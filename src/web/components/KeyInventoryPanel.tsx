@@ -5,6 +5,8 @@ import type {
   ProviderKeyRecord,
 } from "@shared/contracts";
 import { formatNumber } from "../format";
+import type { KeySortMode } from "../types";
+import { EmptyState, InlineSpinner, LoadingOverlay } from "./Feedback";
 import {
   KeyInventoryCard,
   renderFirecrawlQuota,
@@ -19,15 +21,33 @@ type KeyInventoryPanelProps = {
   status: KeyListStatus;
   selectedIds: string[];
   revealedValues: Record<string, string>;
-  busy: boolean;
   loading: boolean;
+  isBatchDeleting: boolean;
+  isBatchSyncing: boolean;
+  isBatchTesting: boolean;
+  isBulkUpdating: boolean;
+  copyingIds: ReadonlySet<string>;
+  deletingIds: ReadonlySet<string>;
+  revealingIds: ReadonlySet<string>;
+  savingNoteIds: ReadonlySet<string>;
+  syncingIds: ReadonlySet<string>;
+  sortMode: KeySortMode;
+  testingIds: ReadonlySet<string>;
+  togglingIds: ReadonlySet<string>;
   onQueryChange: (value: string) => void;
+  onDisableSelected: () => void;
+  onEnableSelected: () => void;
+  onJumpToImport: () => void;
+  onResetFilters: () => void;
   onTagChange: (value: string) => void;
   onStatusChange: (value: KeyListStatus) => void;
+  onSortChange: (value: KeySortMode) => void;
   onToggleSelected: (id: string) => void;
   onSelectAll: () => void;
   onClearSelection: () => void;
-  onBulkToggle: (enabled: boolean) => void;
+  onDeleteSelected: () => void;
+  onSyncSelected: () => void;
+  onTestSelected: () => void;
   onToggleReveal: (id: string) => void;
   onCopy: (id: string) => void;
   onSaveNote: (id: string, note: string) => void;
@@ -51,7 +71,7 @@ function renderSummaryQuota(summary: KeyPoolSummary | null): string {
   if (summary.provider === "firecrawl") {
     return renderFirecrawlQuota(summary.firecrawl?.team ?? null, null);
   }
-  return "未同步";
+  return "Not synced";
 }
 
 function SummaryCards(props: { summary: KeyPoolSummary | null; loading: boolean }) {
@@ -84,11 +104,15 @@ function SummaryCards(props: { summary: KeyPoolSummary | null; loading: boolean 
       {props.summary?.quotaNote ? (
         <p className="warning-banner compact key-summary-note">{props.summary.quotaNote}</p>
       ) : null}
+      {props.loading ? <LoadingOverlay label="Refreshing key summary" /> : null}
     </div>
   );
 }
 
 export function KeyInventoryPanel(props: KeyInventoryPanelProps) {
+  const hasActiveFilters =
+    props.status !== "all" || props.tag.length > 0 || props.query.trim().length > 0;
+
   return (
     <article className="surface-card key-inventory-panel">
       <div className="section-heading">
@@ -103,82 +127,102 @@ export function KeyInventoryPanel(props: KeyInventoryPanelProps) {
       <SummaryCards loading={props.loading} summary={props.summary} />
       <div className="sticky-toolbar">
         <div className="inventory-toolbar">
-          <div className="inventory-block">
-            <div className="eyebrow">Batch Actions</div>
-            <div className="toolbar-actions">
-              <button className="primary-button" disabled={props.busy} onClick={() => props.onTest(props.selectedIds)}>
-                Test Selected
-              </button>
-              <button className="secondary-button" disabled={props.busy} onClick={() => props.onSyncQuota(props.selectedIds)}>
-                Refresh Quota
-              </button>
-              <button className="secondary-button" disabled={props.busy} onClick={() => props.onDelete(props.selectedIds)}>
-                Delete Selected
-              </button>
-              <button className="secondary-button" disabled={props.busy} onClick={props.onSelectAll}>
-                Select Visible
-              </button>
-              <button className="secondary-button" disabled={props.busy} onClick={props.onClearSelection}>
-                Clear
-              </button>
-            </div>
-          </div>
-          <div className="inventory-block">
-            <div className="eyebrow">Selection State</div>
+          <div className="inventory-block inventory-block-wide">
+            <div className="eyebrow">Selection Toolbar</div>
             <div className="selection-summary">
               {props.selectedIds.length} selected
             </div>
             <div className="toolbar-actions">
-              <button className="secondary-button" disabled={props.busy} onClick={() => props.onBulkToggle(true)}>
-                Enable
+              <button className="secondary-button" disabled={props.isBulkUpdating} onClick={props.onEnableSelected}>
+                {props.isBulkUpdating ? <InlineSpinner label="Updating" /> : "Enable"}
               </button>
-              <button className="secondary-button" disabled={props.busy} onClick={() => props.onBulkToggle(false)}>
-                Disable
+              <button className="secondary-button" disabled={props.isBulkUpdating} onClick={props.onDisableSelected}>
+                {props.isBulkUpdating ? <InlineSpinner label="Updating" /> : "Disable"}
+              </button>
+              <span className="toolbar-separator" aria-hidden="true" />
+              <button className="primary-button" disabled={props.isBatchTesting} onClick={props.onTestSelected}>
+                {props.isBatchTesting ? <InlineSpinner label="Testing" /> : "Test Selected"}
+              </button>
+              <button className="secondary-button" disabled={props.isBatchSyncing} onClick={props.onSyncSelected}>
+                {props.isBatchSyncing ? <InlineSpinner label="Syncing" /> : "Refresh Quota"}
+              </button>
+              <span className="toolbar-separator" aria-hidden="true" />
+              <button className="danger-button" disabled={props.isBatchDeleting} onClick={props.onDeleteSelected}>
+                {props.isBatchDeleting ? <InlineSpinner label="Deleting" /> : "Delete Selected"}
+              </button>
+              <button className="secondary-button" onClick={props.onSelectAll}>
+                Select Visible
+              </button>
+              <button className="secondary-button" onClick={props.onClearSelection}>
+                Clear
               </button>
             </div>
           </div>
         </div>
-      <div className="inventory-filters">
-        <label className="field inventory-field">
-          <span>Status</span>
-          <select value={props.status} onChange={(event) => props.onStatusChange(event.target.value as KeyListStatus)}>
-            <option value="all">all</option>
-            <option value="enabled">enabled</option>
-            <option value="disabled">disabled</option>
-            <option value="healthy">healthy</option>
-            <option value="unhealthy">unhealthy</option>
-          </select>
-        </label>
-        <label className="field inventory-field">
-          <span>Tag</span>
-          <select value={props.tag} onChange={(event) => props.onTagChange(event.target.value)}>
-            <option value="">all tags</option>
-            {(props.summary?.tags ?? []).map((item) => (
-              <option key={item} value={item}>{item}</option>
-            ))}
-          </select>
-        </label>
-        <label className="field inventory-field inventory-search-field">
-          <span>Search</span>
-          <input
-            value={props.query}
-            onChange={(event) => props.onQueryChange(event.target.value)}
-            placeholder="Search key / fingerprint / note"
-          />
-        </label>
+        <div className="inventory-filters">
+          <label className="field inventory-field">
+            <span>Status</span>
+            <select value={props.status} onChange={(event) => props.onStatusChange(event.target.value as KeyListStatus)}>
+              <option value="all">all</option>
+              <option value="enabled">enabled</option>
+              <option value="disabled">disabled</option>
+              <option value="healthy">healthy</option>
+              <option value="unhealthy">unhealthy</option>
+            </select>
+          </label>
+          <label className="field inventory-field">
+            <span>Tag</span>
+            <select value={props.tag} onChange={(event) => props.onTagChange(event.target.value)}>
+              <option value="">all tags</option>
+              {(props.summary?.tags ?? []).map((item) => (
+                <option key={item} value={item}>{item}</option>
+              ))}
+            </select>
+          </label>
+          <label className="field inventory-field">
+            <span>Sort</span>
+            <select value={props.sortMode} onChange={(event) => props.onSortChange(event.target.value as KeySortMode)}>
+              <option value="requests_desc">Requests high to low</option>
+              <option value="requests_asc">Requests low to high</option>
+              <option value="failures_desc">Failures high to low</option>
+              <option value="last_used_desc">Last used newest first</option>
+              <option value="quota_remaining_desc">Quota remaining high to low</option>
+            </select>
+          </label>
+          <label className="field inventory-field inventory-search-field">
+            <span>Search</span>
+            <input
+              value={props.query}
+              onChange={(event) => props.onQueryChange(event.target.value)}
+              placeholder="Search key / fingerprint / note"
+            />
+          </label>
         </div>
       </div>
       {props.keys.length === 0 ? (
-        <p className="warning-banner compact">No keys match the current filters.</p>
+        <EmptyState
+          actionLabel={hasActiveFilters ? "Clear filters" : "Import your first key"}
+          description={hasActiveFilters
+            ? "No keys match the current filters. Clear the filters or adjust the query to continue."
+            : "No keys have been imported for this provider yet. Start by importing one or more keys."}
+          onAction={hasActiveFilters ? props.onResetFilters : props.onJumpToImport}
+          title={hasActiveFilters ? "No matching keys" : "No keys imported yet"}
+        />
       ) : null}
       <div className="key-grid">
         {props.keys.map((item) => (
           <KeyInventoryCard
             key={item.id}
-            busy={props.busy}
+            isCopying={props.copyingIds.has(item.id)}
+            isDeleting={props.deletingIds.has(item.id)}
             item={item}
             revealedValue={props.revealedValues[item.id]}
+            isRevealing={props.revealingIds.has(item.id)}
+            isSavingNote={props.savingNoteIds.has(item.id)}
             selected={props.selectedIds.includes(item.id)}
+            isSyncing={props.syncingIds.has(item.id)}
+            isTesting={props.testingIds.has(item.id)}
+            isTogglingEnabled={props.togglingIds.has(item.id)}
             onToggleSelected={props.onToggleSelected}
             onToggleReveal={props.onToggleReveal}
             onCopy={props.onCopy}

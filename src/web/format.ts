@@ -54,3 +54,10 @@ export function formatNumber(value: number | null | undefined): string {
   }
   return new Intl.NumberFormat("zh-CN").format(value);
 }
+
+export function getErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
+  }
+  return fallback;
+}

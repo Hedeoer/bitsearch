@@ -1,17 +1,56 @@
 import { useEffect, useMemo, useState } from "react";
 import type { RequestActivityRecord } from "@shared/contracts";
-import { asText, formatDuration, statusTone } from "../format";
+import { formatDuration, statusTone } from "../format";
+import { EmptyState, LoadingOverlay } from "./Feedback";
 import { RequestDetails } from "./RequestDetails";
 
 type ActivityHubProps = {
   activity: RequestActivityRecord[];
+  loading: boolean;
 };
+
+type TimeRangePreset = "all" | "today" | "last_hour" | "last_24_hours" | "custom";
+
+function isWithinTimeRange(
+  createdAt: string,
+  preset: TimeRangePreset,
+  customStart: string,
+  customEnd: string,
+) {
+  const timestamp = Date.parse(createdAt);
+  if (!Number.isFinite(timestamp)) {
+    return preset === "all";
+  }
+  const now = Date.now();
+  if (preset === "today") {
+    return timestamp >= new Date().setHours(0, 0, 0, 0);
+  }
+  if (preset === "last_hour") {
+    return timestamp >= now - 60 * 60 * 1000;
+  }
+  if (preset === "last_24_hours") {
+    return timestamp >= now - 24 * 60 * 60 * 1000;
+  }
+  if (preset === "custom") {
+    const start = customStart ? Date.parse(customStart) : Number.NEGATIVE_INFINITY;
+    const end = customEnd ? Date.parse(customEnd) : Number.POSITIVE_INFINITY;
+    return timestamp >= start && timestamp <= end;
+  }
+  return true;
+}
 
 export function ActivityHub(props: ActivityHubProps) {
   const [query, setQuery] = useState("");
   const [toolFilter, setToolFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [timeRange, setTimeRange] = useState<TimeRangePreset>("all");
+  const [customStart, setCustomStart] = useState("");
+  const [customEnd, setCustomEnd] = useState("");
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
+
+  const toolOptions = useMemo(() => {
+    return [...new Set(props.activity.map((item) => item.request.toolName))].sort();
+  }, [props.activity]);
 
   const filtered = useMemo(() => {
     return props.activity.filter((item) => {
@@ -33,9 +72,9 @@ export function ActivityHub(props: ActivityHubProps) {
       if (statusFilter !== "all" && request.status !== statusFilter) {
         return false;
       }
-      return true;
+      return isWithinTimeRange(request.createdAt, timeRange, customStart, customEnd);
     });
-  }, [props.activity, query, statusFilter, toolFilter]);
+  }, [props.activity, customEnd, customStart, query, statusFilter, timeRange, toolFilter]);
 
   useEffect(() => {
     if (filtered.length === 0) {
@@ -48,12 +87,22 @@ export function ActivityHub(props: ActivityHubProps) {
     }
   }, [filtered, selectedRequestId]);
 
+  function resetFilters() {
+    setQuery("");
+    setToolFilter("all");
+    setStatusFilter("all");
+    setTimeRange("all");
+    setCustomStart("");
+    setCustomEnd("");
+  }
+
   const selected =
     filtered.find((item) => item.request.id === selectedRequestId) ?? null;
 
   return (
     <section className="activity-hub" id="activity">
       <article className="surface-card">
+        {props.loading ? <LoadingOverlay label="Refreshing activity" /> : null}
         <div className="section-heading">
           <div>
             <div className="eyebrow">Activity</div>
@@ -69,18 +118,49 @@ export function ActivityHub(props: ActivityHubProps) {
           />
           <select value={toolFilter} onChange={(event) => setToolFilter(event.target.value)}>
             <option value="all">all tools</option>
-            <option value="web_search">web_search</option>
-            <option value="web_fetch">web_fetch</option>
-            <option value="web_map">web_map</option>
+            {toolOptions.map((toolName) => (
+              <option key={toolName} value={toolName}>{toolName}</option>
+            ))}
           </select>
           <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
             <option value="all">all status</option>
             <option value="success">success</option>
             <option value="failed">failed</option>
           </select>
+          <select value={timeRange} onChange={(event) => setTimeRange(event.target.value as TimeRangePreset)}>
+            <option value="all">all time</option>
+            <option value="today">today</option>
+            <option value="last_hour">last 1 hour</option>
+            <option value="last_24_hours">last 24 hours</option>
+            <option value="custom">custom range</option>
+          </select>
         </div>
+        {timeRange === "custom" ? (
+          <div className="activity-custom-range">
+            <label className="field">
+              <span>Start</span>
+              <input type="datetime-local" value={customStart} onChange={(event) => setCustomStart(event.target.value)} />
+            </label>
+            <label className="field">
+              <span>End</span>
+              <input type="datetime-local" value={customEnd} onChange={(event) => setCustomEnd(event.target.value)} />
+            </label>
+          </div>
+        ) : null}
         <div className="activity-list">
-          {filtered.map((item) => (
+          {props.activity.length === 0 ? (
+            <EmptyState
+              description="Requests sent through the MCP endpoint will appear here once traffic starts flowing."
+              title="No request activity yet"
+            />
+          ) : filtered.length === 0 ? (
+            <EmptyState
+              actionLabel="Clear filters"
+              description="No activity matches the current filters. Clear them to inspect the broader request history."
+              onAction={resetFilters}
+              title="No matching requests"
+            />
+          ) : filtered.map((item) => (
             <button
               key={item.request.id}
               type="button"

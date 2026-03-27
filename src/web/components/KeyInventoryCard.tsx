@@ -6,16 +6,23 @@ import type {
   TavilyAccountQuotaSnapshot,
 } from "@shared/contracts";
 import { formatDateTime, formatNumber } from "../format";
+import { InlineSpinner } from "./Feedback";
 
 type KeyCardProps = {
   item: ProviderKeyRecord;
   revealedValue?: string;
   selected: boolean;
-  busy: boolean;
+  isCopying: boolean;
+  isDeleting: boolean;
+  isRevealing: boolean;
   onToggleSelected: (id: string) => void;
   onToggleReveal: (id: string) => void;
   onCopy: (id: string) => void;
+  isSavingNote: boolean;
   onSaveNote: (id: string, note: string) => void;
+  isSyncing: boolean;
+  isTesting: boolean;
+  isTogglingEnabled: boolean;
   onDelete: (ids: string[]) => void;
   onToggleEnabled: (id: string, enabled: boolean) => void;
   onTest: (ids: string[]) => void;
@@ -42,7 +49,7 @@ export function renderTavilyQuota(
 ): string {
   const quota = item.quota?.tavily;
   if (!quota) {
-    return "未同步";
+    return "Not synced";
   }
   const keyUsage = quota.key.limit > 0
     ? `${formatNumber(quota.key.usage)} / ${formatNumber(quota.key.limit)} credits`
@@ -61,7 +68,7 @@ export function renderFirecrawlQuota(
   historical: FirecrawlHistoricalQuotaSnapshot | null,
 ): string {
   if (!team) {
-    return "未同步";
+    return "Not synced";
   }
   const teamText = team.planCredits > 0
     ? `${formatNumber(team.remainingCredits)} / ${formatNumber(team.planCredits)} credits`
@@ -120,6 +127,10 @@ export function KeyInventoryCard(props: KeyCardProps) {
           <span>Checked</span>
           <strong>{formatDateTime(props.item.lastCheckedAt)}</strong>
         </div>
+        <div className="key-meta-card">
+          <span>Created At</span>
+          <strong>{formatDateTime(props.item.createdAt)}</strong>
+        </div>
       </div>
       <div className="key-stat-grid">
         <div className="key-stat-card">
@@ -162,31 +173,33 @@ export function KeyInventoryCard(props: KeyCardProps) {
           />
           <button
             className="secondary-button key-action-button"
-            disabled={props.busy || noteDraft === props.item.note}
+            disabled={props.isSavingNote || noteDraft === props.item.note}
             onClick={() => props.onSaveNote(props.item.id, noteDraft)}
           >
-            Save Note
+            {props.isSavingNote ? <InlineSpinner label="Saving" /> : "Save Note"}
           </button>
         </div>
       </label>
       <div className="key-card-actions">
-        <button className="secondary-button key-action-button" disabled={props.busy} onClick={() => props.onToggleReveal(props.item.id)}>
-          {props.revealedValue ? "Hide" : "Show"}
+        <button className="secondary-button key-action-button" disabled={props.isRevealing} onClick={() => props.onToggleReveal(props.item.id)}>
+          {props.isRevealing ? <InlineSpinner label="Loading" /> : props.revealedValue ? "Hide" : "Show"}
         </button>
-        <button className="secondary-button key-action-button" disabled={props.busy} onClick={() => props.onCopy(props.item.id)}>
-          Copy
+        <button className="secondary-button key-action-button" disabled={props.isCopying || props.isRevealing} onClick={() => props.onCopy(props.item.id)}>
+          {props.isCopying ? <InlineSpinner label="Copying" /> : "Copy"}
         </button>
-        <button className="secondary-button key-action-button" disabled={props.busy} onClick={() => props.onTest([props.item.id])}>
-          Test
+        <button className="secondary-button key-action-button" disabled={props.isTesting} onClick={() => props.onTest([props.item.id])}>
+          {props.isTesting ? <InlineSpinner label="Testing" /> : "Test"}
         </button>
-        <button className="secondary-button key-action-button" disabled={props.busy} onClick={() => props.onSyncQuota([props.item.id])}>
-          Sync
+        <button className="secondary-button key-action-button" disabled={props.isSyncing} onClick={() => props.onSyncQuota([props.item.id])}>
+          {props.isSyncing ? <InlineSpinner label="Syncing" /> : "Sync"}
         </button>
-        <button className="secondary-button key-action-button" disabled={props.busy} onClick={() => props.onToggleEnabled(props.item.id, !props.item.enabled)}>
-          {props.item.enabled ? "Disable" : "Enable"}
+        <button className="secondary-button key-action-button" disabled={props.isTogglingEnabled} onClick={() => props.onToggleEnabled(props.item.id, !props.item.enabled)}>
+          {props.isTogglingEnabled
+            ? <InlineSpinner label="Updating" />
+            : props.item.enabled ? "Disable" : "Enable"}
         </button>
-        <button className="secondary-button key-action-button key-action-danger" disabled={props.busy} onClick={() => props.onDelete([props.item.id])}>
-          Delete
+        <button className="danger-button key-action-button" disabled={props.isDeleting} onClick={() => props.onDelete([props.item.id])}>
+          {props.isDeleting ? <InlineSpinner label="Deleting" /> : "Delete"}
         </button>
       </div>
     </article>

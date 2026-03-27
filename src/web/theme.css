@@ -115,6 +115,7 @@ code {
 
 .primary-button,
 .secondary-button,
+.danger-button,
 .text-button {
   border: 0;
   cursor: pointer;
@@ -130,6 +131,11 @@ code {
 .secondary-button {
   color: var(--text);
   background: rgba(255, 255, 255, 0.06);
+}
+
+.danger-button {
+  color: #1d0907;
+  background: linear-gradient(135deg, #ffb4aa, var(--danger));
 }
 
 .text-button {
@@ -194,4 +200,55 @@ code {
   transform: translateY(-2px);
   box-shadow: var(--shadow);
   border-color: rgba(0, 215, 243, 0.2);
+}
+
+.skeleton-text {
+  display: inline-block;
+  width: 4.5rem;
+  height: 1.35rem;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.06),
+    rgba(255, 255, 255, 0.18),
+    rgba(255, 255, 255, 0.06)
+  );
+  background-size: 240px 100%;
+  animation: shimmer 1.2s linear infinite;
+}
+
+.inline-spinner-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.inline-spinner {
+  width: 0.95rem;
+  height: 0.95rem;
+  border-radius: 999px;
+  border: 2px solid rgba(4, 20, 26, 0.22);
+  border-top-color: currentColor;
+  animation: spin 0.8s linear infinite;
+}
+
+.secondary-button .inline-spinner,
+.text-button .inline-spinner {
+  border-color: rgba(255, 255, 255, 0.18);
+  border-top-color: currentColor;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -240px 0;
+  }
+  100% {
+    background-position: 240px 0;
+  }
 }

@@ -1,14 +1,19 @@
 import { useEffect, useState } from "react";
 import type { DashboardSummary, ProviderConfigRecord, SystemSettings } from "@shared/contracts";
+import { InlineSpinner } from "./Feedback";
 import type { SessionState } from "../types";
 
 type SidebarProps = {
   dashboard: DashboardSummary | null;
+  isOpen: boolean;
+  onClose: () => void;
   providers: ProviderConfigRecord[];
   system: SystemSettings;
 };
 
 type HeaderProps = {
+  isRefreshing: boolean;
+  onOpenNavigation: () => void;
   session: SessionState;
   onRefresh: () => void;
   onLogout: () => void;
@@ -27,50 +32,67 @@ export function ConsoleSidebar(props: SidebarProps) {
   useEffect(() => {
     const handleHashChange = () => {
       setActiveHash(window.location.hash || "#overview");
+      props.onClose();
     };
     window.addEventListener("hashchange", handleHashChange);
     return () => window.removeEventListener("hashchange", handleHashChange);
-  }, []);
+  }, [props.onClose]);
 
   const providerSummary = props.providers
     .map((item) => `${item.provider}:${item.keyCount}`)
     .join(" · ");
 
   return (
-    <aside className="console-sidebar">
-      <div className="sidebar-brand">
-        <div className="eyebrow">BitSearch</div>
-        <h1>Control Surface</h1>
-        <p className="supporting">
-          Premium MCP operations console with live provider routing and request observability.
-        </p>
-      </div>
-      <nav className="sidebar-nav">
-        {SECTION_LINKS.map((item) => (
-          <a
-            key={item.href}
-            href={item.href}
-            className={`nav-link ${activeHash === item.href ? "active" : ""}`}
-          >
-            {item.label}
-          </a>
-        ))}
-      </nav>
-      <div className="sidebar-footer">
-        <section className="sidebar-panel">
-          <div className="panel-label">Current Mode</div>
-          <div className="panel-value">{props.system.fetchMode}</div>
-          <div className="panel-label">Provider Order</div>
-          <div className="panel-value mono">{props.system.providerPriority.join(" → ")}</div>
-        </section>
-        <section className="sidebar-panel">
-          <div className="panel-label">Key Pools</div>
-          <div className="panel-value mono">{providerSummary}</div>
-          <div className="panel-label">Requests</div>
-          <div className="panel-value">{props.dashboard?.totalRequests ?? 0}</div>
-        </section>
-      </div>
-    </aside>
+    <>
+      <button
+        aria-label="Close navigation"
+        className={`sidebar-backdrop ${props.isOpen ? "sidebar-backdrop-open" : ""}`}
+        type="button"
+        onClick={props.onClose}
+      />
+      <aside className={`console-sidebar ${props.isOpen ? "console-sidebar-open" : ""}`}>
+        <div className="sidebar-brand">
+          <div className="sidebar-mobile-row">
+            <div>
+              <div className="eyebrow">BitSearch</div>
+              <h1>Control Surface</h1>
+            </div>
+            <button className="secondary-button sidebar-close-button" type="button" onClick={props.onClose}>
+              Close
+            </button>
+          </div>
+          <p className="supporting">
+            Premium MCP operations console with live provider routing and request observability.
+          </p>
+        </div>
+        <nav className="sidebar-nav">
+          {SECTION_LINKS.map((item) => (
+            <a
+              key={item.href}
+              href={item.href}
+              className={`nav-link ${activeHash === item.href ? "active" : ""}`}
+              onClick={props.onClose}
+            >
+              {item.label}
+            </a>
+          ))}
+        </nav>
+        <div className="sidebar-footer">
+          <section className="sidebar-panel">
+            <div className="panel-label">Current Mode</div>
+            <div className="panel-value">{props.system.fetchMode}</div>
+            <div className="panel-label">Provider Order</div>
+            <div className="panel-value mono">{props.system.providerPriority.join(" → ")}</div>
+          </section>
+          <section className="sidebar-panel">
+            <div className="panel-label">Key Pools</div>
+            <div className="panel-value mono">{providerSummary}</div>
+            <div className="panel-label">Requests</div>
+            <div className="panel-value">{props.dashboard?.totalRequests ?? 0}</div>
+          </section>
+        </div>
+      </aside>
+    </>
   );
 }
 
@@ -85,20 +107,16 @@ export function ShellHeader(props: HeaderProps) {
         </p>
       </div>
       <div className="action-row">
-        <button className="secondary-button" onClick={props.onRefresh}>
-          Refresh
+        <button className="secondary-button nav-toggle-button" type="button" onClick={props.onOpenNavigation}>
+          Menu
         </button>
-        <button className="secondary-button" onClick={props.onLogout}>
+        <button className="secondary-button" type="button" onClick={props.onRefresh}>
+          {props.isRefreshing ? <InlineSpinner label="Refreshing" /> : "Refresh"}
+        </button>
+        <button className="secondary-button" type="button" onClick={props.onLogout}>
           Logout
         </button>
       </div>
     </header>
   );
-}
-
-export function StatusToast({ message }: { message: string }) {
-  if (!message) {
-    return null;
-  }
-  return <section className="status-toast">{message}</section>;
 }

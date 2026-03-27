@@ -1,6 +1,7 @@
 import type { Dispatch, SetStateAction } from "react";
 import type { KeyPoolProvider, KeyPoolSummary } from "@shared/contracts";
 import { formatDateTime, formatNumber } from "../format";
+import { InlineSpinner, LoadingOverlay } from "./Feedback";
 import { renderFirecrawlQuota } from "./KeyInventoryCard";
 
 type KeyPoolImportPanelProps = {
@@ -12,6 +13,7 @@ type KeyPoolImportPanelProps = {
   setTags: Dispatch<SetStateAction<string>>;
   summary: KeyPoolSummary | null;
   busy: boolean;
+  loading: boolean;
   onImport: () => void;
 };
 
@@ -31,6 +33,7 @@ function renderQuotaHint(summary: KeyPoolSummary | null): string {
 export function KeyPoolImportPanel(props: KeyPoolImportPanelProps) {
   return (
     <article className="surface-card" id="keys">
+      {props.loading ? <LoadingOverlay label="Refreshing key import summary" /> : null}
       <div className="section-heading">
         <div>
           <div className="eyebrow">Key Pools</div>
@@ -87,7 +90,7 @@ export function KeyPoolImportPanel(props: KeyPoolImportPanelProps) {
           disabled={props.busy}
           onClick={props.onImport}
         >
-          Import Text
+          {props.busy ? <InlineSpinner label="Importing" /> : "Import Text"}
         </button>
         <a
           className="secondary-button link-button"

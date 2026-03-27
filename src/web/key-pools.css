@@ -45,6 +45,7 @@
 .key-summary-grid {
   display: grid;
   gap: 1rem;
+  position: relative;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 }
 
@@ -107,12 +108,22 @@
   gap: 0.85rem;
 }
 
+.inventory-block-wide {
+  grid-column: 1 / -1;
+}
+
 .toolbar-actions {
   gap: 0.75rem;
 }
 
 .toolbar-actions > * {
   flex: 1 1 140px;
+}
+
+.toolbar-separator {
+  flex: 0 0 1px;
+  min-height: 42px;
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .selection-summary {
@@ -129,15 +140,11 @@
 .inventory-filters {
   display: grid;
   gap: 1rem;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .inventory-field span {
   margin-bottom: 0.55rem;
-}
-
-.inventory-search-field {
-  grid-column: span 1;
 }
 
 .key-grid {
@@ -195,7 +202,7 @@
 }
 
 .key-card-meta-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .key-meta-card,
@@ -269,10 +276,6 @@
 .key-action-button {
   justify-content: center;
   min-height: 44px;
-}
-
-.key-action-danger {
-  color: var(--danger);
 }
 
 @media (min-width: 1680px) {

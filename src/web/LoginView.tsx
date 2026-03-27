@@ -29,9 +29,9 @@ export function LoginView(props: LoginViewProps) {
           </button>
         </div>
         <div className="login-foot">
-          <span className="chip neutral">Remote MCP</span>
-          <span className="chip neutral">Provider Pools</span>
-          <span className="chip neutral">Observability</span>
+          <span className="chip neutral-chip">Remote MCP</span>
+          <span className="chip neutral-chip">Provider Pools</span>
+          <span className="chip neutral-chip">Observability</span>
         </div>
         {props.message ? <p className="warning-banner">{props.message}</p> : null}
       </section>

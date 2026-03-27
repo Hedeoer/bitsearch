@@ -19,6 +19,13 @@ export type ProviderDraft = {
 
 export type ProviderDrafts = Record<string, ProviderDraft>;
 
+export type KeySortMode =
+  | "requests_desc"
+  | "requests_asc"
+  | "failures_desc"
+  | "last_used_desc"
+  | "quota_remaining_desc";
+
 export type AppDataBundle = {
   dashboard: DashboardSummary | null;
   providers: ProviderConfigRecord[];
