@@ -23,6 +23,23 @@ function parseJsonObject(value: unknown): Record<string, unknown> {
   }
 }
 
+function parseMessages(value: unknown): Array<{ role: string; content: string }> | null {
+  if (typeof value !== "string" || value.length === 0) {
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(value) as Array<{ role?: string; content?: string }>;
+    return parsed
+      .filter((item) => typeof item.role === "string" && typeof item.content === "string")
+      .map((item) => ({
+        role: item.role as string,
+        content: item.content as string,
+      }));
+  } catch {
+    return null;
+  }
+}
+
 function parseJsonArray(value: unknown): RemoteProvider[] {
   if (typeof value !== "string" || value.length === 0) {
     return [];
@@ -53,6 +70,7 @@ function mapRequestLog(row: Record<string, unknown>): RequestLogRecord {
         ? parseJsonObject(row.input_json)
         : null,
     resultPreview: row.result_preview ? String(row.result_preview) : null,
+    messages: parseMessages(row.messages_json),
     providerOrder: parseJsonArray(row.provider_order_json),
     metadata: parseJsonObject(row.metadata_json),
     createdAt: String(row.created_at),
@@ -80,8 +98,8 @@ export function insertRequestLog(db: AppDatabase, payload: RequestInsert): void 
   db.sqlite
     .prepare(
       `INSERT INTO request_logs
-      (id, tool_name, target_url, strategy, final_provider, final_key_fingerprint, attempts, status, duration_ms, error_summary, input_json, result_preview, provider_order_json, metadata_json, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      (id, tool_name, target_url, strategy, final_provider, final_key_fingerprint, attempts, status, duration_ms, error_summary, input_json, result_preview, messages_json, provider_order_json, metadata_json, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .run(
       payload.id,
@@ -96,6 +114,7 @@ export function insertRequestLog(db: AppDatabase, payload: RequestInsert): void 
       payload.errorSummary,
       payload.inputJson ? JSON.stringify(payload.inputJson) : null,
       payload.resultPreview,
+      payload.messages ? JSON.stringify(payload.messages) : null,
       JSON.stringify(payload.providerOrder),
       JSON.stringify(payload.metadata),
       db.now(),

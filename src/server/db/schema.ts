@@ -54,6 +54,7 @@ CREATE TABLE IF NOT EXISTS request_logs (
   error_summary TEXT,
   input_json TEXT,
   result_preview TEXT,
+  messages_json TEXT,
   provider_order_json TEXT NOT NULL DEFAULT '[]',
   metadata_json TEXT NOT NULL DEFAULT '{}',
   created_at TEXT NOT NULL

@@ -1,22 +1,17 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { RequestActivityRecord } from "@shared/contracts";
 import { asText, formatDuration, statusTone } from "../format";
+import { RequestDetails } from "./RequestDetails";
 
 type ActivityHubProps = {
   activity: RequestActivityRecord[];
 };
 
-function prettyJson(value: Record<string, unknown> | null): string {
-  if (!value) {
-    return "-";
-  }
-  return JSON.stringify(value, null, 2);
-}
-
 export function ActivityHub(props: ActivityHubProps) {
   const [query, setQuery] = useState("");
   const [toolFilter, setToolFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     return props.activity.filter((item) => {
@@ -42,7 +37,19 @@ export function ActivityHub(props: ActivityHubProps) {
     });
   }, [props.activity, query, statusFilter, toolFilter]);
 
-  const selected = filtered[0] ?? null;
+  useEffect(() => {
+    if (filtered.length === 0) {
+      setSelectedRequestId(null);
+      return;
+    }
+    const hasSelected = filtered.some((item) => item.request.id === selectedRequestId);
+    if (!hasSelected) {
+      setSelectedRequestId(filtered[0].request.id);
+    }
+  }, [filtered, selectedRequestId]);
+
+  const selected =
+    filtered.find((item) => item.request.id === selectedRequestId) ?? null;
 
   return (
     <section className="activity-hub" id="activity">
@@ -74,7 +81,14 @@ export function ActivityHub(props: ActivityHubProps) {
         </div>
         <div className="activity-list">
           {filtered.map((item) => (
-            <div className="activity-item" key={item.request.id}>
+            <button
+              key={item.request.id}
+              type="button"
+              className={`activity-item ${
+                item.request.id === selectedRequestId ? "activity-item-selected" : ""
+              }`}
+              onClick={() => setSelectedRequestId(item.request.id)}
+            >
               <div className="activity-item-top">
                 <strong>{item.request.toolName}</strong>
                 <span className={`status-pill ${statusTone(item.request.status)}`}>
@@ -89,90 +103,11 @@ export function ActivityHub(props: ActivityHubProps) {
               <p className="supporting compact">
                 {item.request.errorSummary ?? item.request.resultPreview ?? "No summary"}
               </p>
-            </div>
+            </button>
           ))}
         </div>
       </article>
-
-      <article className="surface-card detail-panel">
-        <div className="section-heading">
-          <div>
-            <div className="eyebrow">Details</div>
-            <h3>Selected Request</h3>
-          </div>
-          {selected ? (
-            <span className={`status-pill ${statusTone(selected.request.status)}`}>
-              {selected.request.status}
-            </span>
-          ) : null}
-        </div>
-        {selected ? (
-          <>
-            <div className="detail-grid">
-              <div className="detail-card">
-                <span>Tool</span>
-                <strong>{selected.request.toolName}</strong>
-              </div>
-              <div className="detail-card">
-                <span>Provider</span>
-                <strong>{selected.request.finalProvider ?? "-"}</strong>
-              </div>
-              <div className="detail-card">
-                <span>Attempts</span>
-                <strong>{selected.request.attempts}</strong>
-              </div>
-              <div className="detail-card">
-                <span>Duration</span>
-                <strong>{formatDuration(selected.request.durationMs)}</strong>
-              </div>
-            </div>
-            <div className="detail-block">
-              <div className="eyebrow">Provider Order</div>
-              <div className="mono">{selected.request.providerOrder.join(" → ") || "-"}</div>
-            </div>
-            <div className="detail-block">
-              <div className="eyebrow">Input</div>
-              <pre>{prettyJson(selected.request.inputJson)}</pre>
-            </div>
-            <div className="detail-block">
-              <div className="eyebrow">Result Preview</div>
-              <pre>{selected.request.resultPreview ?? "-"}</pre>
-            </div>
-            <div className="detail-block">
-              <div className="eyebrow">Metadata</div>
-              <pre>{prettyJson(selected.request.metadata)}</pre>
-            </div>
-            <div className="detail-block">
-              <div className="eyebrow">Attempt Chain</div>
-              <div className="attempt-stack">
-                {selected.attempts.map((attempt) => (
-                  <div className="attempt-card" key={attempt.id}>
-                    <div className="attempt-top">
-                      <strong>
-                        {attempt.attemptNo}. {attempt.provider}
-                      </strong>
-                      <span className={`status-pill ${statusTone(attempt.status)}`}>
-                        {attempt.status}
-                      </span>
-                    </div>
-                    <div className="attempt-meta">
-                      <span className="mono">{attempt.keyFingerprint ?? "-"}</span>
-                      <span>{attempt.providerBaseUrl ?? "-"}</span>
-                      <span>{formatDuration(attempt.durationMs)}</span>
-                    </div>
-                    <div className="supporting compact">
-                      {attempt.errorType ? `${attempt.errorType}: ` : ""}
-                      {attempt.errorSummary ?? "-"}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </>
-        ) : (
-          <p className="warning-banner">No activity matches the current filters.</p>
-        )}
-      </article>
+      <RequestDetails activity={selected} />
     </section>
   );
 }

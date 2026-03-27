@@ -55,6 +55,12 @@ function applyMigrations(db: DatabaseSync): void {
   ensureColumn(
     db,
     "request_logs",
+    "messages_json",
+    "ALTER TABLE request_logs ADD COLUMN messages_json TEXT",
+  );
+  ensureColumn(
+    db,
+    "request_logs",
     "provider_order_json",
     "ALTER TABLE request_logs ADD COLUMN provider_order_json TEXT NOT NULL DEFAULT '[]'",
   );

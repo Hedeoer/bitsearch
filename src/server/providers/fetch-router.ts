@@ -148,6 +148,7 @@ export async function runWithKeyPool<TInput, TResult>(
           errorSummary: null,
           inputJson: input as Record<string, unknown>,
           resultPreview: previewResult(result),
+          messages: null,
           providerOrder,
           metadata: {
             fetchMode: settings.fetchMode,
@@ -193,6 +194,7 @@ export async function runWithKeyPool<TInput, TResult>(
     errorSummary,
     inputJson: input as Record<string, unknown>,
     resultPreview: null,
+    messages: null,
     providerOrder,
     metadata: {
       fetchMode: settings.fetchMode,

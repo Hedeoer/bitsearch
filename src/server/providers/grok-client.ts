@@ -6,6 +6,11 @@ const SEARCH_PROMPT = [
   "At the end, include a source section with markdown links when available.",
 ].join(" ");
 
+export interface GrokMessage {
+  role: "system" | "user";
+  content: string;
+}
+
 function needsTimeContext(query: string): boolean {
   const keywords = [
     "current",
@@ -28,6 +33,22 @@ function buildUserPrompt(query: string, platform: string): string {
     : "";
   const platformContext = platform ? `Focus on: ${platform}\n` : "";
   return `${timeContext}${platformContext}${query}`;
+}
+
+export function buildSearchMessages(
+  query: string,
+  platform: string,
+): GrokMessage[] {
+  return [
+    {
+      role: "system",
+      content: SEARCH_PROMPT,
+    },
+    {
+      role: "user",
+      content: buildUserPrompt(query, platform),
+    },
+  ];
 }
 
 export interface GrokClientConfig {
@@ -53,8 +74,7 @@ export async function listGrokModels(config: GrokClientConfig): Promise<string[]
 
 export async function searchWithGrok(
   config: GrokClientConfig,
-  query: string,
-  platform: string,
+  messages: GrokMessage[],
 ): Promise<string> {
   return requestTextStream(`${config.apiUrl.replace(/\/$/, "")}/chat/completions`, {
     headers: {
@@ -63,16 +83,7 @@ export async function searchWithGrok(
     body: {
       model: config.model,
       stream: true,
-      messages: [
-        {
-          role: "system",
-          content: SEARCH_PROMPT,
-        },
-        {
-          role: "user",
-          content: buildUserPrompt(query, platform),
-        },
-      ],
+      messages,
     },
     timeoutMs: Math.max(config.timeoutMs, 120000),
   });

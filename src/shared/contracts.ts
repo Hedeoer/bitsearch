@@ -86,6 +86,7 @@ export interface RequestLogRecord {
   errorSummary: string | null;
   inputJson: Record<string, unknown> | null;
   resultPreview: string | null;
+  messages: Array<{ role: string; content: string }> | null;
   providerOrder: RemoteProvider[];
   metadata: Record<string, unknown>;
   createdAt: string;

@@ -19,7 +19,11 @@ import {
   saveSystemSetting,
 } from "../repos/settings-repo.js";
 import { splitAnswerAndSources, mergeSources } from "../lib/source-utils.js";
-import { listGrokModels, searchWithGrok } from "../providers/grok-client.js";
+import {
+  buildSearchMessages,
+  listGrokModels,
+  searchWithGrok,
+} from "../providers/grok-client.js";
 import {
   tavilyExtract,
   tavilyMap,
@@ -54,6 +58,7 @@ function logSearchRequest(
     errorSummary?: string | null;
     inputJson?: Record<string, unknown>;
     resultPreview?: string | null;
+    messages?: Array<{ role: string; content: string }> | null;
     metadata?: Record<string, unknown>;
   },
 ): void {
@@ -71,6 +76,7 @@ function logSearchRequest(
     errorSummary: payload.errorSummary ?? null,
     inputJson: payload.inputJson ?? null,
     resultPreview: payload.resultPreview ?? null,
+    messages: payload.messages ?? null,
     providerOrder: settings.providerPriority,
     metadata: payload.metadata ?? {},
   });
@@ -255,8 +261,9 @@ export function createMcpServer(context: AppContext): McpServer {
           }
         }
 
+        const messages = buildSearchMessages(query, platform);
         const [answerText, extraSources] = await Promise.all([
-          searchWithGrok(grokConfig, query, platform),
+          searchWithGrok(grokConfig, messages),
           getExtraSources(context, query, extra_sources),
         ]);
         const { answer, sources } = splitAnswerAndSources(answerText);
@@ -268,6 +275,7 @@ export function createMcpServer(context: AppContext): McpServer {
           startedAt,
           inputJson: { query, platform, model, extra_sources },
           resultPreview: answer.slice(0, 280),
+          messages,
           metadata: {
             sourcesCount: mergedSources.length,
             extraSourcesRequested: extra_sources,
@@ -287,6 +295,7 @@ export function createMcpServer(context: AppContext): McpServer {
           startedAt,
           errorSummary: message,
           inputJson: { query, platform, model, extra_sources },
+          messages: buildSearchMessages(query, platform),
         });
         return toolJsonResult({
           session_id: sessionId,
