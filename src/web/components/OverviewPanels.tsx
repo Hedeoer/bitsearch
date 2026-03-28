@@ -1,6 +1,19 @@
 import type { Dispatch, SetStateAction } from "react";
+import {
+  Activity,
+  CheckCircle,
+  XCircle,
+  Server,
+  Zap,
+  Save,
+  ToggleLeft,
+  ToggleRight,
+  AlertTriangle,
+  Settings,
+} from "lucide-react";
 import type {
   DashboardSummary,
+  KeyPoolProvider,
   ProviderConfigRecord,
   SystemSettings,
 } from "@shared/contracts";
@@ -28,9 +41,9 @@ type ProviderGridProps = {
 };
 
 const METRICS = [
-  { key: "totalRequests", label: "Total Requests" },
-  { key: "successCount", label: "Successful Calls" },
-  { key: "failedCount", label: "Failed Calls" },
+  { key: "totalRequests", label: "Total Requests", icon: Activity, accent: "primary" },
+  { key: "successCount", label: "Successful", icon: CheckCircle, accent: "success" },
+  { key: "failedCount", label: "Failed", icon: XCircle, accent: "danger" },
 ] as const;
 
 function renderMetricValue(value: number | undefined, loading: boolean) {
@@ -40,45 +53,39 @@ function renderMetricValue(value: number | undefined, loading: boolean) {
   return value ?? 0;
 }
 
-function ProviderSkeletonCard({ index }: { index: number }) {
-  return (
-    <article key={index} className="surface-card provider-card interactive-card">
-      <LoadingOverlay label="Loading provider" />
-      <div className="section-heading compact">
-        <div>
-          <div className="eyebrow">Provider</div>
-          <h3>Loading...</h3>
-        </div>
-      </div>
-    </article>
-  );
-}
-
 export function OverviewPanel(props: OverviewProps) {
   return (
-    <article className="surface-card" id="overview">
+    <article className="surface-card">
       {props.loading ? <LoadingOverlay label="Refreshing overview" /> : null}
       <div className="section-heading">
         <div>
-          <div className="eyebrow">Overview</div>
+          <div className="eyebrow">Dashboard</div>
           <h3>Service Pulse</h3>
         </div>
       </div>
       <div className="metric-grid">
         {METRICS.map((item) => (
-          <div key={item.key} className="metric-card">
-            <span>{item.label}</span>
-            <strong>{renderMetricValue(props.dashboard?.[item.key], props.loading)}</strong>
+          <div key={item.key} className={`metric-card metric-card--${item.accent}`}>
+            <div className="metric-icon">
+              <item.icon size={16} />
+            </div>
+            <strong className="metric-value">
+              {renderMetricValue(props.dashboard?.[item.key], props.loading)}
+            </strong>
+            <span className="metric-label">{item.label}</span>
           </div>
         ))}
       </div>
-      <div className="chip-row">
-        {(props.dashboard?.providerErrors ?? []).map((item) => (
-          <span key={item.provider} className="chip warning-chip">
-            {item.provider}: {item.count} errors
-          </span>
-        ))}
-      </div>
+      {(props.dashboard?.providerErrors ?? []).length > 0 && (
+        <div className="chip-row" style={{ marginTop: "0.75rem" }}>
+          {(props.dashboard?.providerErrors ?? []).map((item) => (
+            <span key={item.provider} className="chip warning-chip">
+              <AlertTriangle size={11} />
+              {item.provider}: {item.count} errors
+            </span>
+          ))}
+        </div>
+      )}
     </article>
   );
 }
@@ -92,6 +99,7 @@ export function StrategyPanel(props: StrategyProps) {
           <div className="eyebrow">Routing</div>
           <h3>Global Strategy</h3>
         </div>
+        <Settings size={16} className="section-icon" />
       </div>
       <label className="field">
         <span>Fetch / Map Mode</span>
@@ -112,7 +120,7 @@ export function StrategyPanel(props: StrategyProps) {
       </label>
       <label className="field">
         <span>Default Grok Model</span>
-        <input
+        <select
           disabled={props.loading}
           value={props.system.defaultGrokModel}
           onChange={(event) =>
@@ -121,7 +129,14 @@ export function StrategyPanel(props: StrategyProps) {
               defaultGrokModel: event.target.value,
             }))
           }
-        />
+        >
+          <option value="grok-4-fast">grok-4-fast</option>
+          <option value="grok-4">grok-4</option>
+          <option value="grok-3">grok-3</option>
+          <option value="grok-3-fast">grok-3-fast</option>
+          <option value="grok-3-mini">grok-3-mini</option>
+          <option value="grok-3-mini-fast">grok-3-mini-fast</option>
+        </select>
       </label>
       <div className="split-fields">
         <label className="field">
@@ -130,8 +145,8 @@ export function StrategyPanel(props: StrategyProps) {
             disabled={props.loading}
             value={props.system.providerPriority[0]}
             onChange={(event) => {
-              const first = event.target.value as "tavily" | "firecrawl";
-              const second = first === "tavily" ? "firecrawl" : "tavily";
+              const first = event.target.value as KeyPoolProvider;
+              const second: KeyPoolProvider = first === "tavily" ? "firecrawl" : "tavily";
               props.setSystem((current) => ({
                 ...current,
                 providerPriority: [first, second],
@@ -172,16 +187,33 @@ export function StrategyPanel(props: StrategyProps) {
                 ...current,
                 allowedOrigins: event.target.value
                   .split(",")
-                  .map((item) => item.trim())
+                  .map((s) => s.trim())
                   .filter(Boolean),
               }))
             }
           />
         </label>
       </div>
-      <button className="primary-button" disabled={props.loading} onClick={props.onSave}>
-        Save Strategy
-      </button>
+      <div className="action-row">
+        <button className="primary-button" disabled={props.loading} onClick={props.onSave}>
+          <Save size={14} />
+          Save Strategy
+        </button>
+      </div>
+    </article>
+  );
+}
+
+function ProviderSkeletonCard({ index }: { index: number }) {
+  return (
+    <article key={index} className="surface-card provider-card">
+      <LoadingOverlay label="Loading provider" />
+      <div className="section-heading compact">
+        <div>
+          <div className="eyebrow">Provider</div>
+          <h3>Loading...</h3>
+        </div>
+      </div>
     </article>
   );
 }
@@ -189,122 +221,152 @@ export function StrategyPanel(props: StrategyProps) {
 export function ProviderGrid(props: ProviderGridProps) {
   if (props.loading && props.providers.length === 0) {
     return (
-      <section className="provider-grid" id="providers">
-        {[0, 1, 2].map((index) => (
-          <ProviderSkeletonCard key={index} index={index} />
-        ))}
+      <section className="provider-grid">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">Integrations</div>
+            <h3>Search Providers</h3>
+          </div>
+        </div>
+        <div className="provider-cards">
+          <ProviderSkeletonCard index={0} />
+          <ProviderSkeletonCard index={1} />
+          <ProviderSkeletonCard index={2} />
+        </div>
       </section>
     );
   }
+
   return (
-    <section className="provider-grid" id="providers">
-      {props.providers.map((provider) => {
-        const draft = props.drafts[provider.provider];
-        if (!draft) {
-          return null;
-        }
-        return (
-          <article key={provider.provider} className="surface-card provider-card interactive-card">
-            {props.loading ? <LoadingOverlay label={`Refreshing ${provider.provider}`} /> : null}
-            <div className="section-heading compact">
-              <div>
-                <div className="eyebrow">Provider</div>
-                <h3>{provider.provider}</h3>
+    <section className="provider-grid">
+      <div className="section-heading">
+        <div>
+          <div className="eyebrow">Integrations</div>
+          <h3>Search Providers</h3>
+        </div>
+        <Server size={16} className="section-icon" />
+      </div>
+      <div className="provider-cards">
+        {props.providers.map((provider) => {
+          const draft = props.drafts[provider.provider] ?? {
+            enabled: provider.enabled,
+            baseUrl: provider.baseUrl,
+            timeoutMs: provider.timeoutMs,
+            apiKey: "",
+          };
+          return (
+            <article key={provider.provider} className="surface-card provider-card">
+              {props.loading ? <LoadingOverlay label="Refreshing" /> : null}
+              <div className="section-heading compact">
+                <div>
+                  <div className="eyebrow">Provider</div>
+                  <h3>{provider.provider}</h3>
+                </div>
+                <div className="provider-meta">
+                  <span
+                    className={`chip ${
+                      provider.enabled ? "success-chip" : "neutral-chip"
+                    }`}
+                  >
+                    {provider.enabled ? (
+                      <ToggleRight size={12} />
+                    ) : (
+                      <ToggleLeft size={12} />
+                    )}
+                    {provider.enabled ? "Active" : "Disabled"}
+                  </span>
+                  <span className="chip neutral-chip">
+                    <Zap size={11} />
+                    {provider.keyCount} keys
+                  </span>
+                </div>
               </div>
-              <span className={`chip ${draft.enabled ? "positive-chip" : "neutral-chip"}`}>
-                {draft.enabled ? "enabled" : "disabled"}
-              </span>
-            </div>
-            <p className="supporting">
-              {provider.provider === "grok"
-                ? provider.hasApiKey
-                  ? "Grok API key stored and ready."
-                  : "Grok API key missing."
-                : `Key pool count: ${provider.keyCount}`}
-            </p>
-            {provider.provider !== "grok" && provider.enabled && provider.keyCount === 0 ? (
-              <p className="warning-banner">Enabled but no provider keys are loaded.</p>
-            ) : null}
-            <label className="checkbox-row">
-              <input
-                disabled={props.loading}
-                type="checkbox"
-                checked={draft.enabled}
-                onChange={(event) =>
-                  props.setDrafts((current) => ({
-                    ...current,
-                    [provider.provider]: {
-                      ...current[provider.provider],
-                      enabled: event.target.checked,
-                    },
-                  }))
-                }
-              />
-              <span>Enabled</span>
-            </label>
-            <label className="field">
-              <span>Base URL</span>
-              <input
-                disabled={props.loading}
-                value={draft.baseUrl}
-                onChange={(event) =>
-                  props.setDrafts((current) => ({
-                    ...current,
-                    [provider.provider]: {
-                      ...current[provider.provider],
-                      baseUrl: event.target.value,
-                    },
-                  }))
-                }
-              />
-            </label>
-            <label className="field">
-              <span>Timeout (ms)</span>
-              <input
-                disabled={props.loading}
-                type="number"
-                value={draft.timeoutMs}
-                onChange={(event) =>
-                  props.setDrafts((current) => ({
-                    ...current,
-                    [provider.provider]: {
-                      ...current[provider.provider],
-                      timeoutMs: Number(event.target.value || 30000),
-                    },
-                  }))
-                }
-              />
-            </label>
-            {provider.provider === "grok" ? (
               <label className="field">
-                <span>API Key</span>
-                <input
+                <span>Enabled</span>
+                <select
                   disabled={props.loading}
-                  type="password"
-                  placeholder={provider.hasApiKey ? "Stored. Fill only to replace." : "Enter API key"}
-                  value={draft.apiKey}
+                  value={String(draft.enabled)}
                   onChange={(event) =>
                     props.setDrafts((current) => ({
                       ...current,
                       [provider.provider]: {
                         ...current[provider.provider],
-                        apiKey: event.target.value,
+                        enabled: event.target.value === "true",
+                      },
+                    }))
+                  }
+                >
+                  <option value="true">Enabled</option>
+                  <option value="false">Disabled</option>
+                </select>
+              </label>
+              <label className="field">
+                <span>Base URL</span>
+                <input
+                  disabled={props.loading}
+                  value={draft.baseUrl}
+                  onChange={(event) =>
+                    props.setDrafts((current) => ({
+                      ...current,
+                      [provider.provider]: {
+                        ...current[provider.provider],
+                        baseUrl: event.target.value,
                       },
                     }))
                   }
                 />
               </label>
-            ) : null}
-            <button
-              className="secondary-button"
-              disabled={props.loading}
-              onClick={() => props.onSave(provider.provider)}
-            >
-              Save Provider
-            </button>
-          </article>
-        );
-      })}
+              <label className="field">
+                <span>Timeout (ms)</span>
+                <input
+                  disabled={props.loading}
+                  type="number"
+                  value={draft.timeoutMs}
+                  onChange={(event) =>
+                    props.setDrafts((current) => ({
+                      ...current,
+                      [provider.provider]: {
+                        ...current[provider.provider],
+                        timeoutMs: Number(event.target.value || 30000),
+                      },
+                    }))
+                  }
+                />
+              </label>
+              {provider.provider === "grok" ? (
+                <label className="field">
+                  <span>API Key</span>
+                  <input
+                    disabled={props.loading}
+                    type="password"
+                    placeholder={provider.hasApiKey ? "Stored. Fill only to replace." : "Enter API key"}
+                    value={draft.apiKey}
+                    onChange={(event) =>
+                      props.setDrafts((current) => ({
+                        ...current,
+                        [provider.provider]: {
+                          ...current[provider.provider],
+                          apiKey: event.target.value,
+                        },
+                      }))
+                    }
+                  />
+                </label>
+              ) : null}
+              <div className="action-row">
+                <button
+                  className="secondary-button"
+                  disabled={props.loading}
+                  onClick={() => props.onSave(provider.provider)}
+                >
+                  <Save size={13} />
+                  Save Provider
+                </button>
+              </div>
+            </article>
+          );
+        })}
+      </div>
     </section>
   );
 }

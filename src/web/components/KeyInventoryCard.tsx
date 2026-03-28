@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Eye, EyeOff, Copy, Trash2, FlaskConical, RefreshCw, Power } from "lucide-react";
 import type {
   FirecrawlHistoricalQuotaSnapshot,
   FirecrawlTeamQuotaSnapshot,
@@ -182,24 +183,24 @@ export function KeyInventoryCard(props: KeyCardProps) {
       </label>
       <div className="key-card-actions">
         <button className="secondary-button key-action-button" disabled={props.isRevealing} onClick={() => props.onToggleReveal(props.item.id)}>
-          {props.isRevealing ? <InlineSpinner label="Loading" /> : props.revealedValue ? "Hide" : "Show"}
+          {props.isRevealing ? <InlineSpinner label="Loading" /> : props.revealedValue ? <><EyeOff size={13} /> Hide</> : <><Eye size={13} /> Show</>}
         </button>
         <button className="secondary-button key-action-button" disabled={props.isCopying || props.isRevealing} onClick={() => props.onCopy(props.item.id)}>
-          {props.isCopying ? <InlineSpinner label="Copying" /> : "Copy"}
+          {props.isCopying ? <InlineSpinner label="Copying" /> : <><Copy size={13} /> Copy</>}
         </button>
         <button className="secondary-button key-action-button" disabled={props.isTesting} onClick={() => props.onTest([props.item.id])}>
-          {props.isTesting ? <InlineSpinner label="Testing" /> : "Test"}
+          {props.isTesting ? <InlineSpinner label="Testing" /> : <><FlaskConical size={13} /> Test</>}
         </button>
         <button className="secondary-button key-action-button" disabled={props.isSyncing} onClick={() => props.onSyncQuota([props.item.id])}>
-          {props.isSyncing ? <InlineSpinner label="Syncing" /> : "Sync"}
+          {props.isSyncing ? <InlineSpinner label="Syncing" /> : <><RefreshCw size={13} /> Sync</>}
         </button>
         <button className="secondary-button key-action-button" disabled={props.isTogglingEnabled} onClick={() => props.onToggleEnabled(props.item.id, !props.item.enabled)}>
           {props.isTogglingEnabled
             ? <InlineSpinner label="Updating" />
-            : props.item.enabled ? "Disable" : "Enable"}
+            : <><Power size={13} /> {props.item.enabled ? "Disable" : "Enable"}</>}
         </button>
         <button className="danger-button key-action-button" disabled={props.isDeleting} onClick={() => props.onDelete([props.item.id])}>
-          {props.isDeleting ? <InlineSpinner label="Deleting" /> : "Delete"}
+          {props.isDeleting ? <InlineSpinner label="Deleting" /> : <><Trash2 size={13} /> Delete</>}
         </button>
       </div>
     </article>

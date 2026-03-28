@@ -1,4 +1,5 @@
 import type { Dispatch, SetStateAction } from "react";
+import { Upload, Download, Key } from "lucide-react";
 import type { KeyPoolProvider, KeyPoolSummary } from "@shared/contracts";
 import { formatDateTime, formatNumber } from "../format";
 import { InlineSpinner, LoadingOverlay } from "./Feedback";
@@ -39,9 +40,12 @@ export function KeyPoolImportPanel(props: KeyPoolImportPanelProps) {
           <div className="eyebrow">Key Pools</div>
           <h3>Import Workspace</h3>
         </div>
-        <span className="chip neutral-chip">
-          {props.selectedProvider} · {props.summary?.totalKeys ?? 0} keys
-        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          <span className="chip neutral-chip">
+            {props.selectedProvider} · {props.summary?.totalKeys ?? 0} keys
+          </span>
+          <Key size={16} className="section-icon" />
+        </div>
       </div>
       <div className="key-side-metrics">
         <div className="metric-card">
@@ -90,13 +94,13 @@ export function KeyPoolImportPanel(props: KeyPoolImportPanelProps) {
           disabled={props.busy}
           onClick={props.onImport}
         >
-          {props.busy ? <InlineSpinner label="Importing" /> : "Import Text"}
+          {props.busy ? <InlineSpinner label="Importing" /> : <><Upload size={14} /> Import Text</>}
         </button>
         <a
           className="secondary-button link-button"
           href={`/api/admin/keys/export.csv?provider=${props.selectedProvider}`}
         >
-          Export CSV
+          <Download size={14} /> Export CSV
         </a>
       </div>
       <p className="supporting compact">

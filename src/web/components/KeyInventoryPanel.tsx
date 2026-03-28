@@ -11,6 +11,7 @@ import {
   KeyInventoryCard,
   renderFirecrawlQuota,
 } from "./KeyInventoryCard";
+import { Database, Trash2, RefreshCw, FlaskConical, Power, CheckSquare, Square } from "lucide-react";
 
 type KeyInventoryPanelProps = {
   provider: KeyPoolProvider;
@@ -120,9 +121,10 @@ export function KeyInventoryPanel(props: KeyInventoryPanelProps) {
           <div className="eyebrow">Inventory</div>
           <h3>{props.provider} Keys</h3>
         </div>
-        <span className="chip neutral-chip">
-          {props.selectedIds.length} selected
-        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          <span className="chip neutral-chip">{props.selectedIds.length} selected</span>
+          <Database size={16} className="section-icon" />
+        </div>
       </div>
       <SummaryCards loading={props.loading} summary={props.summary} />
       <div className="sticky-toolbar">
@@ -134,21 +136,21 @@ export function KeyInventoryPanel(props: KeyInventoryPanelProps) {
             </div>
             <div className="toolbar-actions">
               <button className="secondary-button" disabled={props.isBulkUpdating} onClick={props.onEnableSelected}>
-                {props.isBulkUpdating ? <InlineSpinner label="Updating" /> : "Enable"}
+                {props.isBulkUpdating ? <InlineSpinner label="Updating" /> : <><Power size={13} /> Enable</>}
               </button>
               <button className="secondary-button" disabled={props.isBulkUpdating} onClick={props.onDisableSelected}>
-                {props.isBulkUpdating ? <InlineSpinner label="Updating" /> : "Disable"}
+                {props.isBulkUpdating ? <InlineSpinner label="Updating" /> : <><Power size={13} /> Disable</>}
               </button>
               <span className="toolbar-separator" aria-hidden="true" />
               <button className="primary-button" disabled={props.isBatchTesting} onClick={props.onTestSelected}>
-                {props.isBatchTesting ? <InlineSpinner label="Testing" /> : "Test Selected"}
+                {props.isBatchTesting ? <InlineSpinner label="Testing" /> : <><FlaskConical size={13} /> Test Selected</>}
               </button>
               <button className="secondary-button" disabled={props.isBatchSyncing} onClick={props.onSyncSelected}>
-                {props.isBatchSyncing ? <InlineSpinner label="Syncing" /> : "Refresh Quota"}
+                {props.isBatchSyncing ? <InlineSpinner label="Syncing" /> : <><RefreshCw size={13} /> Refresh Quota</>}
               </button>
               <span className="toolbar-separator" aria-hidden="true" />
               <button className="danger-button" disabled={props.isBatchDeleting} onClick={props.onDeleteSelected}>
-                {props.isBatchDeleting ? <InlineSpinner label="Deleting" /> : "Delete Selected"}
+                {props.isBatchDeleting ? <InlineSpinner label="Deleting" /> : <><Trash2 size={13} /> Delete Selected</>}
               </button>
               <button className="secondary-button" onClick={props.onSelectAll}>
                 Select Visible

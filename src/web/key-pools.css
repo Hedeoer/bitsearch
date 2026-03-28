@@ -50,11 +50,16 @@
 }
 
 .key-summary-card {
-  min-height: 120px;
-  padding: 1.15rem 1.2rem;
-  border-radius: 22px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  min-height: 110px;
+  padding: 1.1rem 1.2rem;
+  border-radius: 16px;
+  background: rgba(139, 92, 246, 0.06);
+  border: 1px solid rgba(139, 92, 246, 0.15);
+  transition: border-color 150ms ease;
+}
+
+.key-summary-card:hover {
+  border-color: rgba(139, 92, 246, 0.3);
 }
 
 .key-summary-card span {
@@ -68,6 +73,7 @@
   margin-top: 0.7rem;
   font-size: 1.25rem;
   line-height: 1.35;
+  color: var(--primary);
 }
 
 .key-summary-note {
@@ -77,14 +83,14 @@
 
 .sticky-toolbar {
   position: sticky;
-  top: 1rem;
+  top: calc(var(--nav-h, 56px) + 0.5rem);
   z-index: 10;
   display: grid;
   gap: 1.25rem;
   padding: 1.25rem;
   margin: 0 -1.25rem;
-  background: rgba(22, 28, 36, 0.95);
-  backdrop-filter: blur(12px);
+  background: rgba(10, 8, 30, 0.95);
+  backdrop-filter: blur(16px);
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
 }
@@ -98,9 +104,9 @@
 .inventory-block,
 .inventory-filters {
   padding: 1rem 1.1rem;
-  border-radius: 20px;
+  border-radius: 14px;
   background: rgba(255, 255, 255, 0.025);
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .inventory-block {
@@ -113,11 +119,11 @@
 }
 
 .toolbar-actions {
-  gap: 0.75rem;
+  gap: 0.65rem;
 }
 
 .toolbar-actions > * {
-  flex: 1 1 140px;
+  flex: 1 1 130px;
 }
 
 .toolbar-separator {
@@ -129,12 +135,12 @@
 .selection-summary {
   display: inline-flex;
   align-items: center;
-  min-height: 48px;
-  padding: 0.85rem 1rem;
-  border-radius: 16px;
+  min-height: 44px;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
   color: var(--text);
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  background: rgba(139, 92, 246, 0.08);
+  border: 1px solid rgba(139, 92, 246, 0.2);
 }
 
 .inventory-filters {
@@ -156,18 +162,24 @@
 .key-card {
   display: grid;
   gap: 1rem;
-  border-radius: 26px;
+  border-radius: 20px;
   padding: 1.25rem;
-  background: linear-gradient(180deg, rgba(23, 31, 40, 0.96), rgba(13, 18, 24, 0.98));
-  border: 1px solid rgba(159, 178, 199, 0.12);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+  background: linear-gradient(135deg, rgba(20, 16, 50, 0.9), rgba(10, 8, 30, 0.95));
+  border: 1px solid rgba(139, 92, 246, 0.15);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.key-card:hover {
+  border-color: rgba(139, 92, 246, 0.3);
+  box-shadow: 0 8px 32px rgba(139, 92, 246, 0.12);
 }
 
 .key-card-selected {
-  border-color: rgba(0, 215, 243, 0.36);
+  border-color: rgba(139, 92, 246, 0.55);
   box-shadow:
-    inset 0 0 0 1px rgba(0, 215, 243, 0.16),
-    0 18px 40px rgba(0, 0, 0, 0.22);
+    inset 0 0 0 1px rgba(139, 92, 246, 0.2),
+    0 8px 32px rgba(139, 92, 246, 0.18);
 }
 
 .key-card-head,
@@ -188,11 +200,13 @@
 
 .key-card-value {
   padding: 1rem 1.05rem;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  background: rgba(139, 92, 246, 0.06);
+  border: 1px solid rgba(139, 92, 246, 0.15);
   word-break: break-all;
-  font-size: 1.1rem;
+  font-size: 0.9rem;
   line-height: 1.5;
+  font-family: "IBM Plex Mono", monospace;
 }
 
 .key-card-meta-grid,
@@ -207,18 +221,18 @@
 
 .key-meta-card,
 .key-stat-card {
-  min-height: 92px;
-  padding: 0.95rem 1rem;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.035);
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  min-height: 88px;
+  padding: 0.9rem 1rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .key-meta-card span,
 .key-stat-card span {
   display: block;
   color: var(--text-soft);
-  font-size: 0.8rem;
+  font-size: 0.78rem;
 }
 
 .key-meta-card strong,
@@ -239,19 +253,21 @@
 .key-card-error {
   margin: 0;
   padding: 0.9rem 1rem;
-  border-radius: 18px;
+  border-radius: 14px;
   color: var(--warning);
-  background: rgba(216, 170, 87, 0.12);
+  background: rgba(251, 191, 36, 0.08);
+  border: 1px solid rgba(251, 191, 36, 0.2);
 }
 
 .tag-chip {
   display: inline-flex;
   align-items: center;
   border-radius: 999px;
-  padding: 0.45rem 0.8rem;
+  padding: 0.4rem 0.75rem;
   color: var(--primary);
-  background: rgba(0, 215, 243, 0.12);
-  font-size: 0.8rem;
+  background: rgba(139, 92, 246, 0.12);
+  border: 1px solid rgba(139, 92, 246, 0.25);
+  font-size: 0.78rem;
 }
 
 .note-editor {
@@ -269,13 +285,14 @@
 
 .key-card-actions {
   display: grid;
-  gap: 0.75rem;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.65rem;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
 }
 
 .key-action-button {
   justify-content: center;
-  min-height: 44px;
+  min-height: 40px;
+  gap: 0.4rem;
 }
 
 @media (min-width: 1680px) {

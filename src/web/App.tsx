@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
 import type { SystemSettings } from "@shared/contracts";
 import { apiRequest, clearStoredAuthKey, setStoredAuthKey } from "./api";
-import { getErrorMessage } from "./format";
 import { LoginView } from "./LoginView";
-import { ConsoleSidebar, ShellHeader } from "./components/ConsoleChrome";
+import { ConsoleHeader } from "./components/ConsoleChrome";
 import { ToastViewport } from "./components/Feedback";
 import {
   OverviewPanel,
@@ -53,121 +52,89 @@ export function App() {
   const [authKey, setAuthKey] = useState("");
   const [loginMessage, setLoginMessage] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [workspaceRefreshNonce, setWorkspaceRefreshNonce] = useState(0);
   const toasts = useToastStore();
-
-  useEffect(() => {
-    void loadSession();
-  }, []);
-
-  useEffect(() => {
-    if (session?.loggedIn) {
-      void refreshAll();
-    }
-  }, [session?.loggedIn]);
-
-  async function loadSession() {
-    try {
-      const data = await apiRequest<SessionState>("/api/admin/session");
-      if (!data.loggedIn) {
-        setAuthKey("");
-      }
-      setSession(data);
-    } catch (error) {
-      setSession({ loggedIn: false });
-      setLoginMessage(getErrorMessage(error, "无法检查当前授权状态。"));
-    }
-  }
 
   async function refreshAll() {
     setIsRefreshing(true);
     try {
-      const [dashboardData, providerData, systemData, activityData] =
-      await Promise.all([
-        apiRequest<AppDataBundle["dashboard"]>("/api/admin/dashboard"),
-        apiRequest<AppDataBundle["providers"]>("/api/admin/providers"),
-        apiRequest<SystemSettings>("/api/admin/system"),
-        apiRequest<AppDataBundle["activity"]>("/api/admin/activity?limit=80"),
+      const [dashRes, provRes, sysRes, actRes] = await Promise.all([
+        apiRequest<AppDataBundle["dashboard"]>("GET", "/admin/dashboard"),
+        apiRequest<AppDataBundle["providers"]>("GET", "/admin/providers"),
+        apiRequest<SystemSettings>("GET", "/admin/system"),
+        apiRequest<AppDataBundle["activity"]>("GET", "/admin/activity"),
       ]);
-
-      setDashboard(dashboardData);
-      setProviders(providerData);
-      setProviderDrafts(createProviderDrafts(providerData));
-      setSystem(systemData);
-      setActivity(activityData);
-      setWorkspaceRefreshNonce((current) => current + 1);
-      setLoginMessage("");
-      return true;
-    } catch (error) {
-      if (error instanceof Error && error.message.includes("unauthorized")) {
-        clearStoredAuthKey();
-        setAuthKey("");
-      setSession({ loggedIn: false });
-      setLoginMessage("后台授权已失效，请重新输入授权密钥。");
-      return false;
-    }
-      enqueueToast("error", getErrorMessage(error, "刷新后台数据失败。"));
-      return false;
+      if (dashRes.ok) setDashboard(dashRes.data);
+      if (provRes.ok) {
+        setProviders(provRes.data);
+        setProviderDrafts(createProviderDrafts(provRes.data));
+      }
+      if (sysRes.ok) setSystem(sysRes.data);
+      if (actRes.ok) setActivity(actRes.data);
     } finally {
       setIsRefreshing(false);
     }
   }
 
+  async function checkSession() {
+    const res = await apiRequest<SessionState>("GET", "/admin/session");
+    if (res.ok && res.data.loggedIn) {
+      setSession(res.data);
+      void refreshAll();
+    }
+  }
+
+  useEffect(() => {
+    void checkSession();
+  }, []);
+
   async function login() {
-    try {
-      await apiRequest("/api/admin/login", {
-        method: "POST",
-        body: JSON.stringify({ authKey }),
-      });
+    setLoginMessage("");
+    const res = await apiRequest<SessionState>("POST", "/admin/login", {
+      authKey,
+    });
+    if (res.ok && res.data.loggedIn) {
       setStoredAuthKey(authKey);
-      setAuthKey("");
-      setLoginMessage("");
-      await loadSession();
-    } catch {
-      clearStoredAuthKey();
-      setLoginMessage("登录失败，请检查授权密钥。");
+      setSession(res.data);
+      void refreshAll();
+    } else {
+      setLoginMessage(res.ok ? "登录失败，请检查授权密钥。" : "登录失败，请检查授权密钥。");
     }
   }
 
-  function logout() {
+  async function logout() {
+    await apiRequest("POST", "/admin/logout");
     clearStoredAuthKey();
-    setAuthKey("");
-    setSession({ loggedIn: false });
-    setIsSidebarOpen(false);
-  }
-
-  async function saveProvider(provider: string) {
-    try {
-      await apiRequest(`/api/admin/providers/${provider}`, {
-        method: "PUT",
-        body: JSON.stringify(providerDrafts[provider]),
-      });
-      const refreshed = await refreshAll();
-      if (refreshed) {
-        enqueueToast("success", `Saved provider: ${provider}`);
-      }
-    } catch (error) {
-      enqueueToast("error", getErrorMessage(error, `Failed to save provider: ${provider}`));
-    }
+    setSession(null);
+    setDashboard(null);
+    setProviders([]);
+    setProviderDrafts({});
+    setActivity([]);
   }
 
   async function saveSystem() {
-    try {
-      await apiRequest("/api/admin/system", {
-        method: "PUT",
-        body: JSON.stringify(system),
-      });
-      const refreshed = await refreshAll();
-      if (refreshed) {
-        enqueueToast("success", "Saved system settings");
-      }
-    } catch (error) {
-      enqueueToast("error", getErrorMessage(error, "Failed to save system settings"));
+    const res = await apiRequest("PUT", "/admin/system", system);
+    if (res.ok) {
+      enqueueToast("success", "System settings saved.");
+      void refreshAll();
+    } else {
+      enqueueToast("error", res.message);
     }
   }
 
-  if (!session?.loggedIn) {
+  async function saveProvider(provider: string) {
+    const draft = providerDrafts[provider];
+    if (!draft) return;
+    const res = await apiRequest("PUT", `/admin/providers/${provider}`, draft);
+    if (res.ok) {
+      enqueueToast("success", `${provider} provider saved.`);
+      void refreshAll();
+    } else {
+      enqueueToast("error", res.message);
+    }
+  }
+
+  if (!session) {
     return (
       <LoginView
         authKey={authKey}
@@ -179,45 +146,54 @@ export function App() {
   }
 
   return (
-    <main className="console-shell">
-      <ConsoleSidebar
-        dashboard={dashboard}
-        isOpen={isSidebarOpen}
-        onClose={() => setIsSidebarOpen(false)}
-        providers={providers}
-        system={system}
+    <div className="console-shell">
+      <ConsoleHeader
+        isRefreshing={isRefreshing}
+        onOpenNavigation={() => {}}
+        session={session}
+        onRefresh={() => void refreshAll()}
+        onLogout={() => void logout()}
       />
-      <div className="console-main">
-        <ShellHeader
-          isRefreshing={isRefreshing}
-          onOpenNavigation={() => setIsSidebarOpen(true)}
-          session={session}
-          onRefresh={() => void refreshAll()}
-          onLogout={logout}
-        />
+      <main className="console-main">
         <ToastViewport items={toasts} onDismiss={dismissToast} />
-        <section className="overview-grid">
-          <OverviewPanel dashboard={dashboard} loading={isRefreshing} />
-          <StrategyPanel
+
+        <section id="overview" className="console-section">
+          <div className="overview-grid">
+            <div className="overview-grid-wide">
+              <OverviewPanel dashboard={dashboard} loading={isRefreshing} />
+            </div>
+            <div className="overview-grid-wide">
+              <StrategyPanel
+                loading={isRefreshing}
+                system={system}
+                setSystem={setSystem}
+                onSave={() => void saveSystem()}
+              />
+            </div>
+          </div>
+        </section>
+
+        <section id="providers" className="console-section">
+          <ProviderGrid
+            providers={providers}
             loading={isRefreshing}
-            system={system}
-            setSystem={setSystem}
-            onSave={() => void saveSystem()}
+            drafts={providerDrafts}
+            setDrafts={setProviderDrafts}
+            onSave={(provider) => void saveProvider(provider)}
           />
         </section>
-        <ProviderGrid
-          providers={providers}
-          loading={isRefreshing}
-          drafts={providerDrafts}
-          setDrafts={setProviderDrafts}
-          onSave={(provider) => void saveProvider(provider)}
-        />
-        <KeyPoolsWorkspace
-          onToast={(type, message) => enqueueToast(type, message)}
-          refreshNonce={workspaceRefreshNonce}
-        />
-        <ActivityHub activity={activity} loading={isRefreshing} />
-      </div>
-    </main>
+
+        <section id="keys" className="console-section">
+          <KeyPoolsWorkspace
+            onToast={(type, message) => enqueueToast(type, message)}
+            refreshNonce={workspaceRefreshNonce}
+          />
+        </section>
+
+        <section id="activity" className="console-section">
+          <ActivityHub activity={activity} loading={isRefreshing} />
+        </section>
+      </main>
+    </div>
   );
 }

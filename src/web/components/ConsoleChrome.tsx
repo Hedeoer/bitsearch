@@ -1,15 +1,18 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import {
+  LayoutDashboard,
+  Server,
+  KeyRound,
+  Activity,
+  RefreshCw,
+  LogOut,
+  Menu,
+  X,
+  Search,
+} from "lucide-react";
 import type { DashboardSummary, ProviderConfigRecord, SystemSettings } from "@shared/contracts";
 import { InlineSpinner } from "./Feedback";
 import type { SessionState } from "../types";
-
-type SidebarProps = {
-  dashboard: DashboardSummary | null;
-  isOpen: boolean;
-  onClose: () => void;
-  providers: ProviderConfigRecord[];
-  system: SystemSettings;
-};
 
 type HeaderProps = {
   isRefreshing: boolean;
@@ -19,104 +22,155 @@ type HeaderProps = {
   onLogout: () => void;
 };
 
-const SECTION_LINKS = [
-  { href: "#overview", label: "Overview" },
-  { href: "#providers", label: "Providers" },
-  { href: "#keys", label: "Key Pools" },
-  { href: "#activity", label: "Activity" },
+type SidebarProps = {
+  dashboard: DashboardSummary | null;
+  isOpen: boolean;
+  onClose: () => void;
+  providers: ProviderConfigRecord[];
+  system: SystemSettings;
+};
+
+const NAV_ITEMS = [
+  { href: "#overview", label: "Overview", icon: LayoutDashboard },
+  { href: "#providers", label: "Providers", icon: Server },
+  { href: "#keys", label: "Key Pools", icon: KeyRound },
+  { href: "#activity", label: "Activity", icon: Activity },
 ];
 
-export function ConsoleSidebar(props: SidebarProps) {
-  const [activeHash, setActiveHash] = useState(() => window.location.hash || "#overview");
+function useActiveHash() {
+  const [activeHash, setActiveHash] = useState(
+    () => window.location.hash || "#overview"
+  );
 
-  useEffect(() => {
-    const handleHashChange = () => {
-      setActiveHash(window.location.hash || "#overview");
-      props.onClose();
-    };
-    window.addEventListener("hashchange", handleHashChange);
-    return () => window.removeEventListener("hashchange", handleHashChange);
-  }, [props.onClose]);
+  // Update on hashchange
+  if (typeof window !== "undefined") {
+    window.onhashchange = () => setActiveHash(window.location.hash || "#overview");
+  }
 
-  const providerSummary = props.providers
-    .map((item) => `${item.provider}:${item.keyCount}`)
-    .join(" · ");
+  return activeHash;
+}
+
+export function ConsoleHeader(props: HeaderProps) {
+  const [navOpen, setNavOpen] = useState(false);
+  const activeHash = useActiveHash();
+
+  function handleNavClose() {
+    setNavOpen(false);
+  }
 
   return (
     <>
-      <button
-        aria-label="Close navigation"
-        className={`sidebar-backdrop ${props.isOpen ? "sidebar-backdrop-open" : ""}`}
-        type="button"
-        onClick={props.onClose}
-      />
-      <aside className={`console-sidebar ${props.isOpen ? "console-sidebar-open" : ""}`}>
-        <div className="sidebar-brand">
-          <div className="sidebar-mobile-row">
-            <div>
-              <div className="eyebrow">BitSearch</div>
-              <h1>Control Surface</h1>
-            </div>
-            <button className="secondary-button sidebar-close-button" type="button" onClick={props.onClose}>
-              Close
-            </button>
-          </div>
-          <p className="supporting">
-            Premium MCP operations console with live provider routing and request observability.
-          </p>
-        </div>
-        <nav className="sidebar-nav">
-          {SECTION_LINKS.map((item) => (
+      <header className="console-header">
+        {/* Brand */}
+        <a href="#overview" className="header-brand">
+          <span className="header-brand-icon">
+            <Search size={16} />
+          </span>
+          <h1>BitSearch</h1>
+        </a>
+
+        {/* Desktop nav */}
+        <nav className="header-nav" aria-label="Main navigation">
+          {NAV_ITEMS.map(({ href, label, icon: Icon }) => (
             <a
-              key={item.href}
-              href={item.href}
-              className={`nav-link ${activeHash === item.href ? "active" : ""}`}
-              onClick={props.onClose}
+              key={href}
+              href={href}
+              className={`nav-link${activeHash === href ? " active" : ""}`}
             >
-              {item.label}
+              <Icon size={14} />
+              {label}
             </a>
           ))}
         </nav>
-        <div className="sidebar-footer">
-          <section className="sidebar-panel">
-            <div className="panel-label">Current Mode</div>
-            <div className="panel-value">{props.system.fetchMode}</div>
-            <div className="panel-label">Provider Order</div>
-            <div className="panel-value mono">{props.system.providerPriority.join(" → ")}</div>
-          </section>
-          <section className="sidebar-panel">
-            <div className="panel-label">Key Pools</div>
-            <div className="panel-value mono">{providerSummary}</div>
-            <div className="panel-label">Requests</div>
-            <div className="panel-value">{props.dashboard?.totalRequests ?? 0}</div>
-          </section>
+
+        {/* Right actions */}
+        <div className="header-actions">
+          {props.isRefreshing ? (
+            <span className="header-status">
+              <InlineSpinner label="Refreshing" />
+            </span>
+          ) : (
+            <span className="header-status">
+              <span className="status-dot" aria-hidden="true" />
+              Live
+            </span>
+          )}
+          <button
+            type="button"
+            className="icon-button"
+            title="Refresh"
+            disabled={props.isRefreshing}
+            onClick={props.onRefresh}
+          >
+            <RefreshCw size={15} />
+          </button>
+          <button
+            type="button"
+            className="icon-button"
+            title="Sign out"
+            onClick={props.onLogout}
+          >
+            <LogOut size={15} />
+          </button>
+          <button
+            type="button"
+            className="nav-toggle-button"
+            aria-label="Open navigation"
+            onClick={() => setNavOpen(true)}
+          >
+            <Menu size={18} />
+          </button>
         </div>
-      </aside>
+      </header>
+
+      {/* Mobile drawer backdrop */}
+      {navOpen && (
+        <button
+          type="button"
+          aria-label="Close navigation"
+          className="sidebar-backdrop sidebar-backdrop-open"
+          onClick={handleNavClose}
+        />
+      )}
+
+      {/* Mobile nav drawer */}
+      <nav
+        className={`mobile-nav-drawer${navOpen ? " mobile-nav-open" : ""}`}
+        aria-label="Mobile navigation"
+      >
+        <div className="mobile-nav-header">
+          <a href="#overview" className="header-brand" onClick={handleNavClose}>
+            <span className="header-brand-icon">
+              <Search size={14} />
+            </span>
+            <h1>BitSearch</h1>
+          </a>
+          <button
+            type="button"
+            className="sidebar-close-button"
+            aria-label="Close navigation"
+            onClick={handleNavClose}
+          >
+            <X size={16} />
+          </button>
+        </div>
+        {NAV_ITEMS.map(({ href, label, icon: Icon }) => (
+          <a
+            key={href}
+            href={href}
+            className={`mobile-nav-link${activeHash === href ? " active" : ""}`}
+            onClick={handleNavClose}
+          >
+            <Icon size={16} />
+            {label}
+          </a>
+        ))}
+      </nav>
     </>
   );
 }
 
-export function ShellHeader(props: HeaderProps) {
-  return (
-    <header className="hero-panel">
-      <div>
-        <div className="eyebrow">Operations Center</div>
-        <h2>Unified Streamable HTTP MCP Console</h2>
-        <p className="supporting">
-          使用后台授权密钥访问控制台，对外端点为 <code>/mcp</code>。
-        </p>
-      </div>
-      <div className="action-row">
-        <button className="secondary-button nav-toggle-button" type="button" onClick={props.onOpenNavigation}>
-          Menu
-        </button>
-        <button className="secondary-button" type="button" onClick={props.onRefresh}>
-          {props.isRefreshing ? <InlineSpinner label="Refreshing" /> : "Refresh"}
-        </button>
-        <button className="secondary-button" type="button" onClick={props.onLogout}>
-          Logout
-        </button>
-      </div>
-    </header>
-  );
+// Legacy export alias kept for App.tsx compatibility
+export function ConsoleSidebar(props: SidebarProps) {
+  return null;
 }

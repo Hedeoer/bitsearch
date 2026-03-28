@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Activity, Search, Filter, Clock, CheckCircle2, XCircle } from "lucide-react";
 import type { RequestActivityRecord } from "@shared/contracts";
 import { formatDuration, statusTone } from "../format";
 import { EmptyState, LoadingOverlay } from "./Feedback";
@@ -108,7 +109,10 @@ export function ActivityHub(props: ActivityHubProps) {
             <div className="eyebrow">Activity</div>
             <h3>Request Feed</h3>
           </div>
-          <span className="chip neutral-chip">{filtered.length} visible</span>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <span className="chip neutral-chip">{filtered.length} visible</span>
+            <Activity size={16} className="section-icon" />
+          </div>
         </div>
         <div className="activity-filters">
           <input

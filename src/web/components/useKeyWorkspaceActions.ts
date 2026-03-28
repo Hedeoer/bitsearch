@@ -67,12 +67,10 @@ export function useKeyWorkspaceActions(config: ActionConfig) {
   async function fetchSecret(id: string) {
     updatePendingIds(setRevealingIds, [id], true);
     try {
-      const data = await apiRequest<{ secret: string }>("/api/admin/keys/reveal", {
-        method: "POST",
-        body: JSON.stringify({ id }),
-      });
-      config.setRevealedValues((current) => ({ ...current, [id]: data.secret }));
-      return data.secret;
+      const res = await apiRequest<{ secret: string }>("POST", "/admin/keys/reveal", { id });
+      if (!res.ok) throw new Error(res.message);
+      config.setRevealedValues((current) => ({ ...current, [id]: res.data.secret }));
+      return res.data.secret;
     } finally {
       updatePendingIds(setRevealingIds, [id], false);
     }
@@ -85,16 +83,14 @@ export function useKeyWorkspaceActions(config: ActionConfig) {
     }
     setIsImporting(true);
     try {
-      const result = await apiRequest<ActionResponse>("/api/admin/keys/import-text", {
-        method: "POST",
-        body: JSON.stringify({
-          provider: config.provider,
-          rawKeys: config.rawKeys,
-          tags: config.importTags,
-        }),
+      const res = await apiRequest<ActionResponse>("POST", "/admin/keys/import-text", {
+        provider: config.provider,
+        rawKeys: config.rawKeys,
+        tags: config.importTags,
       });
+      if (!res.ok) throw new Error(res.message);
       config.setRawKeys("");
-      config.onToast("success", summarizeAction("Import complete", result));
+      config.onToast("success", summarizeAction("Import complete", res.data));
       await config.refreshWorkspace();
     } catch (error) {
       config.onToast("error", getErrorMessage(error, "Key import failed"));
@@ -109,12 +105,14 @@ export function useKeyWorkspaceActions(config: ActionConfig) {
       config.onToast("warning", "There are no keys available to test");
       return;
     }
-    await runPendingAction(idsToRun, "Testing complete", setTestingIds, () =>
-      apiRequest<ActionResponse>("/api/admin/keys/test", {
-        method: "POST",
-        body: JSON.stringify({ provider: config.provider, ids: idsToRun }),
-      }),
-    );
+    await runPendingAction(idsToRun, "Testing complete", setTestingIds, async () => {
+      const res = await apiRequest<ActionResponse>("POST", "/admin/keys/test", {
+        provider: config.provider,
+        ids: idsToRun,
+      });
+      if (!res.ok) throw new Error(res.message);
+      return res.data;
+    });
   }
 
   async function syncQuota(ids: string[]) {
@@ -123,12 +121,14 @@ export function useKeyWorkspaceActions(config: ActionConfig) {
       config.onToast("warning", "There are no keys available to sync");
       return;
     }
-    await runPendingAction(idsToRun, "Quota sync complete", setSyncingIds, () =>
-      apiRequest<ActionResponse>("/api/admin/keys/quota-sync", {
-        method: "POST",
-        body: JSON.stringify({ provider: config.provider, ids: idsToRun }),
-      }),
-    );
+    await runPendingAction(idsToRun, "Quota sync complete", setSyncingIds, async () => {
+      const res = await apiRequest<ActionResponse>("POST", "/admin/keys/quota-sync", {
+        provider: config.provider,
+        ids: idsToRun,
+      });
+      if (!res.ok) throw new Error(res.message);
+      return res.data;
+    });
   }
 
   function deleteKeys(ids: string[], source: "batch" | "card") {
@@ -162,10 +162,11 @@ export function useKeyWorkspaceActions(config: ActionConfig) {
       confirmDelete.ids,
       "Delete complete",
       setDeletingIds,
-      () => apiRequest<ActionResponse>("/api/admin/keys", {
-        method: "DELETE",
-        body: JSON.stringify({ ids: confirmDelete.ids }),
-      }),
+      async () => {
+        const res = await apiRequest<ActionResponse>("DELETE", "/admin/keys", { ids: confirmDelete.ids });
+        if (!res.ok) throw new Error(res.message);
+        return res.data;
+      },
       true,
     );
     setIsBatchDeleting(false);
@@ -183,20 +184,20 @@ export function useKeyWorkspaceActions(config: ActionConfig) {
       idsToRun,
       enabled ? "Enable complete" : "Disable complete",
       setTogglingIds,
-      () => apiRequest<ActionResponse>("/api/admin/keys/bulk", {
-        method: "PATCH",
-        body: JSON.stringify({ ids: idsToRun, enabled }),
-      }),
+      async () => {
+        const res = await apiRequest<ActionResponse>("PATCH", "/admin/keys/bulk", { ids: idsToRun, enabled });
+        if (!res.ok) throw new Error(res.message);
+        return res.data;
+      },
     );
   }
 
   async function saveNote(id: string, note: string) {
-    await runPendingAction([id], "Note saved", setSavingNoteIds, () =>
-      apiRequest<ActionResponse>("/api/admin/keys/meta", {
-        method: "PATCH",
-        body: JSON.stringify({ id, note }),
-      }),
-    );
+    await runPendingAction([id], "Note saved", setSavingNoteIds, async () => {
+      const res = await apiRequest<ActionResponse>("PATCH", "/admin/keys/meta", { id, note });
+      if (!res.ok) throw new Error(res.message);
+      return res.data;
+    });
   }
 
   async function toggleReveal(id: string) {

@@ -43,12 +43,15 @@ export function useKeyWorkspace(refreshNonce: number, onToast: ToastHandler) {
     setLoading(true);
     try {
       const params = new URLSearchParams({ provider, status, query: deferredQuery, tag });
-      const [keyData, summaryData] = await Promise.all([
-        apiRequest<ProviderKeyRecord[]>(`/api/admin/keys?${params.toString()}`),
-        apiRequest<KeyPoolSummary>(`/api/admin/keys/summary?provider=${provider}`),
+      const [keyRes, summaryRes] = await Promise.all([
+        apiRequest<ProviderKeyRecord[]>("GET", `/admin/keys?${params.toString()}`),
+        apiRequest<KeyPoolSummary>("GET", `/admin/keys/summary?provider=${provider}`),
       ]);
-      setKeys(keyData);
-      setSummary(summaryData);
+      if (keyRes.ok) setKeys(keyRes.data);
+      if (summaryRes.ok) setSummary(summaryRes.data);
+      if (!keyRes.ok || !summaryRes.ok) {
+        onToast("error", "Failed to refresh the key workspace");
+      }
     } catch (error) {
       onToast("error", getErrorMessage(error, "Failed to refresh the key workspace"));
     } finally {
