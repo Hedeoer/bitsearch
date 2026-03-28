@@ -38,8 +38,8 @@ function OverviewTab({ activity }: { activity: RequestActivityRecord }) {
         <div className="detail-card"><span>Duration</span><strong>{formatDuration(activity.request.durationMs)}</strong></div>
       </div>
       <div className="detail-block"><div className="eyebrow">Provider Order</div><div className="mono">{activity.request.providerOrder.join(" → ") || "-"}</div></div>
-      <div className="detail-block"><div className="eyebrow">Error Summary</div><pre>{activity.request.errorSummary ?? "-"}</pre></div>
-      <div className="detail-block"><div className="eyebrow">Metadata</div><pre>{prettyJson(activity.request.metadata)}</pre></div>
+      <div className="detail-block"><div className="eyebrow">Error Summary</div><pre className="message-content">{activity.request.errorSummary ?? "-"}</pre></div>
+      <div className="detail-block"><div className="eyebrow">Metadata</div><pre className="message-content">{prettyJson(activity.request.metadata)}</pre></div>
     </>
   );
 }
@@ -80,7 +80,7 @@ function MessagesTab({ activity }: { activity: RequestActivityRecord }) {
       {activity.request.messages.map((message, index) => (
         <div className="message-card" key={`${activity.request.id}-${index}`}>
           <div className="message-role">{message.role}</div>
-          <pre>{message.content}</pre>
+          <pre className="message-content">{message.content}</pre>
         </div>
       ))}
     </div>
@@ -133,8 +133,8 @@ export function RequestDetails(props: RequestDetailsProps) {
       </div>
       <div className="detail-body">
         {activeTab === "overview" ? <OverviewTab activity={props.activity} /> : null}
-        {activeTab === "input" ? <div className="detail-block"><pre>{prettyJson(request.inputJson)}</pre></div> : null}
-        {activeTab === "output" ? <div className="detail-block"><pre>{request.resultPreview ?? "-"}</pre></div> : null}
+        {activeTab === "input" ? <div className="detail-block"><pre className="message-content">{prettyJson(request.inputJson)}</pre></div> : null}
+        {activeTab === "output" ? <div className="detail-block"><pre className="message-content">{request.resultPreview ?? "-"}</pre></div> : null}
         {activeTab === "attempts" ? <AttemptsTab activity={props.activity} /> : null}
         {activeTab === "messages" ? <MessagesTab activity={props.activity} /> : null}
       </div>

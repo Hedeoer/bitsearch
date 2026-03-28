@@ -2,7 +2,7 @@
   position: fixed;
   right: 1.25rem;
   bottom: 1.25rem;
-  z-index: 30;
+  z-index: 40;
   display: grid;
   gap: 0.75rem;
   width: min(360px, calc(100vw - 2.5rem));
@@ -11,49 +11,39 @@
 .toast-card,
 .dialog-card,
 .empty-state {
+  border-radius: 18px;
   border: 1px solid var(--border);
-  border-radius: 16px;
-  background: linear-gradient(180deg, rgba(30, 27, 75, 0.96), rgba(15, 15, 40, 0.98));
-  box-shadow: var(--shadow);
+  background: linear-gradient(180deg, rgba(28, 32, 38, 0.96), rgba(16, 20, 26, 0.96));
+  box-shadow: var(--shadow-md);
+  backdrop-filter: blur(18px);
 }
 
 .toast-card {
   display: flex;
-  align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
   padding: 1rem 1.1rem;
 }
 
-.toast-card p {
+.toast-card p,
+.empty-state p {
   margin: 0;
 }
 
-.toast-success {
-  border-color: rgba(52, 211, 153, 0.4);
-}
-
-.toast-error {
-  border-color: rgba(248, 113, 113, 0.4);
-}
-
-.toast-warning {
-  border-color: rgba(251, 191, 36, 0.4);
-}
-
-.toast-info {
-  border-color: rgba(139, 92, 246, 0.4);
-}
+.toast-success { border-color: rgba(64, 229, 108, 0.22); }
+.toast-error { border-color: rgba(255, 142, 125, 0.22); }
+.toast-warning { border-color: rgba(216, 170, 87, 0.22); }
+.toast-info { border-color: rgba(0, 229, 255, 0.22); }
 
 .dialog-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 40;
+  z-index: 45;
   display: grid;
   place-items: center;
   padding: 1.5rem;
-  background: rgba(5, 5, 20, 0.8);
-  backdrop-filter: blur(8px);
+  background: rgba(10, 14, 20, 0.74);
+  backdrop-filter: blur(10px);
 }
 
 .dialog-card {
@@ -61,56 +51,50 @@
   padding: 1.35rem;
 }
 
-.dialog-card h3 {
-  margin: 0.4rem 0 0;
+.dialog-card h3,
+.empty-state h4 {
+  margin: 0.45rem 0 0;
 }
 
 .dialog-actions {
   display: flex;
   justify-content: flex-end;
   gap: 0.75rem;
-  margin-top: 1.25rem;
   flex-wrap: wrap;
+  margin-top: 1.25rem;
 }
 
 .loading-overlay {
   position: absolute;
   inset: 0;
-  z-index: 1;
+  z-index: 2;
   display: grid;
   align-content: start;
   gap: 0.7rem;
-  padding: 1.35rem;
-  background: linear-gradient(180deg, rgba(5, 5, 20, 0.5), rgba(5, 5, 20, 0.28));
+  padding: 1.3rem;
+  background: linear-gradient(180deg, rgba(10, 14, 20, 0.5), rgba(10, 14, 20, 0.24));
   pointer-events: none;
 }
 
 .loading-bar {
   width: 100%;
-  height: 0.85rem;
+  height: 0.82rem;
   border-radius: 999px;
-  background: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0.04),
-    rgba(139, 92, 246, 0.2),
-    rgba(255, 255, 255, 0.04)
-  );
+  background: linear-gradient(90deg, rgba(223, 226, 235, 0.04), rgba(0, 229, 255, 0.18), rgba(223, 226, 235, 0.04));
   background-size: 200% 100%;
-  animation: shimmer 1.6s infinite linear;
+  animation: shimmer 1.6s linear infinite;
 }
 
-@keyframes shimmer {
-  from { background-position: 200% 0; }
-  to { background-position: -200% 0; }
+.loading-bar.short {
+  width: 72%;
 }
 
 .empty-state {
-  padding: 2.5rem 1.5rem;
+  display: grid;
+  gap: 0.75rem;
+  justify-items: center;
+  padding: 2.4rem 1.5rem;
   text-align: center;
-}
-
-.empty-state h4 {
-  margin: 0.5rem 0 0.25rem;
 }
 
 .inline-spinner-wrap {
@@ -120,26 +104,10 @@
 }
 
 .inline-spinner {
-  display: inline-block;
-  width: 0.85em;
-  height: 0.85em;
+  width: 0.9em;
+  height: 0.9em;
   border-radius: 50%;
-  border: 2px solid rgba(139, 92, 246, 0.25);
+  border: 2px solid rgba(0, 229, 255, 0.18);
   border-top-color: var(--primary);
   animation: spin 0.7s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.skeleton-text {
-  display: inline-block;
-  width: 4rem;
-  height: 1em;
-  border-radius: 6px;
-  background: linear-gradient(90deg, rgba(255,255,255,0.06), rgba(139,92,246,0.15), rgba(255,255,255,0.06));
-  background-size: 200% 100%;
-  animation: shimmer 1.6s infinite linear;
-  vertical-align: middle;
 }

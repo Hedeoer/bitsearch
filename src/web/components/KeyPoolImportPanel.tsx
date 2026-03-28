@@ -20,7 +20,7 @@ type KeyPoolImportPanelProps = {
 
 function renderQuotaHint(summary: KeyPoolSummary | null): string {
   if (!summary) {
-    return "加载中";
+    return "Loading";
   }
   if (summary.provider === "tavily" && summary.tavily) {
     return `${formatNumber(summary.tavily.totalKeyUsage)} / ${formatNumber(summary.tavily.totalKeyLimit)} credits`;
@@ -28,7 +28,7 @@ function renderQuotaHint(summary: KeyPoolSummary | null): string {
   if (summary.provider === "firecrawl" && summary.firecrawl?.team) {
     return renderFirecrawlQuota(summary.firecrawl.team, null);
   }
-  return "尚未同步额度";
+  return "Quota not synced yet";
 }
 
 export function KeyPoolImportPanel(props: KeyPoolImportPanelProps) {
@@ -49,14 +49,18 @@ export function KeyPoolImportPanel(props: KeyPoolImportPanelProps) {
       </div>
       <div className="key-side-metrics">
         <div className="metric-card">
-          <span>健康密钥</span>
+          <span>Healthy Keys</span>
           <strong>{formatNumber(props.summary?.healthyKeys ?? 0)}</strong>
-          <p className="supporting compact">已通过最近一次测试或额度同步的 key 数量</p>
+          <p className="supporting compact">
+            Keys that passed the latest test or quota sync.
+          </p>
         </div>
         <div className="metric-card">
-          <span>额度概览</span>
+          <span>Quota Snapshot</span>
           <strong>{renderQuotaHint(props.summary)}</strong>
-          <p className="supporting compact">按当前 Provider 的汇总口径展示最近同步结果</p>
+          <p className="supporting compact">
+            Most recent aggregated quota view for the active provider.
+          </p>
         </div>
       </div>
       <label className="field">
@@ -104,7 +108,7 @@ export function KeyPoolImportPanel(props: KeyPoolImportPanelProps) {
         </a>
       </div>
       <p className="supporting compact">
-        最近额度同步: {formatDateTime(props.summary?.quotaSyncedAt ?? null)}
+        Last quota sync: {formatDateTime(props.summary?.quotaSyncedAt ?? null)}
       </p>
     </article>
   );

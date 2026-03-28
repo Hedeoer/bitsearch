@@ -26,15 +26,18 @@
   margin-top: 1.2rem;
 }
 
-.key-side-metrics {
+.key-side-metrics,
+.key-summary-grid,
+.inventory-toolbar,
+.inventory-filters,
+.key-card-meta-grid,
+.key-stat-grid {
   display: grid;
   gap: 1rem;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.key-side-metrics .metric-card strong,
-.key-summary-card strong {
-  font-size: 1.15rem;
+.key-side-metrics {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .key-inventory-panel {
@@ -43,37 +46,43 @@
 }
 
 .key-summary-grid {
-  display: grid;
-  gap: 1rem;
-  position: relative;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  position: relative;
+}
+
+.key-summary-card,
+.inventory-block,
+.inventory-filters,
+.key-meta-card,
+.key-stat-card {
+  border-radius: 16px;
+  background: rgba(223, 226, 235, 0.03);
+  border: 1px solid rgba(59, 73, 76, 0.34);
 }
 
 .key-summary-card {
-  min-height: 110px;
-  padding: 1.1rem 1.2rem;
-  border-radius: 16px;
-  background: rgba(139, 92, 246, 0.06);
-  border: 1px solid rgba(139, 92, 246, 0.15);
-  transition: border-color 150ms ease;
+  min-height: 112px;
+  padding: 1rem 1.1rem;
 }
 
-.key-summary-card:hover {
-  border-color: rgba(139, 92, 246, 0.3);
-}
-
-.key-summary-card span {
+.key-summary-card span,
+.key-meta-card span,
+.key-stat-card span {
   display: block;
   color: var(--text-soft);
-  font-size: 0.8rem;
+  font-size: 0.78rem;
+}
+
+.key-summary-card strong,
+.key-meta-card strong,
+.key-stat-card strong {
+  display: block;
+  margin-top: 0.55rem;
+  line-height: 1.45;
 }
 
 .key-summary-card strong {
-  display: block;
-  margin-top: 0.7rem;
-  font-size: 1.25rem;
-  line-height: 1.35;
-  color: var(--primary);
+  color: var(--primary-strong);
 }
 
 .key-summary-note {
@@ -83,38 +92,33 @@
 
 .sticky-toolbar {
   position: sticky;
-  top: calc(var(--nav-h, 56px) + 0.5rem);
+  top: calc(var(--topbar-h) + 0.5rem);
   z-index: 10;
   display: grid;
-  gap: 1.25rem;
-  padding: 1.25rem;
+  gap: 1rem;
+  padding: 1.15rem;
   margin: 0 -1.25rem;
-  background: rgba(10, 8, 30, 0.95);
-  backdrop-filter: blur(16px);
+  background: linear-gradient(180deg, rgba(16, 20, 26, 0.95), rgba(16, 20, 26, 0.88));
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(18px);
 }
 
 .inventory-toolbar {
-  display: grid;
-  gap: 1rem;
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .inventory-block,
 .inventory-filters {
   padding: 1rem 1.1rem;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.025);
-  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .inventory-block {
-  display: grid;
   gap: 0.85rem;
 }
 
-.inventory-block-wide {
+.inventory-block-wide,
+.key-stat-wide {
   grid-column: 1 / -1;
 }
 
@@ -129,7 +133,7 @@
 .toolbar-separator {
   flex: 0 0 1px;
   min-height: 42px;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(132, 147, 150, 0.2);
 }
 
 .selection-summary {
@@ -137,15 +141,13 @@
   align-items: center;
   min-height: 44px;
   padding: 0.75rem 1rem;
-  border-radius: 12px;
-  color: var(--text);
-  background: rgba(139, 92, 246, 0.08);
-  border: 1px solid rgba(139, 92, 246, 0.2);
+  border-radius: 14px;
+  color: var(--primary-strong);
+  background: rgba(0, 229, 255, 0.08);
+  border: 1px solid rgba(0, 229, 255, 0.16);
 }
 
 .inventory-filters {
-  display: grid;
-  gap: 1rem;
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
@@ -162,24 +164,20 @@
 .key-card {
   display: grid;
   gap: 1rem;
-  border-radius: 20px;
-  padding: 1.25rem;
-  background: linear-gradient(135deg, rgba(20, 16, 50, 0.9), rgba(10, 8, 30, 0.95));
-  border: 1px solid rgba(139, 92, 246, 0.15);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
-  transition: border-color 150ms ease, box-shadow 150ms ease;
+  padding: 1.2rem;
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(28, 32, 38, 0.88), rgba(14, 18, 24, 0.94));
+  border: 1px solid rgba(59, 73, 76, 0.4);
+  box-shadow: var(--shadow-sm);
 }
 
 .key-card:hover {
-  border-color: rgba(139, 92, 246, 0.3);
-  box-shadow: 0 8px 32px rgba(139, 92, 246, 0.12);
+  border-color: rgba(0, 229, 255, 0.18);
 }
 
 .key-card-selected {
-  border-color: rgba(139, 92, 246, 0.55);
-  box-shadow:
-    inset 0 0 0 1px rgba(139, 92, 246, 0.2),
-    0 8px 32px rgba(139, 92, 246, 0.18);
+  border-color: rgba(0, 229, 255, 0.22);
+  box-shadow: 0 0 0 1px rgba(0, 229, 255, 0.06), var(--shadow-md);
 }
 
 .key-card-head,
@@ -199,20 +197,13 @@
 }
 
 .key-card-value {
-  padding: 1rem 1.05rem;
-  border-radius: 12px;
-  background: rgba(139, 92, 246, 0.06);
-  border: 1px solid rgba(139, 92, 246, 0.15);
+  padding: 0.95rem 1rem;
+  border-radius: 14px;
+  background: rgba(0, 229, 255, 0.05);
+  border: 1px solid rgba(0, 229, 255, 0.12);
   word-break: break-all;
-  font-size: 0.9rem;
-  line-height: 1.5;
-  font-family: "IBM Plex Mono", monospace;
-}
-
-.key-card-meta-grid,
-.key-stat-grid {
-  display: grid;
-  gap: 0.85rem;
+  font-size: 0.88rem;
+  line-height: 1.55;
 }
 
 .key-card-meta-grid {
@@ -223,31 +214,10 @@
 .key-stat-card {
   min-height: 88px;
   padding: 0.9rem 1rem;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.key-meta-card span,
-.key-stat-card span {
-  display: block;
-  color: var(--text-soft);
-  font-size: 0.78rem;
-}
-
-.key-meta-card strong,
-.key-stat-card strong {
-  display: block;
-  margin-top: 0.55rem;
-  line-height: 1.45;
 }
 
 .key-stat-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.key-stat-wide {
-  grid-column: 1 / -1;
 }
 
 .key-card-error {
@@ -255,19 +225,20 @@
   padding: 0.9rem 1rem;
   border-radius: 14px;
   color: var(--warning);
-  background: rgba(251, 191, 36, 0.08);
-  border: 1px solid rgba(251, 191, 36, 0.2);
+  background: rgba(216, 170, 87, 0.08);
+  border: 1px solid rgba(216, 170, 87, 0.2);
 }
 
 .tag-chip {
   display: inline-flex;
   align-items: center;
+  min-height: 28px;
+  padding: 0.36rem 0.72rem;
   border-radius: 999px;
-  padding: 0.4rem 0.75rem;
-  color: var(--primary);
-  background: rgba(139, 92, 246, 0.12);
-  border: 1px solid rgba(139, 92, 246, 0.25);
-  font-size: 0.78rem;
+  color: var(--primary-strong);
+  background: rgba(0, 229, 255, 0.08);
+  border: 1px solid rgba(0, 229, 255, 0.16);
+  font-size: 0.76rem;
 }
 
 .note-editor {
@@ -292,7 +263,6 @@
 .key-action-button {
   justify-content: center;
   min-height: 40px;
-  gap: 0.4rem;
 }
 
 @media (min-width: 1680px) {

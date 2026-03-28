@@ -1,16 +1,14 @@
 import { useEffect, useState } from "react";
+import { Navigate, Route, Routes } from "react-router-dom";
 import type { SystemSettings } from "@shared/contracts";
 import { apiRequest, clearStoredAuthKey, setStoredAuthKey } from "./api";
 import { LoginView } from "./LoginView";
-import { ConsoleHeader } from "./components/ConsoleChrome";
+import { ConsoleLayout } from "./components/ConsoleChrome";
 import { ToastViewport } from "./components/Feedback";
-import {
-  OverviewPanel,
-  ProviderGrid,
-  StrategyPanel,
-} from "./components/OverviewPanels";
-import { ActivityHub } from "./components/ActivityHub";
-import { KeyPoolsWorkspace } from "./components/KeyPoolsWorkspace";
+import { ActivityWorkspace } from "./pages/ActivityWorkspace";
+import { KeysWorkspace } from "./pages/KeysWorkspace";
+import { OverviewWorkspace } from "./pages/OverviewWorkspace";
+import { ProvidersWorkspace } from "./pages/ProvidersWorkspace";
 import type {
   AppDataBundle,
   ProviderDrafts,
@@ -44,6 +42,8 @@ function createProviderDrafts(
 
 export function App() {
   const [session, setSession] = useState<SessionState | null>(null);
+  const [isSessionReady, setIsSessionReady] = useState(false);
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [dashboard, setDashboard] = useState<AppDataBundle["dashboard"]>(null);
   const [providers, setProviders] = useState<AppDataBundle["providers"]>([]);
   const [providerDrafts, setProviderDrafts] = useState<ProviderDrafts>({});
@@ -71,16 +71,23 @@ export function App() {
       }
       if (sysRes.ok) setSystem(sysRes.data);
       if (actRes.ok) setActivity(actRes.data);
+      setWorkspaceRefreshNonce((current) => current + 1);
     } finally {
       setIsRefreshing(false);
     }
   }
 
   async function checkSession() {
-    const res = await apiRequest<SessionState>("GET", "/admin/session");
-    if (res.ok && res.data.loggedIn) {
-      setSession(res.data);
-      void refreshAll();
+    try {
+      const res = await apiRequest<SessionState>("GET", "/admin/session");
+      if (res.ok && res.data.loggedIn) {
+        setSession(res.data);
+        void refreshAll();
+      } else {
+        setSession(null);
+      }
+    } finally {
+      setIsSessionReady(true);
     }
   }
 
@@ -90,15 +97,20 @@ export function App() {
 
   async function login() {
     setLoginMessage("");
-    const res = await apiRequest<SessionState>("POST", "/admin/login", {
-      authKey,
-    });
-    if (res.ok && res.data.loggedIn) {
-      setStoredAuthKey(authKey);
-      setSession(res.data);
-      void refreshAll();
-    } else {
-      setLoginMessage(res.ok ? "登录失败，请检查授权密钥。" : "登录失败，请检查授权密钥。");
+    setIsAuthenticating(true);
+    try {
+      const res = await apiRequest<SessionState>("POST", "/admin/login", {
+        authKey,
+      });
+      if (res.ok && res.data.loggedIn) {
+        setStoredAuthKey(authKey);
+        setSession(res.data);
+        void refreshAll();
+      } else {
+        setLoginMessage("Login failed. Check the authorization key.");
+      }
+    } finally {
+      setIsAuthenticating(false);
     }
   }
 
@@ -110,6 +122,7 @@ export function App() {
     setProviders([]);
     setProviderDrafts({});
     setActivity([]);
+    setAuthKey("");
   }
 
   async function saveSystem() {
@@ -141,59 +154,73 @@ export function App() {
         message={loginMessage}
         onAuthKeyChange={setAuthKey}
         onLogin={() => void login()}
+        pending={!isSessionReady || isAuthenticating}
       />
     );
   }
 
   return (
-    <div className="console-shell">
-      <ConsoleHeader
-        isRefreshing={isRefreshing}
-        onOpenNavigation={() => {}}
-        session={session}
-        onRefresh={() => void refreshAll()}
-        onLogout={() => void logout()}
-      />
-      <main className="console-main">
-        <ToastViewport items={toasts} onDismiss={dismissToast} />
-
-        <section id="overview" className="console-section">
-          <div className="overview-grid">
-            <div className="overview-grid-wide">
-              <OverviewPanel dashboard={dashboard} loading={isRefreshing} />
-            </div>
-            <div className="overview-grid-wide">
-              <StrategyPanel
+    <>
+      <ToastViewport items={toasts} onDismiss={dismissToast} />
+      <Routes>
+        <Route
+          element={
+            <ConsoleLayout
+              dashboard={dashboard}
+              providers={providers}
+              system={system}
+              isRefreshing={isRefreshing}
+              onRefresh={() => void refreshAll()}
+              onLogout={() => void logout()}
+            />
+          }
+        >
+          <Route index element={<Navigate replace to="/overview" />} />
+          <Route
+            path="/overview"
+            element={
+              <OverviewWorkspace
+                dashboard={dashboard}
                 loading={isRefreshing}
-                system={system}
+                onSaveSystem={() => void saveSystem()}
                 setSystem={setSystem}
-                onSave={() => void saveSystem()}
+                system={system}
               />
-            </div>
-          </div>
-        </section>
-
-        <section id="providers" className="console-section">
-          <ProviderGrid
-            providers={providers}
-            loading={isRefreshing}
-            drafts={providerDrafts}
-            setDrafts={setProviderDrafts}
-            onSave={(provider) => void saveProvider(provider)}
+            }
           />
-        </section>
-
-        <section id="keys" className="console-section">
-          <KeyPoolsWorkspace
-            onToast={(type, message) => enqueueToast(type, message)}
-            refreshNonce={workspaceRefreshNonce}
+          <Route
+            path="/providers"
+            element={
+              <ProvidersWorkspace
+                drafts={providerDrafts}
+                loading={isRefreshing}
+                onSave={(provider) => void saveProvider(provider)}
+                providers={providers}
+                setDrafts={setProviderDrafts}
+              />
+            }
           />
-        </section>
-
-        <section id="activity" className="console-section">
-          <ActivityHub activity={activity} loading={isRefreshing} />
-        </section>
-      </main>
-    </div>
+          <Route
+            path="/keys"
+            element={
+              <KeysWorkspace
+                onToast={(type, message) => enqueueToast(type, message)}
+                refreshNonce={workspaceRefreshNonce}
+              />
+            }
+          />
+          <Route
+            path="/activity"
+            element={
+              <ActivityWorkspace
+                activity={activity}
+                loading={isRefreshing}
+              />
+            }
+          />
+          <Route path="*" element={<Navigate replace to="/overview" />} />
+        </Route>
+      </Routes>
+    </>
   );
 }
