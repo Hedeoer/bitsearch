@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Eye, EyeOff, Copy, Trash2, FlaskConical, RefreshCw, Power } from "lucide-react";
+import { Eye, EyeOff, Copy, Trash2, FlaskConical, RefreshCw, Power, MoreHorizontal, Edit2, CheckCircle, AlertCircle, XCircle, Activity, Clock, Database } from "lucide-react";
 import type {
   FirecrawlHistoricalQuotaSnapshot,
   FirecrawlTeamQuotaSnapshot,
@@ -49,35 +49,30 @@ export function renderTavilyQuota(
   account: TavilyAccountQuotaSnapshot | null,
 ): string {
   const quota = item.quota?.tavily;
-  if (!quota) {
-    return "Not synced";
+  if (!quota) return "Not synced";
+
+  if (account && account.planLimit > 0) {
+    return `${formatNumber(account.planUsage)}/${formatNumber(account.planLimit)}`;
   }
-  const keyUsage = quota.key.limit > 0
-    ? `${formatNumber(quota.key.usage)} / ${formatNumber(quota.key.limit)} credits`
-    : `${formatNumber(quota.key.usage)} credits`;
-  if (!account) {
-    return keyUsage;
+  
+  if (quota.key.limit > 0) {
+    return `${formatNumber(quota.key.usage)}/${formatNumber(quota.key.limit)}`;
   }
-  return joinSummary(
-    keyUsage,
-    `${account.currentPlan ?? "plan"} ${formatNumber(account.planUsage)} / ${formatNumber(account.planLimit)}`,
-  );
+  
+  return `${formatNumber(quota.key.usage)}`;
 }
 
 export function renderFirecrawlQuota(
   team: FirecrawlTeamQuotaSnapshot | null,
   historical: FirecrawlHistoricalQuotaSnapshot | null,
 ): string {
-  if (!team) {
-    return "Not synced";
+  if (!team) return "Not synced";
+
+  if (team.planCredits > 0) {
+    return `${formatNumber(team.remainingCredits)}/${formatNumber(team.planCredits)}`;
   }
-  const teamText = team.planCredits > 0
-    ? `${formatNumber(team.remainingCredits)} / ${formatNumber(team.planCredits)} credits`
-    : `${formatNumber(team.remainingCredits)} credits`;
-  if (!historical?.byApiKeyMatched) {
-    return teamText;
-  }
-  return joinSummary(teamText, `history ${formatNumber(historical.historicalCredits)}`);
+    
+  return `${formatNumber(team.remainingCredits)}`;
 }
 
 function MetaSep() {
@@ -95,9 +90,12 @@ function MetaItem(props: { label: string; value: string }) {
 
 export function KeyInventoryCard(props: KeyCardProps) {
   const [noteDraft, setNoteDraft] = useState(props.item.note);
+  const [isNoteOpen, setIsNoteOpen] = useState(false);
+  const [isMoreActionsOpen, setIsMoreActionsOpen] = useState(false);
 
   useEffect(() => {
     setNoteDraft(props.item.note);
+    setIsNoteOpen(false);
   }, [props.item.note]);
 
   const quotaText = props.item.provider === "tavily"
@@ -108,111 +106,113 @@ export function KeyInventoryCard(props: KeyCardProps) {
       );
 
   return (
-    <article className={`key-card interactive-card ${props.selected ? "key-card-selected" : ""}`}>
-      {/* Row 1: Status + Key value + Tags */}
-      <div className="key-card-head">
-        <label className="selection-toggle">
-          <input
-            checked={props.selected}
-            type="checkbox"
-            onChange={() => props.onToggleSelected(props.item.id)}
-          />
-          <span className={`status-pill ${props.item.enabled ? "positive" : "danger"}`}>
-            {props.item.enabled ? "enabled" : "disabled"}
-          </span>
-          <span
-            className={`status-pill ${
-              props.item.healthStatus === "healthy"
-                ? "positive"
-                : props.item.healthStatus === "unhealthy"
-                  ? "danger"
-                  : "neutral"
-            }`}
-          >
-            {healthLabel(props.item.healthStatus)}
-          </span>
-        </label>
-        <div className="tag-list">
-          {props.item.tags.length > 0 ? props.item.tags.map((tag) => (
-            <span key={`${props.item.id}-${tag}`} className="tag-chip">{tag}</span>
-          )) : <span className="tag-chip">untagged</span>}
+    <article 
+      className={`compact-key-card ${props.selected ? "key-card-selected" : ""}`}
+      onClick={() => props.onToggleSelected(props.item.id)}
+      style={{ cursor: 'pointer' }}
+    >
+      {/* Row 1: Status, Key, Inline Icons */}
+      <div className="compact-row-upper">
+        
+        {(() => {
+          if (!props.item.enabled) {
+            return <span className="status-pill danger" style={{ padding: '0.15rem 0.5rem', borderRadius: '12px', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><XCircle size={12}/> Disabled</span>;
+          }
+          if (props.item.healthStatus === "unhealthy") {
+            return <span className="status-pill danger" style={{ padding: '0.15rem 0.5rem', borderRadius: '12px', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={12}/> Error</span>;
+          }
+          return <span className="status-pill positive" style={{ padding: '0.15rem 0.5rem', borderRadius: '12px', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'rgba(56, 178, 102, 0.15)', color: '#4ADE80', border: 'none' }}><CheckCircle size={12}/> Active</span>;
+        })()}
+
+        <span className="compact-key-string" title={`Fingerprint: ${props.item.fingerprint}`}>
+          {props.revealedValue ?? props.item.maskedValue}
+        </span>
+
+        <div style={{ display: 'flex', gap: '0.15rem' }}>
+          <button className="tiny-icon-btn" title="Edit Note" onClick={(e) => { e.stopPropagation(); setIsNoteOpen(!isNoteOpen); }}>
+             <Edit2 size={13} />
+          </button>
+          <button className="tiny-icon-btn" disabled={props.isRevealing} title={props.revealedValue ? "Hide Key" : "Reveal Key"} onClick={(e) => { e.stopPropagation(); props.onToggleReveal(props.item.id); }}>
+             {props.isRevealing ? <InlineSpinner label=""/> : props.revealedValue ? <EyeOff size={13} /> : <Eye size={13} />}
+          </button>
+          <button className="tiny-icon-btn" disabled={props.isCopying || props.isRevealing} title="Copy Key" onClick={(e) => { e.stopPropagation(); props.onCopy(props.item.id); }}>
+             {props.isCopying ? <InlineSpinner label=""/> : <Copy size={13} />}
+          </button>
         </div>
       </div>
 
-      {/* Row 2: Masked key value */}
-      <div className="key-card-value mono">
-        {props.revealedValue ?? props.item.maskedValue}
+      {/* Row 2: Metrics OR Note Editor */}
+      <div className="compact-row-lower">
+        {isNoteOpen ? (
+          <div style={{ display: 'flex', gap: '0.4rem', width: '100%', alignItems: 'center' }} onClick={(e) => e.stopPropagation()}>
+            <input
+              style={{ flex: 1, padding: '0.2rem 0.5rem', fontSize: '0.8rem', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)' }}
+              value={noteDraft}
+              onChange={(e) => setNoteDraft(e.target.value)}
+              placeholder="Add note... (Press Enter to save)"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !props.isSavingNote) {
+                  props.onSaveNote(props.item.id, noteDraft);
+                  setIsNoteOpen(false);
+                } else if (e.key === 'Escape') {
+                  setNoteDraft(props.item.note);
+                  setIsNoteOpen(false);
+                }
+              }}
+            />
+            <button className="text-action-link primary" disabled={props.isSavingNote} onClick={(e) => { e.stopPropagation(); props.onSaveNote(props.item.id, noteDraft); setIsNoteOpen(false); }}>Save</button>
+            <button className="text-action-link neutral" onClick={(e) => { e.stopPropagation(); setNoteDraft(props.item.note); setIsNoteOpen(false); }}>Cancel</button>
+          </div>
+        ) : (
+          <>
+            <div style={{ display: 'flex', gap: '0.85rem', alignItems: 'center', flexWrap: 'wrap' }}>
+              <span title="Requests" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                <Activity size={12} /> <strong>{formatNumber(props.item.requestCount)}</strong>
+              </span>
+              <span title="Failures" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: props.item.failureCount > 0 ? 'var(--danger)' : 'inherit' }}>
+                <AlertCircle size={12} /> <strong>{formatNumber(props.item.failureCount)}</strong>
+              </span>
+              <span title={`Used (Created: ${formatDateTime(props.item.createdAt)})`} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                <Clock size={12} /> {formatDateTime(props.item.lastUsedAt)}
+              </span>
+              <span title="Quota" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                <Database size={12} /> {quotaText}
+              </span>
+              {props.item.note && (
+                <>
+                   <span style={{ color: 'var(--border)', userSelect: 'none' }}>|</span>
+                   <span style={{ color: 'rgba(0, 229, 255, 0.8)', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '3px' }}><Edit2 size={10}/> {props.item.note}</span>
+                </>
+              )}
+            </div>
+            <div style={{ flex: 1 }} />
+            
+            <div style={{ display: 'flex', gap: '0.1rem' }}>
+              {!isMoreActionsOpen ? (
+                <button className="text-action-link neutral" onClick={(e) => { e.stopPropagation(); setIsMoreActionsOpen(true); }} style={{ padding: '0 0.2rem' }}>
+                  <MoreHorizontal size={14} />
+                </button>
+              ) : (
+                <>
+                   <button className="text-action-link primary" disabled={props.isTesting} onClick={(e) => { e.stopPropagation(); props.onTest([props.item.id]); }}>Test</button>
+                   <button className="text-action-link neutral" disabled={props.isSyncing} onClick={(e) => { e.stopPropagation(); props.onSyncQuota([props.item.id]); }}>Sync</button>
+                   <button className="text-action-link neutral" disabled={props.isTogglingEnabled} onClick={(e) => { e.stopPropagation(); props.onToggleEnabled(props.item.id, !props.item.enabled); }}>{props.item.enabled ? "Disable" : "Enable"}</button>
+                   <button className="text-action-link danger" disabled={props.isDeleting} onClick={(e) => { e.stopPropagation(); props.onDelete([props.item.id]); }}>Delete</button>
+                   <button className="text-action-link neutral" onClick={(e) => { e.stopPropagation(); setIsMoreActionsOpen(false); }}>Less</button>
+                </>
+              )}
+            </div>
+          </>
+        )}
       </div>
 
-      {/* Row 3: Inline metadata */}
-      <div className="key-inline-meta">
-        <MetaItem label="Fingerprint:" value={props.item.fingerprint} />
-        <MetaSep />
-        <MetaItem label="Used:" value={formatDateTime(props.item.lastUsedAt)} />
-        <MetaSep />
-        <MetaItem label="Checked:" value={formatDateTime(props.item.lastCheckedAt)} />
-        <MetaSep />
-        <MetaItem label="Created:" value={formatDateTime(props.item.createdAt)} />
-      </div>
-
-      {/* Row 4: Inline stats */}
-      <div className="key-inline-stats">
-        <MetaItem label="Requests:" value={formatNumber(props.item.requestCount)} />
-        <MetaSep />
-        <MetaItem label="Failures:" value={formatNumber(props.item.failureCount)} />
-        <MetaSep />
-        <MetaItem label="Quota:" value={quotaText} />
-      </div>
-
-      {/* Row 5: Error (conditional) */}
-      {props.item.lastError || props.item.lastCheckError ? (
-        <p className="supporting compact key-card-error">
+      {/* Row 3 (Optional Error Context) */}
+      {(props.item.lastError || props.item.lastCheckError) && !isNoteOpen && (
+        <p className="supporting compact key-card-error" style={{ padding: '0.2rem 0.5rem', margin: '0', fontSize: '0.75rem' }}>
           {props.item.lastCheckError ?? props.item.lastError}
         </p>
-      ) : null}
-
-      {/* Row 6: Note editor + Actions */}
-      <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "flex-end" }}>
-        <label className="field note-editor" style={{ flex: "1 1 280px", margin: 0 }}>
-          <span>Note</span>
-          <div className="note-editor-row">
-            <input
-              value={noteDraft}
-              onChange={(event) => setNoteDraft(event.target.value)}
-              placeholder="Add operational note"
-            />
-            <button
-              className="secondary-button key-action-button"
-              disabled={props.isSavingNote || noteDraft === props.item.note}
-              onClick={() => props.onSaveNote(props.item.id, noteDraft)}
-            >
-              {props.isSavingNote ? <InlineSpinner label="Saving" /> : "Save"}
-            </button>
-          </div>
-        </label>
-        <div className="key-card-actions">
-          <button className="secondary-button key-action-button" disabled={props.isRevealing} onClick={() => props.onToggleReveal(props.item.id)}>
-            {props.isRevealing ? <InlineSpinner label="" /> : props.revealedValue ? <><EyeOff size={13} /> Hide</> : <><Eye size={13} /> Show</>}
-          </button>
-          <button className="secondary-button key-action-button" disabled={props.isCopying || props.isRevealing} onClick={() => props.onCopy(props.item.id)}>
-            {props.isCopying ? <InlineSpinner label="" /> : <><Copy size={13} /> Copy</>}
-          </button>
-          <button className="secondary-button key-action-button" disabled={props.isTesting} onClick={() => props.onTest([props.item.id])}>
-            {props.isTesting ? <InlineSpinner label="" /> : <><FlaskConical size={13} /> Test</>}
-          </button>
-          <button className="secondary-button key-action-button" disabled={props.isSyncing} onClick={() => props.onSyncQuota([props.item.id])}>
-            {props.isSyncing ? <InlineSpinner label="" /> : <><RefreshCw size={13} /> Sync</>}
-          </button>
-          <button className="secondary-button key-action-button" disabled={props.isTogglingEnabled} onClick={() => props.onToggleEnabled(props.item.id, !props.item.enabled)}>
-            {props.isTogglingEnabled
-              ? <InlineSpinner label="" />
-              : <><Power size={13} /> {props.item.enabled ? "Disable" : "Enable"}</>}
-          </button>
-          <button className="danger-button key-action-button" disabled={props.isDeleting} onClick={() => props.onDelete([props.item.id])}>
-            {props.isDeleting ? <InlineSpinner label="" /> : <><Trash2 size={13} /> Del</>}
-          </button>
-        </div>
-      </div>
+      )}
     </article>
   );
 }

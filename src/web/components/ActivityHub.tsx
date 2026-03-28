@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Activity, Search, Filter, Clock, CheckCircle2, XCircle } from "lucide-react";
+import { Activity, Search, Globe, Server, Timer } from "lucide-react";
 import type { RequestActivityRecord } from "@shared/contracts";
 import { formatDuration, statusTone } from "../format";
 import { EmptyState, LoadingOverlay } from "./Feedback";
@@ -115,28 +115,32 @@ export function ActivityHub(props: ActivityHubProps) {
           </div>
         </div>
         <div className="activity-filters">
-          <input
-            placeholder="Search tool / url / provider / error"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-          />
-          <select value={toolFilter} onChange={(event) => setToolFilter(event.target.value)}>
-            <option value="all">all tools</option>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", flex: "1 1 200px", background: "rgba(0,0,0,0.2)", borderRadius: "6px", padding: "0 0.5rem" }}>
+            <Search size={14} color="var(--text-dim)" />
+            <input
+              placeholder="Search tool / url / provider / error"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              style={{ border: "none", background: "transparent", outline: "none", width: "100%", height: "32px", fontSize: "0.85rem", color: "var(--text)" }}
+            />
+          </div>
+          <select value={toolFilter} onChange={(event) => setToolFilter(event.target.value)} style={{ height: "32px", fontSize: "0.8rem", borderRadius: "6px", border: "none", background: "rgba(255,255,255,0.05)", outline: "none", color: "var(--text)", padding: "0 0.6rem" }}>
+            <option value="all">Tool: All</option>
             {toolOptions.map((toolName) => (
-              <option key={toolName} value={toolName}>{toolName}</option>
+              <option key={toolName} value={toolName}>Tool: {toolName}</option>
             ))}
           </select>
-          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-            <option value="all">all status</option>
-            <option value="success">success</option>
-            <option value="failed">failed</option>
+          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} style={{ height: "32px", fontSize: "0.8rem", borderRadius: "6px", border: "none", background: "rgba(255,255,255,0.05)", outline: "none", color: "var(--text)", padding: "0 0.6rem" }}>
+            <option value="all">Status: All</option>
+            <option value="success">Status: Success</option>
+            <option value="failed">Status: Failed</option>
           </select>
-          <select value={timeRange} onChange={(event) => setTimeRange(event.target.value as TimeRangePreset)}>
-            <option value="all">all time</option>
-            <option value="today">today</option>
-            <option value="last_hour">last 1 hour</option>
-            <option value="last_24_hours">last 24 hours</option>
-            <option value="custom">custom range</option>
+          <select value={timeRange} onChange={(event) => setTimeRange(event.target.value as TimeRangePreset)} style={{ height: "32px", fontSize: "0.8rem", borderRadius: "6px", border: "none", background: "rgba(255,255,255,0.05)", outline: "none", color: "var(--text)", padding: "0 0.6rem" }}>
+            <option value="all">Time: All</option>
+            <option value="today">Time: Today</option>
+            <option value="last_hour">Time: Last 1 Hr</option>
+            <option value="last_24_hours">Time: Last 24 Hrs</option>
+            <option value="custom">Time: Custom</option>
           </select>
         </div>
         {timeRange === "custom" ? (
@@ -180,11 +184,11 @@ export function ActivityHub(props: ActivityHubProps) {
                 </span>
               </div>
               <div className="activity-item-meta">
-                <span className="mono">{item.request.targetUrl ?? "no target url"}</span>
-                <span>{item.request.finalProvider ?? "-"}</span>
-                <span>{formatDuration(item.request.durationMs)}</span>
+                <span className="url-chip mono"><Globe size={10} />{item.request.targetUrl ?? "no target url"}</span>
+                <span><Server size={10} />{item.request.finalProvider ?? "-"}</span>
+                <span><Timer size={10} />{formatDuration(item.request.durationMs)}</span>
               </div>
-              <p className="supporting compact">
+              <p className="supporting compact ellipsis-text" style={{ maxWidth: "100%", WebkitLineClamp: 1, display: "-webkit-box", WebkitBoxOrient: "vertical", overflow: "hidden" }}>
                 {item.request.errorSummary ?? item.request.resultPreview ?? "No summary"}
               </p>
             </button>

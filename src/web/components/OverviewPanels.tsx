@@ -10,6 +10,7 @@ import {
   ToggleRight,
   AlertTriangle,
   Settings,
+  KeyRound,
 } from "lucide-react";
 import type {
   DashboardSummary,
@@ -23,6 +24,7 @@ import { LoadingOverlay } from "./Feedback";
 type OverviewProps = {
   dashboard: DashboardSummary | null;
   loading: boolean;
+  providers: ProviderConfigRecord[];
 };
 
 type StrategyProps = {
@@ -40,11 +42,7 @@ type ProviderGridProps = {
   onSave: (provider: string) => void;
 };
 
-const METRICS = [
-  { key: "totalRequests", label: "Total Requests", icon: Activity, accent: "primary" },
-  { key: "successCount", label: "Successful", icon: CheckCircle, accent: "success" },
-  { key: "failedCount", label: "Failed", icon: XCircle, accent: "danger" },
-] as const;
+
 
 function renderMetricValue(value: number | undefined, loading: boolean) {
   if (loading && typeof value !== "number") {
@@ -54,6 +52,9 @@ function renderMetricValue(value: number | undefined, loading: boolean) {
 }
 
 export function OverviewPanel(props: OverviewProps) {
+  const activeProviders = props.providers.filter((p) => p.enabled).length;
+  const totalKeys = props.providers.reduce((sum, p) => sum + p.keyCount, 0);
+
   return (
     <article className="surface-card">
       {props.loading ? <LoadingOverlay label="Refreshing overview" /> : null}
@@ -64,17 +65,51 @@ export function OverviewPanel(props: OverviewProps) {
         </div>
       </div>
       <div className="metric-grid">
-        {METRICS.map((item) => (
-          <div key={item.key} className={`metric-card metric-card--${item.accent}`}>
-            <div className="metric-icon">
-              <item.icon size={16} />
-            </div>
-            <strong className="metric-value">
-              {renderMetricValue(props.dashboard?.[item.key], props.loading)}
-            </strong>
-            <span className="metric-label">{item.label}</span>
+        <div className="metric-card metric-card--primary">
+          <div className="metric-icon">
+            <Activity size={16} />
           </div>
-        ))}
+          <strong className="metric-value">
+            {renderMetricValue(props.dashboard?.totalRequests, props.loading)}
+          </strong>
+          <span className="metric-label">Total Requests</span>
+        </div>
+        <div className="metric-card metric-card--success">
+          <div className="metric-icon">
+            <CheckCircle size={16} />
+          </div>
+          <strong className="metric-value">
+            {renderMetricValue(props.dashboard?.successCount, props.loading)}
+          </strong>
+          <span className="metric-label">Successful</span>
+        </div>
+        <div className="metric-card metric-card--danger">
+          <div className="metric-icon">
+            <XCircle size={16} />
+          </div>
+          <strong className="metric-value">
+            {renderMetricValue(props.dashboard?.failedCount, props.loading)}
+          </strong>
+          <span className="metric-label">Failed</span>
+        </div>
+        <div className="metric-card metric-card--primary">
+          <div className="metric-icon">
+            <Server size={16} />
+          </div>
+          <strong className="metric-value">
+            {renderMetricValue(activeProviders, props.loading)}
+          </strong>
+          <span className="metric-label">Active Providers</span>
+        </div>
+        <div className="metric-card metric-card--primary">
+          <div className="metric-icon">
+            <KeyRound size={16} />
+          </div>
+          <strong className="metric-value">
+            {renderMetricValue(totalKeys, props.loading)}
+          </strong>
+          <span className="metric-label">Total Keys</span>
+        </div>
       </div>
       {(props.dashboard?.providerErrors ?? []).length > 0 && (
         <div className="chip-row" style={{ marginTop: "0.75rem" }}>

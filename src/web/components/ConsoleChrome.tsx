@@ -8,7 +8,6 @@ import {
   RefreshCw,
   Search,
   Server,
-  ShieldCheck,
   X,
 } from "lucide-react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
@@ -72,58 +71,6 @@ function getActiveRoute(pathname: string): NavItem {
   return NAV_ITEMS.find((item) => pathname.startsWith(item.href)) ?? NAV_ITEMS[0];
 }
 
-function summarizeProviders(providers: ProviderConfigRecord[]) {
-  return providers.reduce(
-    (summary, provider) => ({
-      activeCount: summary.activeCount + (provider.enabled ? 1 : 0),
-      keyCount: summary.keyCount + provider.keyCount,
-    }),
-    { activeCount: 0, keyCount: 0 },
-  );
-}
-
-function StatusCluster(props: Readonly<{
-  dashboard: DashboardSummary | null;
-  providers: ProviderConfigRecord[];
-  system: SystemSettings;
-}>) {
-  const providerSummary = useMemo(
-    () => summarizeProviders(props.providers),
-    [props.providers],
-  );
-
-  return (
-    <section className="sidebar-status-card">
-      <div className="section-heading compact">
-        <div>
-          <div className="eyebrow">Runtime</div>
-          <h3>Control Plane</h3>
-        </div>
-        <span className="section-icon">
-          <ShieldCheck size={14} />
-        </span>
-      </div>
-      <div className="sidebar-stat-grid">
-        <div className="sidebar-stat">
-          <span>Requests</span>
-          <strong>{formatNumber(props.dashboard?.totalRequests ?? 0)}</strong>
-        </div>
-        <div className="sidebar-stat">
-          <span>Providers</span>
-          <strong>{providerSummary.activeCount}</strong>
-        </div>
-        <div className="sidebar-stat">
-          <span>Keys</span>
-          <strong>{formatNumber(providerSummary.keyCount)}</strong>
-        </div>
-        <div className="sidebar-stat">
-          <span>Mode</span>
-          <strong>{props.system.fetchMode}</strong>
-        </div>
-      </div>
-    </section>
-  );
-}
 
 function SidebarNav(props: Readonly<{ onNavigate: () => void }>) {
   return (
@@ -181,11 +128,6 @@ export function ConsoleLayout(props: ConsoleLayoutProps) {
           </button>
         </div>
         <SidebarNav onNavigate={() => setMobileOpen(false)} />
-        <StatusCluster
-          dashboard={props.dashboard}
-          providers={props.providers}
-          system={props.system}
-        />
       </aside>
 
       <div className="console-workspace">

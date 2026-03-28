@@ -185,6 +185,7 @@ export function App() {
                 onSaveSystem={() => void saveSystem()}
                 setSystem={setSystem}
                 system={system}
+                providers={providers}
               />
             }
           />

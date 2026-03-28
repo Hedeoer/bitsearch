@@ -1,6 +1,6 @@
 import type { Dispatch, SetStateAction } from "react";
 import { AlertTriangle, ShieldCheck } from "lucide-react";
-import type { DashboardSummary, SystemSettings } from "@shared/contracts";
+import type { DashboardSummary, SystemSettings, ProviderConfigRecord } from "@shared/contracts";
 import { formatDateTime } from "../format";
 import {
   OverviewPanel,
@@ -13,6 +13,7 @@ type OverviewWorkspaceProps = Readonly<{
   onSaveSystem: () => void;
   setSystem: Dispatch<SetStateAction<SystemSettings>>;
   system: SystemSettings;
+  providers: ProviderConfigRecord[];
 }>;
 
 function LatestErrorsPanel(props: Readonly<{
@@ -75,7 +76,7 @@ export function OverviewWorkspace(props: OverviewWorkspaceProps) {
   return (
     <div className="workspace-stack">
       <div className="workspace-grid-two">
-        <OverviewPanel dashboard={props.dashboard} loading={props.loading} />
+        <OverviewPanel dashboard={props.dashboard} loading={props.loading} providers={props.providers} />
         <StrategyPanel
           loading={props.loading}
           system={props.system}

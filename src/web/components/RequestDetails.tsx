@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { RequestActivityRecord } from "@shared/contracts";
 import { formatDuration, statusTone } from "../format";
+import { Wrench, Server, RefreshCw, Timer, Globe, Key, ChevronRight, AlertTriangle, CheckCircle } from "lucide-react";
 
 type RequestDetailsProps = {
   activity: RequestActivityRecord | null;
@@ -32,14 +33,48 @@ function OverviewTab({ activity }: { activity: RequestActivityRecord }) {
   return (
     <>
       <div className="detail-grid">
-        <div className="detail-card"><span>Tool</span><strong>{activity.request.toolName}</strong></div>
-        <div className="detail-card"><span>Provider</span><strong>{activity.request.finalProvider ?? "-"}</strong></div>
-        <div className="detail-card"><span>Attempts</span><strong>{activity.request.attempts}</strong></div>
-        <div className="detail-card"><span>Duration</span><strong>{formatDuration(activity.request.durationMs)}</strong></div>
+        <div className="detail-card">
+          <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}><Wrench size={12} /> Tool</span>
+          <strong>{activity.request.toolName}</strong>
+        </div>
+        <div className="detail-card">
+          <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}><Server size={12} /> Provider</span>
+          <strong>{activity.request.finalProvider ?? "-"}</strong>
+        </div>
+        <div className="detail-card">
+          <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}><RefreshCw size={12} /> Attempts</span>
+          <strong>{activity.request.attempts}</strong>
+        </div>
+        <div className="detail-card">
+          <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}><Timer size={12} /> Duration</span>
+          <strong>{formatDuration(activity.request.durationMs)}</strong>
+        </div>
       </div>
-      <div className="detail-block"><div className="eyebrow">Provider Order</div><div className="mono">{activity.request.providerOrder.join(" → ") || "-"}</div></div>
-      <div className="detail-block"><div className="eyebrow">Error Summary</div><pre className="message-content">{activity.request.errorSummary ?? "-"}</pre></div>
-      <div className="detail-block"><div className="eyebrow">Metadata</div><pre className="message-content">{prettyJson(activity.request.metadata)}</pre></div>
+      <div className="detail-block">
+        <div className="eyebrow">Provider Order</div>
+        {activity.request.providerOrder.length > 0 ? (
+          <div className="provider-routing-flow">
+            {activity.request.providerOrder.map((provider, index) => (
+              <span key={provider} style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}>
+                <span className="provider-routing-node">{provider}</span>
+                {index < activity.request.providerOrder.length - 1 && (
+                  <ChevronRight size={14} className="provider-routing-arrow" />
+                )}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <div className="mono" style={{ color: "var(--text-dim)" }}>-</div>
+        )}
+      </div>
+      <div className="detail-block">
+        <div className="eyebrow">Error Summary</div>
+        <pre className="message-content">{activity.request.errorSummary ?? "-"}</pre>
+      </div>
+      <div className="detail-block">
+        <div className="eyebrow">Metadata</div>
+        <pre className="message-content">{prettyJson(activity.request.metadata)}</pre>
+      </div>
     </>
   );
 }
@@ -57,9 +92,9 @@ function AttemptsTab({ activity }: { activity: RequestActivityRecord }) {
             <span className={`status-pill ${statusTone(attempt.status)}`}>{attempt.status}</span>
           </div>
           <div className="attempt-meta">
-            <span className="mono">{attempt.keyFingerprint ?? "-"}</span>
-            <span>{attempt.providerBaseUrl ?? "-"}</span>
-            <span>{formatDuration(attempt.durationMs)}</span>
+            <span className="mono"><Key size={10} />{attempt.keyFingerprint ?? "-"}</span>
+            <span className="url-chip"><Globe size={10} />{attempt.providerBaseUrl ?? "-"}</span>
+            <span><Timer size={10} />{formatDuration(attempt.durationMs)}</span>
           </div>
           <div className="supporting compact">
             {attempt.errorType ? `${attempt.errorType}: ` : ""}
@@ -111,7 +146,10 @@ export function RequestDetails(props: RequestDetailsProps) {
     <article className="surface-card detail-panel">
       <div className="section-heading">
         <div><div className="eyebrow">Details</div><h3>Selected Request</h3></div>
-        <span className={`status-pill ${statusTone(request.status)}`}>{request.status}</span>
+        <span className={`status-pill ${statusTone(request.status)}`}>
+          {request.status === "success" ? <CheckCircle size={11} /> : <AlertTriangle size={11} />}
+          {request.status}
+        </span>
       </div>
       <div className="detail-tabs" role="tablist" aria-label="Request detail tabs">
         {TABS.map((tab) => {

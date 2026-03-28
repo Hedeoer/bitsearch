@@ -2,6 +2,7 @@
   display: grid;
   gap: 1rem;
   grid-template-columns: minmax(360px, 0.92fr) minmax(0, 1.08fr);
+  align-items: start;
 }
 
 .activity-filters,
@@ -16,8 +17,25 @@
 }
 
 .activity-filters {
-  grid-template-columns: 1.4fr 1fr 1fr 1fr;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem;
+  background: rgba(255, 255, 255, 0.02);
+  padding: 0.45rem 0.65rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
   margin-bottom: 1rem;
+}
+
+.activity-filters select {
+  width: auto;
+  flex: 0 0 auto;
+}
+
+.activity-filters select option {
+  background: var(--surface-raised);
+  color: var(--text);
 }
 
 .activity-custom-range {
@@ -68,9 +86,36 @@
 
 .activity-item-meta,
 .attempt-meta {
-  grid-template-columns: repeat(3, auto);
-  justify-content: start;
-  margin-top: 0.25rem;
+  display: flex !important;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.35rem;
+}
+
+.activity-item-meta span,
+.attempt-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 0.15rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.activity-item-meta .url-chip,
+.attempt-meta .url-chip {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ellipsis-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .detail-grid {
@@ -139,6 +184,7 @@
   color: var(--text-soft);
 }
 
+.monaco-style,
 .detail-block pre,
 .message-content {
   margin: 0.5rem 0 0;
@@ -148,6 +194,32 @@
   font-size: 0.78rem;
   line-height: 1.6;
   color: var(--text-soft);
+  background: rgba(0, 229, 255, 0.03);
+  border: 1px solid rgba(0, 229, 255, 0.12);
+  border-radius: 10px;
+  padding: 0.85rem;
+  overflow-x: auto;
+}
+
+.provider-routing-flow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  background: rgba(0, 229, 255, 0.05);
+  border-radius: 8px;
+  border: 1px solid rgba(0, 229, 255, 0.15);
+  margin-top: 0.5rem;
+}
+
+.provider-routing-node {
+  font-size: 0.76rem;
+  font-weight: 500;
+  color: var(--primary-strong);
+}
+
+.provider-routing-arrow {
+  color: rgba(0, 229, 255, 0.5);
 }
 
 .message-role {
@@ -177,7 +249,6 @@
 }
 
 @media (max-width: 720px) {
-  .activity-filters,
   .activity-custom-range,
   .detail-grid {
     grid-template-columns: 1fr;
