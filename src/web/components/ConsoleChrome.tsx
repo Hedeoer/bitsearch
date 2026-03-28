@@ -91,7 +91,6 @@ function StatusCluster(props: Readonly<{
     () => summarizeProviders(props.providers),
     [props.providers],
   );
-  const providerOrder = props.system.providerPriority.join(" -> ");
 
   return (
     <section className="sidebar-status-card">
@@ -106,38 +105,21 @@ function StatusCluster(props: Readonly<{
       </div>
       <div className="sidebar-stat-grid">
         <div className="sidebar-stat">
-          <span>Total Requests</span>
+          <span>Requests</span>
           <strong>{formatNumber(props.dashboard?.totalRequests ?? 0)}</strong>
         </div>
         <div className="sidebar-stat">
-          <span>Active Providers</span>
+          <span>Providers</span>
           <strong>{providerSummary.activeCount}</strong>
         </div>
         <div className="sidebar-stat">
-          <span>Tracked Keys</span>
+          <span>Keys</span>
           <strong>{formatNumber(providerSummary.keyCount)}</strong>
         </div>
         <div className="sidebar-stat">
           <span>Mode</span>
           <strong>{props.system.fetchMode}</strong>
         </div>
-      </div>
-      <div className="sidebar-note">
-        <span className="eyebrow">Priority</span>
-        <p className="mono">{providerOrder}</p>
-      </div>
-      <div className="sidebar-provider-list">
-        {props.providers.map((provider) => (
-          <div key={provider.provider} className="sidebar-provider-row">
-            <div>
-              <strong>{provider.provider}</strong>
-              <p className="supporting compact mono">{provider.baseUrl}</p>
-            </div>
-            <span className={`status-pill ${provider.enabled ? "positive" : "neutral"}`}>
-              {provider.keyCount} keys
-            </span>
-          </div>
-        ))}
       </div>
     </section>
   );

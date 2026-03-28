@@ -1,12 +1,11 @@
 import type { Dispatch, SetStateAction } from "react";
 import { AlertTriangle, ShieldCheck } from "lucide-react";
 import type { DashboardSummary, SystemSettings } from "@shared/contracts";
-import { formatDateTime, formatNumber } from "../format";
+import { formatDateTime } from "../format";
 import {
   OverviewPanel,
   StrategyPanel,
 } from "../components/OverviewPanels";
-import { WorkspaceIntro } from "../components/WorkspaceIntro";
 
 type OverviewWorkspaceProps = Readonly<{
   dashboard: DashboardSummary | null;
@@ -73,36 +72,8 @@ function LatestErrorsPanel(props: Readonly<{
 }
 
 export function OverviewWorkspace(props: OverviewWorkspaceProps) {
-  const providerOrder = props.system.providerPriority.join(" -> ");
-  const metrics = [
-    {
-      label: "Total Requests",
-      value: formatNumber(props.dashboard?.totalRequests ?? 0),
-      tone: "live" as const,
-    },
-    {
-      label: "Provider Order",
-      value: providerOrder,
-    },
-    {
-      label: "Retention",
-      value: `${props.system.logRetentionDays} days`,
-    },
-    {
-      label: "Provider Errors",
-      value: String(props.dashboard?.providerErrors.length ?? 0),
-      tone: props.dashboard?.providerErrors.length ? ("warning" as const) : undefined,
-    },
-  ];
-
   return (
     <div className="workspace-stack">
-      <WorkspaceIntro
-        eyebrow="Overview"
-        title="Command-level visibility into routing, health, and operator posture."
-        description="This workspace consolidates request volume, failure pressure, provider priority, and system policy into one cockpit surface."
-        metrics={metrics}
-      />
       <div className="workspace-grid-two">
         <OverviewPanel dashboard={props.dashboard} loading={props.loading} />
         <StrategyPanel
