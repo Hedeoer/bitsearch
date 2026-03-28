@@ -1,11 +1,16 @@
 import type { Dispatch, SetStateAction } from "react";
 import { Save, Settings } from "lucide-react";
-import type { KeyPoolProvider, SystemSettings } from "@shared/contracts";
+import type { KeyPoolProvider, McpAccessInfo, SystemSettings } from "@shared/contracts";
 import { LoadingOverlay } from "./Feedback";
+import type { ToastTone } from "./Feedback";
+import { McpAccessFields } from "./McpAccessFields";
 
 type StrategyPanelProps = Readonly<{
   loading: boolean;
+  mcpAccess: McpAccessInfo;
+  onSaveMcpAccess: (token: string) => Promise<boolean>;
   system: SystemSettings;
+  onToast: (type: ToastTone, message: string) => void;
   setSystem: Dispatch<SetStateAction<SystemSettings>>;
   onSave: () => void;
 }>;
@@ -139,11 +144,17 @@ export function StrategyPanel(props: StrategyPanelProps) {
       <ProviderPriorityFields {...props} />
       <StrategyMetaFields {...props} />
       <div className="action-row">
-        <button className="primary-button" disabled={props.loading} onClick={props.onSave}>
+        <button className="primary-button" disabled={props.loading} type="button" onClick={props.onSave}>
           <Save size={14} />
           Save Strategy
         </button>
       </div>
+      <McpAccessFields
+        loading={props.loading}
+        mcpAccess={props.mcpAccess}
+        onSaveMcpAccess={props.onSaveMcpAccess}
+        onToast={props.onToast}
+      />
     </article>
   );
 }

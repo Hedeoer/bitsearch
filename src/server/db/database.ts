@@ -118,13 +118,18 @@ function applyMigrations(db: DatabaseSync): void {
   );
 }
 
-function seedSystemSettings(db: DatabaseSync, now: string): void {
+function seedSystemSettings(
+  db: DatabaseSync,
+  now: string,
+  mcpBearerToken: string,
+): void {
   const defaults = [
     ["fetch_mode", JSON.stringify("auto_ordered")],
     ["provider_priority", JSON.stringify(["tavily", "firecrawl"])],
     ["default_grok_model", JSON.stringify("grok-4-fast")],
     ["log_retention_days", JSON.stringify(7)],
     ["allowed_origins", JSON.stringify([])],
+    ["mcp_bearer_token", JSON.stringify(mcpBearerToken)],
   ];
   const stmt = db.prepare(
     "INSERT OR IGNORE INTO system_settings (key, value, updated_at) VALUES (?, ?, ?)",
@@ -149,7 +154,7 @@ export function createDatabase(config: BootstrapConfig): AppDatabase {
   sqlite.exec(SCHEMA_SQL);
   applyMigrations(sqlite);
   const now = new Date().toISOString();
-  seedSystemSettings(sqlite, now);
+  seedSystemSettings(sqlite, now, config.mcpBearerToken);
   seedProviderConfigs(sqlite, now);
   return {
     sqlite,

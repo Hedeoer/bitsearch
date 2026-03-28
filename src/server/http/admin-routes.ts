@@ -21,13 +21,20 @@ import {
   listManagedKeys,
   updateKeyNote,
 } from "../repos/key-pool-repo.js";
-import { getSystemSettings, saveSystemSettings } from "../repos/settings-repo.js";
+import {
+  getEffectiveMcpBearerToken,
+  getSystemSettings,
+  saveMcpBearerToken,
+  saveSystemSettings,
+} from "../repos/settings-repo.js";
 import { syncKeyQuotas, testKeys } from "../services/key-pool-service.js";
+import { getMcpAccessInfo } from "../services/mcp-access-service.js";
 import {
   csvEscape,
   parseCsvKeys,
   parseIds,
   parseKeyLines,
+  parseMcpAccessPayload,
   parseKeyPoolProvider,
   parseKeyStatus,
   parseLimit,
@@ -54,6 +61,25 @@ export function createAdminRouter(context: AppContext): Router {
   router.put("/system", (req, res) => {
     saveSystemSettings(context.db, parseSystemSettingsPayload(req.body ?? {}, allowHttpLocal));
     res.json(getSystemSettings(context.db));
+  });
+
+  router.get("/mcp-access", (req, res) => {
+    res.json(getMcpAccessInfo(context, req));
+  });
+
+  router.put("/mcp-access", (req, res) => {
+    const payload = parseMcpAccessPayload(req.body ?? {});
+    saveMcpBearerToken(context.db, payload.bearerToken);
+    res.json(getMcpAccessInfo(context, req));
+  });
+
+  router.post("/mcp-access/reveal", (_req, res) => {
+    res.json({
+      secret: getEffectiveMcpBearerToken(
+        context.db,
+        context.bootstrap.mcpBearerToken,
+      ),
+    });
   });
 
   router.get("/providers", (_req, res) => {

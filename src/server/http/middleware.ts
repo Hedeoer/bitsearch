@@ -1,7 +1,10 @@
 import type { NextFunction, Request, Response } from "express";
 import type { AppContext } from "../app-context.js";
 import { hasMatchingBearerToken } from "../lib/auth.js";
-import { getSystemSettings } from "../repos/settings-repo.js";
+import {
+  getEffectiveMcpBearerToken,
+  getSystemSettings,
+} from "../repos/settings-repo.js";
 import { isRequestOriginAllowed } from "./origin-utils.js";
 
 const WRITE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
@@ -33,7 +36,11 @@ export function requireAdminAuth(context: AppContext) {
 
 export function requireMcpAuth(context: AppContext) {
   return (req: Request, res: Response, next: NextFunction) => {
-    if (!hasMatchingBearerToken(req.header("authorization"), context.bootstrap.mcpBearerToken)) {
+    const expectedToken = getEffectiveMcpBearerToken(
+      context.db,
+      context.bootstrap.mcpBearerToken,
+    );
+    if (!hasMatchingBearerToken(req.header("authorization"), expectedToken)) {
       res.status(401).json({ error: "invalid_token" });
       return;
     }

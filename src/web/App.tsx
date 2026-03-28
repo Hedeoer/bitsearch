@@ -1,6 +1,6 @@
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
-import type { SystemSettings } from "@shared/contracts";
+import type { McpAccessInfo, SystemSettings } from "@shared/contracts";
 import { apiRequest } from "./api";
 import { LoginView } from "./LoginView";
 import { ConsoleLayout } from "./components/ConsoleChrome";
@@ -24,6 +24,12 @@ const EMPTY_SYSTEM: SystemSettings = {
   defaultGrokModel: "grok-4-fast",
   logRetentionDays: 7,
   allowedOrigins: [],
+};
+const EMPTY_MCP_ACCESS: McpAccessInfo = {
+  streamHttpUrl: "",
+  authScheme: "Bearer",
+  hasBearerToken: false,
+  tokenPreview: null,
 };
 
 function createProviderDrafts(
@@ -51,6 +57,7 @@ export function App() {
   const [providers, setProviders] = useState<AppDataBundle["providers"]>([]);
   const [providerDrafts, setProviderDrafts] = useState<ProviderDrafts>({});
   const [system, setSystem] = useState<SystemSettings>(EMPTY_SYSTEM);
+  const [mcpAccess, setMcpAccess] = useState<McpAccessInfo>(EMPTY_MCP_ACCESS);
   const [activity, setActivity] = useState<AppDataBundle["activity"]>([]);
   const [authKey, setAuthKey] = useState("");
   const [loginMessage, setLoginMessage] = useState("");
@@ -84,10 +91,11 @@ export function App() {
 
   async function refreshAll() {
     await withRefresh(async () => {
-      const [dashRes, provRes, sysRes, actRes] = await Promise.all([
+      const [dashRes, provRes, sysRes, mcpRes, actRes] = await Promise.all([
         apiRequest<AppDataBundle["dashboard"]>("GET", "/admin/dashboard"),
         apiRequest<AppDataBundle["providers"]>("GET", "/admin/providers"),
         apiRequest<SystemSettings>("GET", "/admin/system"),
+        apiRequest<McpAccessInfo>("GET", "/admin/mcp-access"),
         apiRequest<AppDataBundle["activity"]>("GET", "/admin/activity"),
       ]);
       if (dashRes.ok) setDashboard(dashRes.data);
@@ -96,6 +104,7 @@ export function App() {
         setProviderDrafts(createProviderDrafts(provRes.data));
       }
       if (sysRes.ok) setSystem(sysRes.data);
+      if (mcpRes.ok) setMcpAccess(mcpRes.data);
       if (actRes.ok) setActivity(actRes.data);
       setWorkspaceRefreshNonce((current) => current + 1);
     });
@@ -158,6 +167,7 @@ export function App() {
     setDashboard(null);
     setProviders([]);
     setProviderDrafts({});
+    setMcpAccess(EMPTY_MCP_ACCESS);
     setActivity([]);
     setAuthKey("");
   }
@@ -182,6 +192,19 @@ export function App() {
     } else {
       enqueueToast("error", res.message);
     }
+  }
+
+  async function saveMcpAccess(bearerToken: string): Promise<boolean> {
+    const res = await apiRequest<McpAccessInfo>("PUT", "/admin/mcp-access", {
+      bearerToken,
+    });
+    if (!res.ok) {
+      enqueueToast("error", res.message);
+      return false;
+    }
+    setMcpAccess(res.data);
+    enqueueToast("success", "MCP access key saved. New token is live.");
+    return true;
   }
 
   if (!session) {
@@ -219,7 +242,10 @@ export function App() {
               <OverviewWorkspace
                 dashboard={dashboard}
                 loading={isRefreshing}
+                mcpAccess={mcpAccess}
+                onSaveMcpAccess={saveMcpAccess}
                 onSaveSystem={() => void saveSystem()}
+                onToast={(type, message) => enqueueToast(type, message)}
                 setSystem={setSystem}
                 system={system}
                 providers={providers}

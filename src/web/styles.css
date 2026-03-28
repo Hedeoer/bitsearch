@@ -458,6 +458,10 @@
   .split-fields {
     grid-template-columns: 1fr;
   }
+
+  .field-with-action {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 640px) {

@@ -1,6 +1,8 @@
 import type { AppDatabase } from "../db/database.js";
 import type { FetchMode, KeyPoolProvider, SystemSettings } from "../../shared/contracts.js";
 
+const MCP_BEARER_TOKEN_KEY = "mcp_bearer_token";
+
 interface SettingRow {
   key: string;
   value: string;
@@ -8,6 +10,19 @@ interface SettingRow {
 
 function parseJson<T>(value: string): T {
   return JSON.parse(value) as T;
+}
+
+function getStoredSetting<T>(
+  db: AppDatabase,
+  key: string,
+): T | null {
+  const row = db.sqlite
+    .prepare("SELECT value FROM system_settings WHERE key = ?")
+    .get(key) as { value: string } | undefined;
+  if (!row) {
+    return null;
+  }
+  return parseJson<T>(row.value);
 }
 
 export function getSystemSettings(db: AppDatabase): SystemSettings {
@@ -53,4 +68,19 @@ export function saveSystemSettings(db: AppDatabase, settings: Partial<SystemSett
   if (settings.allowedOrigins) {
     saveSystemSetting(db, "allowed_origins", settings.allowedOrigins);
   }
+}
+
+export function getEffectiveMcpBearerToken(
+  db: AppDatabase,
+  fallbackToken: string,
+): string {
+  const storedToken = getStoredSetting<string>(db, MCP_BEARER_TOKEN_KEY)?.trim();
+  return storedToken || fallbackToken;
+}
+
+export function saveMcpBearerToken(
+  db: AppDatabase,
+  token: string,
+): void {
+  saveSystemSetting(db, MCP_BEARER_TOKEN_KEY, token);
 }

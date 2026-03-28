@@ -1,15 +1,24 @@
 import type { Dispatch, SetStateAction } from "react";
 import { AlertTriangle, ShieldCheck } from "lucide-react";
-import type { DashboardSummary, SystemSettings, ProviderConfigRecord } from "@shared/contracts";
+import type {
+  DashboardSummary,
+  McpAccessInfo,
+  ProviderConfigRecord,
+  SystemSettings,
+} from "@shared/contracts";
 import { formatDateTime } from "../format";
 import { OverviewPulsePanel } from "../components/OverviewPulsePanel";
 import { RequestTrendPanel } from "../components/RequestTrendPanel";
 import { StrategyPanel } from "../components/StrategyPanel";
+import type { ToastTone } from "../components/Feedback";
 
 type OverviewWorkspaceProps = Readonly<{
   dashboard: DashboardSummary | null;
   loading: boolean;
+  mcpAccess: McpAccessInfo;
+  onSaveMcpAccess: (token: string) => Promise<boolean>;
   onSaveSystem: () => void;
+  onToast: (type: ToastTone, message: string) => void;
   setSystem: Dispatch<SetStateAction<SystemSettings>>;
   system: SystemSettings;
   providers: ProviderConfigRecord[];
@@ -87,7 +96,10 @@ export function OverviewWorkspace(props: OverviewWorkspaceProps) {
         />
         <StrategyPanel
           loading={props.loading}
+          mcpAccess={props.mcpAccess}
+          onSaveMcpAccess={props.onSaveMcpAccess}
           system={props.system}
+          onToast={props.onToast}
           setSystem={props.setSystem}
           onSave={props.onSaveSystem}
         />

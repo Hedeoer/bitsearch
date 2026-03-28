@@ -163,6 +163,21 @@ export interface SystemSettings {
   allowedOrigins: string[];
 }
 
+export interface McpAccessInfo {
+  streamHttpUrl: string;
+  authScheme: "Bearer";
+  hasBearerToken: boolean;
+  tokenPreview: string | null;
+}
+
+export interface UpdateMcpAccessPayload {
+  bearerToken: string;
+}
+
+export interface McpAccessSecretResponse {
+  secret: string;
+}
+
 export interface RequestAttemptRecord {
   id: string;
   requestLogId: string;
