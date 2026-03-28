@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Activity,
   KeyRound,
@@ -16,7 +16,6 @@ import type {
   ProviderConfigRecord,
   SystemSettings,
 } from "@shared/contracts";
-import { formatNumber } from "../format";
 import { InlineSpinner } from "./Feedback";
 
 type ConsoleLayoutProps = Readonly<{
@@ -96,6 +95,7 @@ export function ConsoleLayout(props: ConsoleLayoutProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
   const activeRoute = getActiveRoute(location.pathname);
+  const isOverviewRoute = activeRoute.href === "/overview";
 
   useEffect(() => {
     setMobileOpen(false);
@@ -154,7 +154,7 @@ export function ConsoleLayout(props: ConsoleLayoutProps) {
               ) : (
                 <>
                   <span className="status-dot" aria-hidden="true" />
-                  Live
+                  {isOverviewRoute ? "Live · 30s" : "Ready"}
                 </>
               )}
             </span>

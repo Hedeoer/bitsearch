@@ -1,6 +1,5 @@
 import { nanoid } from "nanoid";
 import type {
-  DashboardSummary,
   RequestActivityRecord,
   RequestAttemptRecord,
   RequestLogRecord,
@@ -51,7 +50,7 @@ function parseJsonArray(value: unknown): RemoteProvider[] {
   }
 }
 
-function mapRequestLog(row: Record<string, unknown>): RequestLogRecord {
+export function mapRequestLog(row: Record<string, unknown>): RequestLogRecord {
   return {
     id: String(row.id),
     toolName: String(row.tool_name),
@@ -213,40 +212,6 @@ export function getRequestActivity(
   return {
     request: mapRequestLog(request),
     attempts: attempts.map(mapAttemptLog),
-  };
-}
-
-export function getDashboardSummary(db: AppDatabase): DashboardSummary {
-  const totals = db.sqlite
-    .prepare(
-      `SELECT
-        COUNT(*) AS total,
-        SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) AS success_count,
-        SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) AS failed_count
-       FROM request_logs`,
-    )
-    .get() as {
-    total: number;
-    success_count: number | null;
-    failed_count: number | null;
-  };
-
-  const providerErrors = db.sqlite
-    .prepare(
-      `SELECT provider, COUNT(*) AS count
-       FROM request_attempt_logs
-       WHERE status = 'failed'
-       GROUP BY provider
-       ORDER BY count DESC`,
-    )
-    .all() as Array<{ provider: string; count: number }>;
-
-  return {
-    totalRequests: totals.total,
-    successCount: totals.success_count ?? 0,
-    failedCount: totals.failed_count ?? 0,
-    providerErrors,
-    latestErrors: listRequestLogs(db, 10).filter((item) => item.status === "failed"),
   };
 }
 

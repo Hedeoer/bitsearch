@@ -108,4 +108,10 @@ CREATE TABLE IF NOT EXISTS planning_phase_records (
   UNIQUE(session_id, phase_name),
   FOREIGN KEY(session_id) REFERENCES planning_sessions(id) ON DELETE CASCADE
 );
+
+CREATE INDEX IF NOT EXISTS idx_request_logs_created_at
+  ON request_logs(created_at);
+
+CREATE INDEX IF NOT EXISTS idx_request_attempt_logs_created_at
+  ON request_attempt_logs(created_at);
 `;

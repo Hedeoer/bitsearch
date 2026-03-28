@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Navigate, Route, Routes } from "react-router-dom";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import type { SystemSettings } from "@shared/contracts";
 import { apiRequest, clearStoredAuthKey, setStoredAuthKey } from "./api";
 import { LoginView } from "./LoginView";
@@ -15,6 +15,8 @@ import type {
   SessionState,
 } from "./types";
 import { dismissToast, enqueueToast, useToastStore } from "./toast-store";
+
+const AUTO_REFRESH_INTERVAL_MS = 30_000;
 
 const EMPTY_SYSTEM: SystemSettings = {
   fetchMode: "auto_ordered",
@@ -41,6 +43,7 @@ function createProviderDrafts(
 }
 
 export function App() {
+  const location = useLocation();
   const [session, setSession] = useState<SessionState | null>(null);
   const [isSessionReady, setIsSessionReady] = useState(false);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
@@ -53,11 +56,34 @@ export function App() {
   const [loginMessage, setLoginMessage] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [workspaceRefreshNonce, setWorkspaceRefreshNonce] = useState(0);
+  const refreshInFlightRef = useRef(false);
   const toasts = useToastStore();
 
-  async function refreshAll() {
+  async function withRefresh(task: () => Promise<void>) {
+    if (refreshInFlightRef.current) {
+      return;
+    }
+    refreshInFlightRef.current = true;
     setIsRefreshing(true);
     try {
+      await task();
+    } finally {
+      refreshInFlightRef.current = false;
+      setIsRefreshing(false);
+    }
+  }
+
+  async function refreshDashboard() {
+    await withRefresh(async () => {
+      const dashRes = await apiRequest<AppDataBundle["dashboard"]>("GET", "/admin/dashboard");
+      if (dashRes.ok) {
+        setDashboard(dashRes.data);
+      }
+    });
+  }
+
+  async function refreshAll() {
+    await withRefresh(async () => {
       const [dashRes, provRes, sysRes, actRes] = await Promise.all([
         apiRequest<AppDataBundle["dashboard"]>("GET", "/admin/dashboard"),
         apiRequest<AppDataBundle["providers"]>("GET", "/admin/providers"),
@@ -72,9 +98,7 @@ export function App() {
       if (sysRes.ok) setSystem(sysRes.data);
       if (actRes.ok) setActivity(actRes.data);
       setWorkspaceRefreshNonce((current) => current + 1);
-    } finally {
-      setIsRefreshing(false);
-    }
+    });
   }
 
   async function checkSession() {
@@ -94,6 +118,20 @@ export function App() {
   useEffect(() => {
     void checkSession();
   }, []);
+
+  const refreshDashboardEvent = useEffectEvent(() => {
+    void refreshDashboard();
+  });
+
+  useEffect(() => {
+    if (!session || !location.pathname.startsWith("/overview")) {
+      return undefined;
+    }
+    const intervalId = window.setInterval(() => {
+      refreshDashboardEvent();
+    }, AUTO_REFRESH_INTERVAL_MS);
+    return () => window.clearInterval(intervalId);
+  }, [location.pathname, refreshDashboardEvent, session]);
 
   async function login() {
     setLoginMessage("");

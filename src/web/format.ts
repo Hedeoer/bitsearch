@@ -55,6 +55,26 @@ export function formatNumber(value: number | null | undefined): string {
   return new Intl.NumberFormat("zh-CN").format(value);
 }
 
+export function formatDecimal(
+  value: number | null | undefined,
+  fractionDigits = 1,
+): string {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return "-";
+  }
+  return new Intl.NumberFormat("zh-CN", {
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
+  }).format(value);
+}
+
+export function formatPercentage(value: number | null | undefined): string {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return "-";
+  }
+  return `${formatDecimal(value)}%`;
+}
+
 export function getErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof Error && error.message.trim()) {
     return error.message;

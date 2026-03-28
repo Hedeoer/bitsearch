@@ -124,11 +124,34 @@ export interface KeyPoolSummary {
   } | null;
 }
 
-export interface DashboardSummary {
-  totalRequests: number;
+export interface ProviderErrorCount {
+  provider: string;
+  count: number;
+}
+
+export interface RequestRateSummary {
+  rpm10m: number;
+  requestCount10m: number;
+}
+
+export interface DeliveryWindowSummary {
+  total: number;
+  successful: number;
+  failed: number;
+  errorRate: number;
+}
+
+export interface DashboardTrendPoint {
+  bucketStart: string;
   successCount: number;
   failedCount: number;
-  providerErrors: Array<{ provider: string; count: number }>;
+}
+
+export interface DashboardSummary {
+  requestRate: RequestRateSummary;
+  delivery24h: DeliveryWindowSummary;
+  trend24h: DashboardTrendPoint[];
+  providerErrors24h: ProviderErrorCount[];
   latestErrors: RequestLogRecord[];
 }
 

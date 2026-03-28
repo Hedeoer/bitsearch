@@ -2,10 +2,9 @@ import type { Dispatch, SetStateAction } from "react";
 import { AlertTriangle, ShieldCheck } from "lucide-react";
 import type { DashboardSummary, SystemSettings, ProviderConfigRecord } from "@shared/contracts";
 import { formatDateTime } from "../format";
-import {
-  OverviewPanel,
-  StrategyPanel,
-} from "../components/OverviewPanels";
+import { OverviewPulsePanel } from "../components/OverviewPulsePanel";
+import { RequestTrendPanel } from "../components/RequestTrendPanel";
+import { StrategyPanel } from "../components/StrategyPanel";
 
 type OverviewWorkspaceProps = Readonly<{
   dashboard: DashboardSummary | null;
@@ -16,28 +15,33 @@ type OverviewWorkspaceProps = Readonly<{
   providers: ProviderConfigRecord[];
 }>;
 
+function LatestErrorsEmptyState() {
+  return (
+    <article className="surface-card page-panel">
+      <div className="page-panel-header">
+        <div>
+          <div className="eyebrow">Exceptions</div>
+          <h3>Latest Errors</h3>
+        </div>
+        <span className="chip success-chip">
+          <ShieldCheck size={12} />
+          No active failure feed
+        </span>
+      </div>
+      <p className="supporting">
+        Failed requests from the last 24 hours will appear here once the console
+        records an error.
+      </p>
+    </article>
+  );
+}
+
 function LatestErrorsPanel(props: Readonly<{
+  failedCount24h: number;
   errors: DashboardSummary["latestErrors"];
 }>) {
   if (props.errors.length === 0) {
-    return (
-      <article className="surface-card page-panel">
-        <div className="page-panel-header">
-          <div>
-            <div className="eyebrow">Exceptions</div>
-            <h3>Latest Errors</h3>
-          </div>
-          <span className="chip success-chip">
-            <ShieldCheck size={12} />
-            No active failure feed
-          </span>
-        </div>
-        <p className="supporting">
-          Recent request errors will appear here once the console records failed tool
-          runs.
-        </p>
-      </article>
-    );
+    return <LatestErrorsEmptyState />;
   }
 
   return (
@@ -49,7 +53,7 @@ function LatestErrorsPanel(props: Readonly<{
         </div>
         <span className="chip warning-chip">
           <AlertTriangle size={12} />
-          {props.errors.length} recent failures
+          {props.failedCount24h} failures / 24h
         </span>
       </div>
       <div className="workspace-feed">
@@ -76,7 +80,11 @@ export function OverviewWorkspace(props: OverviewWorkspaceProps) {
   return (
     <div className="workspace-stack">
       <div className="workspace-grid-two">
-        <OverviewPanel dashboard={props.dashboard} loading={props.loading} providers={props.providers} />
+        <OverviewPulsePanel
+          dashboard={props.dashboard}
+          loading={props.loading}
+          providers={props.providers}
+        />
         <StrategyPanel
           loading={props.loading}
           system={props.system}
@@ -84,7 +92,14 @@ export function OverviewWorkspace(props: OverviewWorkspaceProps) {
           onSave={props.onSaveSystem}
         />
       </div>
-      <LatestErrorsPanel errors={props.dashboard?.latestErrors ?? []} />
+      <RequestTrendPanel
+        loading={props.loading}
+        trend={props.dashboard?.trend24h ?? []}
+      />
+      <LatestErrorsPanel
+        errors={props.dashboard?.latestErrors ?? []}
+        failedCount24h={props.dashboard?.delivery24h.failed ?? 0}
+      />
     </div>
   );
 }

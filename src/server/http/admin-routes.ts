@@ -1,8 +1,8 @@
 import { Router } from "express";
 import type { AppContext } from "../app-context.js";
+import { getDashboardSummary } from "../repos/dashboard-repo.js";
 import {
   getRequestActivity,
-  getDashboardSummary,
   listRequestActivities,
   listRequestAttempts,
   listRequestLogs,
