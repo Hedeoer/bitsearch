@@ -6,7 +6,9 @@ export interface BootstrapConfig {
   databasePath: string;
   encryptionKey: string;
   adminAuthKey: string;
+  sessionSecret: string;
   mcpBearerToken: string;
+  trustProxy: boolean;
 }
 
 const DEFAULT_DATABASE_PATH = path.resolve(process.cwd(), "data/bitsearch.db");
@@ -36,6 +38,17 @@ function readSecret(name: string, fallback: string): string {
   return fallback;
 }
 
+function readTrustProxy(): boolean {
+  const value = process.env.TRUST_PROXY?.trim().toLowerCase();
+  if (!value || value === "0" || value === "false") {
+    return false;
+  }
+  if (value === "1" || value === "true") {
+    return true;
+  }
+  throw new Error(`Invalid TRUST_PROXY: ${process.env.TRUST_PROXY}`);
+}
+
 export function readBootstrapConfig(): BootstrapConfig {
   return {
     port: readPort(),
@@ -43,6 +56,8 @@ export function readBootstrapConfig(): BootstrapConfig {
     databasePath: readString("DATABASE_PATH", DEFAULT_DATABASE_PATH),
     encryptionKey: readSecret("APP_ENCRYPTION_KEY", "dev-encryption-secret"),
     adminAuthKey: readSecret("ADMIN_AUTH_KEY", "bitsearch-admin-dev-key"),
+    sessionSecret: readSecret("SESSION_SECRET", "bitsearch-session-dev-secret"),
     mcpBearerToken: readSecret("MCP_BEARER_TOKEN", "bitsearch-dev-token"),
+    trustProxy: readTrustProxy(),
   };
 }

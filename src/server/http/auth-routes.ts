@@ -1,16 +1,13 @@
 import { Router } from "express";
 import type { AppContext } from "../app-context.js";
-import { hasMatchingBearerToken, hasMatchingSecret } from "../lib/auth.js";
+import { hasMatchingSecret } from "../lib/auth.js";
 
 export function createAuthRouter(context: AppContext): Router {
   const router = Router();
 
   router.get("/session", (req, res) => {
     res.json({
-      loggedIn: hasMatchingBearerToken(
-        req.header("authorization"),
-        context.bootstrap.adminAuthKey,
-      ),
+      loggedIn: context.adminSessions.hasSession(req.header("cookie")),
     });
   });
 
@@ -20,10 +17,12 @@ export function createAuthRouter(context: AppContext): Router {
       res.status(401).json({ error: "invalid_auth_key" });
       return;
     }
+    context.adminSessions.createSession(res);
     res.json({ loggedIn: true });
   });
 
-  router.post("/logout", (_req, res) => {
+  router.post("/logout", (req, res) => {
+    context.adminSessions.destroySession(req.header("cookie"), res);
     res.json({ loggedIn: false });
   });
 

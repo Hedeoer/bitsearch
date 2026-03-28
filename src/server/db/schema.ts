@@ -112,6 +112,21 @@ CREATE TABLE IF NOT EXISTS planning_phase_records (
 CREATE INDEX IF NOT EXISTS idx_request_logs_created_at
   ON request_logs(created_at);
 
+CREATE INDEX IF NOT EXISTS idx_request_logs_status_created_at
+  ON request_logs(status, created_at);
+
 CREATE INDEX IF NOT EXISTS idx_request_attempt_logs_created_at
   ON request_attempt_logs(created_at);
+
+CREATE INDEX IF NOT EXISTS idx_request_attempt_logs_request_log_id_attempt_no_created_at
+  ON request_attempt_logs(request_log_id, attempt_no, created_at);
+
+CREATE INDEX IF NOT EXISTS idx_provider_keys_provider_enabled_created_at
+  ON provider_keys(provider, enabled, created_at);
+
+CREATE INDEX IF NOT EXISTS idx_search_sessions_created_at
+  ON search_sessions(created_at);
+
+CREATE INDEX IF NOT EXISTS idx_planning_sessions_updated_at
+  ON planning_sessions(updated_at);
 `;

@@ -98,3 +98,12 @@ export function getPlanningSnapshot(
     })),
   };
 }
+
+export function cleanupPlanningSessions(db: AppDatabase, retentionDays: number): void {
+  db.sqlite
+    .prepare(
+      `DELETE FROM planning_sessions
+       WHERE datetime(updated_at) < datetime('now', ?)`,
+    )
+    .run(`-${retentionDays} days`);
+}

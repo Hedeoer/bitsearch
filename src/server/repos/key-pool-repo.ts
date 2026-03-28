@@ -9,33 +9,15 @@ import type {
 import type { AppDatabase } from "../db/database.js";
 import { decryptSecret } from "../lib/crypto.js";
 import { buildKeyPoolSummary } from "./key-pool-summary.js";
+import {
+  loadActionableKeyRows,
+  loadManagedKeyRows,
+  type ProviderKeyAdminRow,
+} from "./key-pool-queries.js";
 
 const MASK_PREFIX = 4;
 const MASK_SUFFIX = 4;
 const UNKNOWN_HEALTH_STATUS: KeyHealthStatus = "unknown";
-
-interface ProviderKeyAdminRow {
-  id: string;
-  provider: KeyPoolProvider;
-  name: string;
-  fingerprint: string;
-  enabled: number;
-  encrypted_key: string;
-  tags_json: string;
-  note: string;
-  last_check_status: string;
-  last_checked_at: string | null;
-  last_check_error: string | null;
-  last_used_at: string | null;
-  last_error: string | null;
-  last_status_code: number | null;
-  quota_json: string;
-  quota_synced_at: string | null;
-  request_count: number;
-  failure_count: number;
-  created_at: string;
-  updated_at: string;
-}
 
 export interface KeyListFilters {
   provider: KeyPoolProvider;
@@ -111,16 +93,6 @@ function mapRow(
   };
 }
 
-function matchStatus(record: ProviderKeyRecord, status: KeyListStatus): boolean {
-  if (status === "all") {
-    return true;
-  }
-  if (status === "enabled" || status === "disabled") {
-    return record.enabled === (status === "enabled");
-  }
-  return record.healthStatus === status;
-}
-
 function matchTag(record: ProviderKeyRecord, tag: string): boolean {
   return !tag || record.tags.includes(tag);
 }
@@ -153,38 +125,13 @@ function stripSecret(record: ActionableKeyRecord): ProviderKeyRecord {
   return rest;
 }
 
-function loadRows(db: AppDatabase, provider: KeyPoolProvider): ProviderKeyAdminRow[] {
-  return db.sqlite
-    .prepare(
-      `SELECT pk.*,
-              COALESCE(stats.request_count, 0) AS request_count,
-              COALESCE(stats.failure_count, 0) AS failure_count
-       FROM provider_keys pk
-       LEFT JOIN (
-         SELECT provider,
-                key_fingerprint,
-                COUNT(*) AS request_count,
-                SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) AS failure_count
-         FROM request_attempt_logs
-         WHERE key_fingerprint IS NOT NULL
-         GROUP BY provider, key_fingerprint
-       ) stats
-         ON stats.provider = pk.provider
-        AND stats.key_fingerprint = pk.fingerprint
-       WHERE pk.provider = ?
-       ORDER BY pk.created_at DESC`,
-    )
-    .all(provider) as unknown as ProviderKeyAdminRow[];
-}
-
 export function listManagedKeys(
   db: AppDatabase,
   filters: KeyListFilters,
   encryptionKey: string,
 ): ProviderKeyRecord[] {
-  return loadRows(db, filters.provider)
+  return loadManagedKeyRows(db, filters.provider, filters.status)
     .map((row) => mapRow(row, encryptionKey))
-    .filter((record) => matchStatus(record, filters.status))
     .filter((record) => matchTag(record, filters.tag.trim()))
     .filter((record) => matchQuery(record, filters.query))
     .map(stripSecret);
@@ -197,7 +144,7 @@ export function listActionableKeys(
   encryptionKey: string,
 ): ActionableKeyRecord[] {
   const idSet = new Set(ids);
-  return loadRows(db, provider)
+  return loadActionableKeyRows(db, provider, ids)
     .map((row) => mapRow(row, encryptionKey))
     .filter((record) => idSet.size === 0 || idSet.has(record.id));
 }
@@ -207,7 +154,9 @@ export function getKeyPoolSummary(
   provider: KeyPoolProvider,
   encryptionKey: string,
 ): KeyPoolSummary {
-  const records = loadRows(db, provider).map((row) => stripSecret(mapRow(row, encryptionKey)));
+  const records = loadManagedKeyRows(db, provider, "all").map((row) =>
+    stripSecret(mapRow(row, encryptionKey)),
+  );
   return buildKeyPoolSummary(provider, records);
 }
 

@@ -1,26 +1,3 @@
-const AUTH_STORAGE_KEY = "authKey";
-
-export function getStoredAuthKey(): string {
-  if (typeof window === "undefined") {
-    return "";
-  }
-  return window.localStorage.getItem(AUTH_STORAGE_KEY)?.trim() ?? "";
-}
-
-export function setStoredAuthKey(value: string): void {
-  if (typeof window === "undefined") {
-    return;
-  }
-  window.localStorage.setItem(AUTH_STORAGE_KEY, value.trim());
-}
-
-export function clearStoredAuthKey(): void {
-  if (typeof window === "undefined") {
-    return;
-  }
-  window.localStorage.removeItem(AUTH_STORAGE_KEY);
-}
-
 export type ApiResult<T> =
   | { ok: true; data: T }
   | { ok: false; status: number; message: string };
@@ -30,12 +7,11 @@ export async function apiRequest<T>(
   path: string,
   body?: unknown,
 ): Promise<ApiResult<T>> {
-  const authKey = getStoredAuthKey();
   const init: RequestInit = {
     method,
+    credentials: "same-origin",
     headers: {
       "content-type": "application/json",
-      ...(authKey ? { authorization: `Bearer ${authKey}` } : {}),
     },
   };
   if (body !== undefined) {

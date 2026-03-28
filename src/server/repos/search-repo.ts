@@ -41,3 +41,12 @@ export function getSearchSession(
     createdAt: row.created_at,
   };
 }
+
+export function cleanupSearchSessions(db: AppDatabase, retentionDays: number): void {
+  db.sqlite
+    .prepare(
+      `DELETE FROM search_sessions
+       WHERE datetime(created_at) < datetime('now', ?)`,
+    )
+    .run(`-${retentionDays} days`);
+}

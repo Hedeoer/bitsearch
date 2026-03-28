@@ -5,6 +5,10 @@ import type {
   RequestLogRecord,
 } from "../../shared/contracts.js";
 import type { AppDatabase } from "../db/database.js";
+import {
+  getCachedDashboardSummary,
+  setCachedDashboardSummary,
+} from "../services/dashboard-cache.js";
 import { mapRequestLog } from "./log-repo.js";
 
 const MINUTES_PER_RPM_WINDOW = 10;
@@ -149,11 +153,16 @@ function getLatestErrors24h(db: AppDatabase, now: Date): RequestLogRecord[] {
 
 export function getDashboardSummary(db: AppDatabase): DashboardSummary {
   const now = new Date();
-  return {
+  const cached = getCachedDashboardSummary(now.getTime());
+  if (cached) {
+    return cached;
+  }
+
+  return setCachedDashboardSummary({
     requestRate: getRequestRate10m(db, now),
     delivery24h: getDelivery24h(db, now),
     trend24h: getTrend24h(db, now),
     providerErrors24h: getProviderErrors24h(db, now),
     latestErrors: getLatestErrors24h(db, now),
-  };
+  }, now.getTime());
 }

@@ -7,6 +7,7 @@ import type {
   RemoteProvider,
 } from "../../shared/contracts.js";
 import type { AppDatabase } from "../db/database.js";
+import { invalidateDashboardSummaryCache } from "../services/dashboard-cache.js";
 
 type AttemptInsert = Omit<RequestAttemptRecord, "id" | "createdAt">;
 type RequestInsert = Omit<RequestLogRecord, "createdAt">;
@@ -118,6 +119,7 @@ export function insertRequestLog(db: AppDatabase, payload: RequestInsert): void 
       JSON.stringify(payload.metadata),
       db.now(),
     );
+  invalidateDashboardSummaryCache();
 }
 
 export function insertAttemptLogs(db: AppDatabase, attempts: AttemptInsert[]): void {
@@ -143,6 +145,7 @@ export function insertAttemptLogs(db: AppDatabase, attempts: AttemptInsert[]): v
       db.now(),
     );
   }
+  invalidateDashboardSummaryCache();
 }
 
 export function listRequestLogs(db: AppDatabase, limit: number): RequestLogRecord[] {
@@ -222,4 +225,5 @@ export function cleanupOldLogs(db: AppDatabase, retentionDays: number): void {
        WHERE datetime(created_at) < datetime('now', ?)`,
     )
     .run(`-${retentionDays} days`);
+  invalidateDashboardSummaryCache();
 }

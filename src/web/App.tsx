@@ -1,7 +1,7 @@
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import type { SystemSettings } from "@shared/contracts";
-import { apiRequest, clearStoredAuthKey, setStoredAuthKey } from "./api";
+import { apiRequest } from "./api";
 import { LoginView } from "./LoginView";
 import { ConsoleLayout } from "./components/ConsoleChrome";
 import { ToastViewport } from "./components/Feedback";
@@ -141,7 +141,7 @@ export function App() {
         authKey,
       });
       if (res.ok && res.data.loggedIn) {
-        setStoredAuthKey(authKey);
+        setAuthKey("");
         setSession(res.data);
         void refreshAll();
       } else {
@@ -154,7 +154,6 @@ export function App() {
 
   async function logout() {
     await apiRequest("POST", "/admin/logout");
-    clearStoredAuthKey();
     setSession(null);
     setDashboard(null);
     setProviders([]);

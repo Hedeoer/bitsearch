@@ -23,59 +23,25 @@ import {
 } from "../repos/key-pool-repo.js";
 import { getSystemSettings, saveSystemSettings } from "../repos/settings-repo.js";
 import { syncKeyQuotas, testKeys } from "../services/key-pool-service.js";
-
-const KEY_POOL_PROVIDERS = new Set(["tavily", "firecrawl"]);
-const KEY_LIST_STATUSES = new Set([
-  "all",
-  "enabled",
-  "disabled",
-  "healthy",
-  "unhealthy",
-]);
-
-function parseTags(raw: unknown): string[] {
-  return String(raw ?? "")
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
-
-function parseKeyLines(raw: string): string[] {
-  return raw
-    .split(/\r?\n/)
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
-
-function parseCsvKeys(raw: string): string[] {
-  return raw
-    .split(/\r?\n/)
-    .slice(1)
-    .map((line) => line.split(",")[0]?.trim() ?? "")
-    .filter(Boolean);
-}
-
-function parseKeyPoolProvider(raw: unknown): "tavily" | "firecrawl" {
-  if (!KEY_POOL_PROVIDERS.has(String(raw))) {
-    throw new Error("invalid_key_pool_provider");
-  }
-  return String(raw) as "tavily" | "firecrawl";
-}
-
-function parseKeyStatus(raw: unknown): "all" | "enabled" | "disabled" | "healthy" | "unhealthy" {
-  const value = String(raw ?? "all");
-  if (!KEY_LIST_STATUSES.has(value)) {
-    throw new Error("invalid_key_list_status");
-  }
-  return value as "all" | "enabled" | "disabled" | "healthy" | "unhealthy";
-}
-
-function parseIds(raw: unknown): string[] {
-  return Array.isArray(raw) ? raw.map(String).filter(Boolean) : [];
-}
+import {
+  csvEscape,
+  parseCsvKeys,
+  parseIds,
+  parseKeyLines,
+  parseKeyPoolProvider,
+  parseKeyStatus,
+  parseLimit,
+  parseOptionalKeyPoolProvider,
+  parseProviderConfigPayload,
+  parseRemoteProvider,
+  parseRequiredId,
+  parseSystemSettingsPayload,
+  parseTags,
+} from "./admin-route-utils.js";
 
 export function createAdminRouter(context: AppContext): Router {
   const router = Router();
+  const allowHttpLocal = process.env.NODE_ENV !== "production";
 
   router.get("/dashboard", (_req, res) => {
     res.json(getDashboardSummary(context.db));
@@ -86,7 +52,7 @@ export function createAdminRouter(context: AppContext): Router {
   });
 
   router.put("/system", (req, res) => {
-    saveSystemSettings(context.db, req.body ?? {});
+    saveSystemSettings(context.db, parseSystemSettingsPayload(req.body ?? {}, allowHttpLocal));
     res.json(getSystemSettings(context.db));
   });
 
@@ -95,12 +61,10 @@ export function createAdminRouter(context: AppContext): Router {
   });
 
   router.put("/providers/:provider", (req, res) => {
-    const provider = req.params.provider as "grok" | "tavily" | "firecrawl";
+    const provider = parseRemoteProvider(req.params.provider);
+    const payload = parseProviderConfigPayload(req.body ?? {}, allowHttpLocal);
     saveProviderConfig(context.db, provider, {
-      enabled: Boolean(req.body?.enabled),
-      baseUrl: String(req.body?.baseUrl ?? ""),
-      timeoutMs: Number(req.body?.timeoutMs ?? 30000),
-      apiKey: req.body?.apiKey === undefined ? undefined : String(req.body.apiKey),
+      ...payload,
       encryptionKey: context.bootstrap.encryptionKey,
     });
     res.json(listProviderConfigs(context.db));
@@ -142,7 +106,7 @@ export function createAdminRouter(context: AppContext): Router {
   });
 
   router.patch("/keys/meta", (req, res) => {
-    const id = String(req.body?.id ?? "");
+    const id = parseRequiredId(req.body?.id, "invalid_key_id");
     updateKeyNote(context.db, id, String(req.body?.note ?? ""));
     res.json({ ok: true });
   });
@@ -168,7 +132,7 @@ export function createAdminRouter(context: AppContext): Router {
   });
 
   router.post("/keys/reveal", (req, res) => {
-    const id = String(req.body?.id ?? "");
+    const id = parseRequiredId(req.body?.id, "invalid_key_id");
     const secret = getKeySecret(context.db, id, context.bootstrap.encryptionKey);
     if (!secret) {
       res.status(404).json({ error: "key_not_found" });
@@ -183,10 +147,19 @@ export function createAdminRouter(context: AppContext): Router {
   });
 
   router.get("/keys/export.csv", (req, res) => {
-    const provider = req.query.provider as "tavily" | "firecrawl" | undefined;
+    const provider = parseOptionalKeyPoolProvider(req.query.provider);
     const rows = listProviderKeys(context.db, provider);
     const csv = [
-      "fingerprint,name,provider,enabled,tags,last_used_at,last_error,last_status_code",
+      [
+        "fingerprint",
+        "name",
+        "provider",
+        "enabled",
+        "tags",
+        "last_used_at",
+        "last_error",
+        "last_status_code",
+      ].map(csvEscape).join(","),
       ...rows.map((row) =>
         [
           row.fingerprint,
@@ -197,20 +170,18 @@ export function createAdminRouter(context: AppContext): Router {
           row.lastUsedAt ?? "",
           row.lastError ?? "",
           row.lastStatusCode ?? "",
-        ].join(","),
+        ].map(csvEscape).join(","),
       ),
     ].join("\n");
     res.type("text/csv").send(csv);
   });
 
   router.get("/logs", (req, res) => {
-    const limit = Number(req.query.limit ?? 100);
-    res.json(listRequestLogs(context.db, Math.min(limit, 500)));
+    res.json(listRequestLogs(context.db, parseLimit(req.query.limit, 100, 500)));
   });
 
   router.get("/activity", (req, res) => {
-    const limit = Number(req.query.limit ?? 100);
-    res.json(listRequestActivities(context.db, Math.min(limit, 500)));
+    res.json(listRequestActivities(context.db, parseLimit(req.query.limit, 100, 500)));
   });
 
   router.get("/activity/:requestId", (req, res) => {
@@ -223,8 +194,7 @@ export function createAdminRouter(context: AppContext): Router {
   });
 
   router.get("/logs/attempts", (req, res) => {
-    const limit = Number(req.query.limit ?? 200);
-    res.json(listRequestAttempts(context.db, Math.min(limit, 1000)));
+    res.json(listRequestAttempts(context.db, parseLimit(req.query.limit, 200, 1000)));
   });
 
   return router;

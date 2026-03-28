@@ -4,20 +4,55 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import type { AppContext } from "../app-context.js";
 import { createMcpServer, isInitializeRequest } from "./register-tools.js";
 
-const transports = new Map<string, StreamableHTTPServerTransport>();
+const MCP_SESSION_TTL_MS = 30 * 60 * 1000;
+const MCP_SESSION_SWEEP_INTERVAL_MS = 5 * 60 * 1000;
+
+interface TransportSession {
+  transport: StreamableHTTPServerTransport;
+  lastSeenAt: number;
+}
+
+const transports = new Map<string, TransportSession>();
+
+async function cleanupIdleTransports(): Promise<void> {
+  const staleCutoff = Date.now() - MCP_SESSION_TTL_MS;
+  const staleSessions = [...transports.entries()].filter(
+    ([, session]) => session.lastSeenAt <= staleCutoff,
+  );
+
+  for (const [sessionId, session] of staleSessions) {
+    transports.delete(sessionId);
+    try {
+      await session.transport.close();
+    } catch (error) {
+      console.error(`Failed to close MCP transport ${sessionId}`, error);
+    }
+  }
+}
+
+const sweepTimer = setInterval(() => {
+  void cleanupIdleTransports();
+}, MCP_SESSION_SWEEP_INTERVAL_MS);
+
+sweepTimer.unref();
 
 function getExistingTransport(sessionId: string | undefined) {
   if (!sessionId) {
     return null;
   }
-  return transports.get(sessionId) ?? null;
+  const session = transports.get(sessionId) ?? null;
+  if (!session) {
+    return null;
+  }
+  session.lastSeenAt = Date.now();
+  return session.transport;
 }
 
 async function createTransport(context: AppContext) {
   const transport = new StreamableHTTPServerTransport({
     sessionIdGenerator: () => randomUUID(),
     onsessioninitialized: (sessionId) => {
-      transports.set(sessionId, transport);
+      transports.set(sessionId, { transport, lastSeenAt: Date.now() });
     },
   });
   transport.onclose = () => {

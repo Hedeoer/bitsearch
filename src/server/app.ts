@@ -7,23 +7,45 @@ import { createAuthRouter } from "./http/auth-routes.js";
 import { createAdminRouter } from "./http/admin-routes.js";
 import {
   requireAdminAuth,
+  requireAdminWriteOrigin,
   requireAllowedOrigin,
   requireMcpAuth,
 } from "./http/middleware.js";
+import { AppHttpError } from "./lib/http.js";
 import { handleMcpDelete, handleMcpGet, handleMcpPost } from "./mcp/transport-router.js";
 
 function resolvePublicDirectory(): string {
   return path.resolve(process.cwd(), "dist/public");
 }
 
+function buildCspDirectives() {
+  return {
+    defaultSrc: ["'self'"],
+    baseUri: ["'self'"],
+    connectSrc: ["'self'"],
+    fontSrc: ["'self'", "data:"],
+    formAction: ["'self'"],
+    frameAncestors: ["'none'"],
+    imgSrc: ["'self'", "data:"],
+    objectSrc: ["'none'"],
+    scriptSrc: ["'self'"],
+    styleSrc: ["'self'", "'unsafe-inline'"],
+  };
+}
+
 export function createApp(context: AppContext) {
   const app = express();
   const publicDir = resolvePublicDirectory();
 
-  app.set("trust proxy", 1);
+  if (context.bootstrap.trustProxy) {
+    app.set("trust proxy", 1);
+  }
   app.use(
     helmet({
-      contentSecurityPolicy: false,
+      contentSecurityPolicy: {
+        useDefaults: false,
+        directives: buildCspDirectives(),
+      },
     }),
   );
   app.use(express.json({ limit: "2mb" }));
@@ -33,7 +55,12 @@ export function createApp(context: AppContext) {
   });
 
   app.use("/api/admin", createAuthRouter(context));
-  app.use("/api/admin", requireAdminAuth(context), createAdminRouter(context));
+  app.use(
+    "/api/admin",
+    requireAdminAuth(context),
+    requireAdminWriteOrigin(context),
+    createAdminRouter(context),
+  );
 
   app.post("/mcp", requireMcpAuth(context), requireAllowedOrigin(context), (req, res, next) => {
     handleMcpPost(context, req, res).catch(next);
@@ -57,8 +84,12 @@ export function createApp(context: AppContext) {
   }
 
   app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-    const message = error instanceof Error ? error.message : "Internal server error";
-    res.status(500).json({ error: message });
+    if (error instanceof AppHttpError) {
+      res.status(error.statusCode).json({ error: error.code });
+      return;
+    }
+    console.error(error);
+    res.status(500).json({ error: "internal_server_error" });
   });
 
   return app;

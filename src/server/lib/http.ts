@@ -1,3 +1,15 @@
+export class AppHttpError extends Error {
+  statusCode: number;
+  code: string;
+
+  constructor(statusCode: number, code: string) {
+    super(code);
+    this.name = "AppHttpError";
+    this.statusCode = statusCode;
+    this.code = code;
+  }
+}
+
 export class HttpRequestError extends Error {
   statusCode: number | null;
 

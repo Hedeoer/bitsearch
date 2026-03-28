@@ -4,7 +4,6 @@ import { z } from "zod";
 import { nanoid } from "nanoid";
 import type { AppContext } from "../app-context.js";
 import {
-  cleanupOldLogs,
   insertRequestLog,
 } from "../repos/log-repo.js";
 import {
@@ -708,7 +707,6 @@ export function createMcpServer(context: AppContext): McpServer {
       ),
   );
 
-  cleanupOldLogs(context.db, getSystemSettings(context.db).logRetentionDays);
   return server;
 }
 
