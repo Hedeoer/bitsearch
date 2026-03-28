@@ -1,4 +1,5 @@
-export const REMOTE_PROVIDERS = ["grok", "tavily", "firecrawl"] as const;
+export const SEARCH_ENGINE_PROVIDER = "search_engine";
+export const REMOTE_PROVIDERS = [SEARCH_ENGINE_PROVIDER, "tavily", "firecrawl"] as const;
 export const KEY_POOL_PROVIDERS = ["tavily", "firecrawl"] as const;
 export const FETCH_MODES = [
   "strict_firecrawl",
@@ -16,6 +17,7 @@ export const KEY_LIST_STATUSES = [
 ] as const;
 
 export type RemoteProvider = (typeof REMOTE_PROVIDERS)[number];
+export type SearchEngineProvider = typeof SEARCH_ENGINE_PROVIDER;
 export type KeyPoolProvider = (typeof KEY_POOL_PROVIDERS)[number];
 export type FetchMode = (typeof FETCH_MODES)[number];
 export type RequestStatus = (typeof REQUEST_STATUSES)[number];
@@ -158,9 +160,14 @@ export interface DashboardSummary {
 export interface SystemSettings {
   fetchMode: FetchMode;
   providerPriority: KeyPoolProvider[];
-  defaultGrokModel: string;
+  defaultSearchModel: string;
   logRetentionDays: number;
   allowedOrigins: string[];
+}
+
+export interface SearchEngineModelsResponse {
+  provider: SearchEngineProvider;
+  models: string[];
 }
 
 export interface McpAccessInfo {

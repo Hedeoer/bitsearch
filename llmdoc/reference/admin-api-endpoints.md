@@ -45,6 +45,7 @@ The admin API consists of 26 endpoints split across two routers: a public auth r
 |--------|------|-------------|---------------|-------------|
 | GET | `/providers` | -- | `ProviderConfigRecord[]` | List all provider configs |
 | PUT | `/providers/:provider` | `{enabled, baseUrl, timeoutMs, apiKey?}` | `ProviderConfigRecord[]` | Update provider config |
+| GET | `/providers/:provider/models` | -- | `{provider, models[]}` | Probe models from `/models` for `search_engine` |
 
 ### Key Pool Management (session required)
 

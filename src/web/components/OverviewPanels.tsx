@@ -1,16 +1,27 @@
-import type { Dispatch, SetStateAction } from "react";
 import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
+import {
+  SEARCH_ENGINE_PROVIDER,
+  type ProviderConfigRecord,
+  type SearchEngineModelsResponse,
+} from "@shared/contracts";
+import {
+  ChevronDown,
   Server,
   Zap,
   Save,
   ToggleLeft,
   ToggleRight,
 } from "lucide-react";
-import type {
-  ProviderConfigRecord,
-} from "@shared/contracts";
+import type { ApiResult } from "../api";
 import type { ProviderDrafts } from "../types";
-import { LoadingOverlay } from "./Feedback";
+import { InlineSpinner, LoadingOverlay } from "./Feedback";
 
 type ProviderGridProps = {
   loading: boolean;
@@ -18,6 +29,7 @@ type ProviderGridProps = {
   drafts: ProviderDrafts;
   setDrafts: Dispatch<SetStateAction<ProviderDrafts>>;
   onSave: (provider: string) => void;
+  onProbeSearchModels: () => Promise<ApiResult<SearchEngineModelsResponse>>;
 };
 
 function ProviderSkeletonCard({ index }: { index: number }) {
@@ -31,6 +43,167 @@ function ProviderSkeletonCard({ index }: { index: number }) {
         </div>
       </div>
     </article>
+  );
+}
+
+function buildDetectedModelOptions(currentModel: string, models: string[]): string[] {
+  return [...new Set([currentModel, ...models].map((item) => item.trim()).filter(Boolean))];
+}
+
+function SearchEngineModelField(
+  props: Readonly<{
+    loading: boolean;
+    searchModel: string;
+    setSearchModel: (value: string) => void;
+    onProbeSearchModels: () => Promise<ApiResult<SearchEngineModelsResponse>>;
+  }>,
+) {
+  const fieldRef = useRef<HTMLLabelElement | null>(null);
+  const listId = useId();
+  const [detectedModels, setDetectedModels] = useState<string[]>([]);
+  const [probeError, setProbeError] = useState("");
+  const [probeMessage, setProbeMessage] = useState("");
+  const [isProbing, setIsProbing] = useState(false);
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const options = buildDetectedModelOptions(props.searchModel, detectedModels);
+  const isExactDetectedModel = detectedModels.includes(props.searchModel.trim());
+  const visibleOptions =
+    props.searchModel.trim().length > 0 && !isExactDetectedModel
+      ? options.filter((model) =>
+          model.toLowerCase().includes(props.searchModel.trim().toLowerCase()),
+        )
+      : options;
+  const currentModelMissing =
+    detectedModels.length > 0 &&
+    props.searchModel.trim().length > 0 &&
+    !detectedModels.includes(props.searchModel);
+
+  useEffect(() => {
+    function handlePointerDown(event: MouseEvent) {
+      if (!fieldRef.current?.contains(event.target as Node)) {
+        setIsPickerOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, []);
+
+  async function probeModels() {
+    setIsProbing(true);
+    setProbeError("");
+    setProbeMessage("");
+    try {
+      const result = await props.onProbeSearchModels();
+      if (!result.ok) {
+        setDetectedModels([]);
+        setProbeError(result.message);
+        return;
+      }
+      setDetectedModels(result.data.models);
+      setIsPickerOpen(result.data.models.length > 0);
+      setProbeMessage(
+        result.data.models.length > 0
+          ? `Detected ${result.data.models.length} models from /models.`
+          : "Probe completed, but /models returned no entries.",
+      );
+    } catch (error) {
+      setDetectedModels([]);
+      setProbeError(error instanceof Error ? error.message : "Model probe failed.");
+    } finally {
+      setIsProbing(false);
+    }
+  }
+
+  return (
+    <label ref={fieldRef} className="field">
+      <span>Search Model</span>
+      <div className="field-with-action">
+        <div className="search-model-picker">
+          <div className="search-model-picker-control">
+            <input
+              aria-controls={listId}
+              aria-expanded={isPickerOpen}
+              aria-haspopup="listbox"
+              disabled={props.loading}
+              placeholder="Probe models first or enter a model name manually"
+              value={props.searchModel}
+              onChange={(event) => {
+                props.setSearchModel(event.target.value);
+                if (options.length > 0) {
+                  setIsPickerOpen(true);
+                }
+              }}
+              onFocus={() => {
+                if (options.length > 0) {
+                  setIsPickerOpen(true);
+                }
+              }}
+            />
+            <button
+              className="icon-button search-model-picker-toggle"
+              disabled={props.loading || options.length === 0}
+              type="button"
+              aria-label={isPickerOpen ? "Collapse model list" : "Expand model list"}
+              onClick={() => setIsPickerOpen((current) => !current)}
+            >
+              <ChevronDown
+                size={16}
+                className={isPickerOpen ? "search-model-picker-chevron-open" : ""}
+              />
+            </button>
+          </div>
+          {isPickerOpen && options.length > 0 ? (
+            <div id={listId} className="search-model-picker-menu" role="listbox">
+              {visibleOptions.length > 0 ? (
+                visibleOptions.map((model) => (
+                  <button
+                    key={model}
+                    className={`search-model-picker-option${
+                      model === props.searchModel ? " search-model-picker-option-active" : ""
+                    }`}
+                    type="button"
+                    role="option"
+                    aria-selected={model === props.searchModel}
+                    onClick={() => {
+                      props.setSearchModel(model);
+                      setIsPickerOpen(false);
+                    }}
+                  >
+                    {model}
+                  </button>
+                ))
+              ) : (
+                <div className="search-model-picker-empty">
+                  No detected models match the current input.
+                </div>
+              )}
+            </div>
+          ) : null}
+        </div>
+        <button
+          className="secondary-button"
+          disabled={props.loading || isProbing}
+          type="button"
+          onClick={() => void probeModels()}
+        >
+          {isProbing ? <InlineSpinner label="Probing" /> : "Probe Models"}
+        </button>
+      </div>
+      <p className="field-note">
+        {options.length > 0
+          ? "Current value is the active default search model. The picker shows probed models with in-place filtering."
+          : "Probe models to populate the dropdown, or enter a model name manually before probing."}{" "}
+        Probe uses the saved search_engine base URL and API key.
+      </p>
+      {probeMessage ? <p className="supporting compact">{probeMessage}</p> : null}
+      {currentModelMissing ? (
+        <p className="supporting compact">
+          Current value is not present in the detected model list.
+        </p>
+      ) : null}
+      {probeError ? <p className="supporting compact error-summary">{probeError}</p> : null}
+    </label>
   );
 }
 
@@ -69,6 +242,7 @@ export function ProviderGrid(props: ProviderGridProps) {
             baseUrl: provider.baseUrl,
             timeoutMs: provider.timeoutMs,
             apiKey: "",
+            searchModel: "",
           };
           return (
             <article key={provider.provider} className="surface-card provider-card">
@@ -149,25 +323,41 @@ export function ProviderGrid(props: ProviderGridProps) {
                   }
                 />
               </label>
-              {provider.provider === "grok" ? (
-                <label className="field">
-                  <span>API Key</span>
-                  <input
-                    disabled={props.loading}
-                    type="password"
-                    placeholder={provider.hasApiKey ? "Stored. Fill only to replace." : "Enter API key"}
-                    value={draft.apiKey}
-                    onChange={(event) =>
+              {provider.provider === SEARCH_ENGINE_PROVIDER ? (
+                <>
+                  <label className="field">
+                    <span>API Key</span>
+                    <input
+                      disabled={props.loading}
+                      type="password"
+                      placeholder={provider.hasApiKey ? "Stored. Fill only to replace." : "Enter API key"}
+                      value={draft.apiKey}
+                      onChange={(event) =>
+                        props.setDrafts((current) => ({
+                          ...current,
+                          [provider.provider]: {
+                            ...current[provider.provider],
+                            apiKey: event.target.value,
+                          },
+                        }))
+                      }
+                    />
+                  </label>
+                  <SearchEngineModelField
+                    loading={props.loading}
+                    searchModel={draft.searchModel}
+                    setSearchModel={(value) =>
                       props.setDrafts((current) => ({
                         ...current,
                         [provider.provider]: {
                           ...current[provider.provider],
-                          apiKey: event.target.value,
+                          searchModel: value,
                         },
                       }))
                     }
+                    onProbeSearchModels={props.onProbeSearchModels}
                   />
-                </label>
+                </>
               ) : null}
               <div className="action-row">
                 <button
@@ -176,7 +366,7 @@ export function ProviderGrid(props: ProviderGridProps) {
                   onClick={() => props.onSave(provider.provider)}
                 >
                   <Save size={13} />
-                  Save Provider
+                  {provider.provider === SEARCH_ENGINE_PROVIDER ? "Save Search Engine" : "Save Provider"}
                 </button>
               </div>
             </article>

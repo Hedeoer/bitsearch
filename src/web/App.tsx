@@ -1,7 +1,12 @@
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
-import type { McpAccessInfo, SystemSettings } from "@shared/contracts";
-import { apiRequest } from "./api";
+import {
+  SEARCH_ENGINE_PROVIDER,
+  type McpAccessInfo,
+  type SearchEngineModelsResponse,
+  type SystemSettings,
+} from "@shared/contracts";
+import { apiRequest, type ApiResult } from "./api";
 import { LoginView } from "./LoginView";
 import { ConsoleLayout } from "./components/ConsoleChrome";
 import { ToastViewport } from "./components/Feedback";
@@ -21,7 +26,7 @@ const AUTO_REFRESH_INTERVAL_MS = 30_000;
 const EMPTY_SYSTEM: SystemSettings = {
   fetchMode: "auto_ordered",
   providerPriority: ["tavily", "firecrawl"],
-  defaultGrokModel: "grok-4-fast",
+  defaultSearchModel: "grok-4-fast",
   logRetentionDays: 7,
   allowedOrigins: [],
 };
@@ -34,6 +39,7 @@ const EMPTY_MCP_ACCESS: McpAccessInfo = {
 
 function createProviderDrafts(
   providers: AppDataBundle["providers"],
+  system: SystemSettings,
 ): ProviderDrafts {
   return Object.fromEntries(
     providers.map((item) => [
@@ -43,6 +49,7 @@ function createProviderDrafts(
         baseUrl: item.baseUrl,
         timeoutMs: item.timeoutMs,
         apiKey: "",
+        searchModel: item.provider === SEARCH_ENGINE_PROVIDER ? system.defaultSearchModel : "",
       },
     ]),
   );
@@ -98,10 +105,11 @@ export function App() {
         apiRequest<McpAccessInfo>("GET", "/admin/mcp-access"),
         apiRequest<AppDataBundle["activity"]>("GET", "/admin/activity"),
       ]);
+      const nextSystem = sysRes.ok ? sysRes.data : system;
       if (dashRes.ok) setDashboard(dashRes.data);
       if (provRes.ok) {
         setProviders(provRes.data);
-        setProviderDrafts(createProviderDrafts(provRes.data));
+        setProviderDrafts(createProviderDrafts(provRes.data, nextSystem));
       }
       if (sysRes.ok) setSystem(sysRes.data);
       if (mcpRes.ok) setMcpAccess(mcpRes.data);
@@ -185,13 +193,33 @@ export function App() {
   async function saveProvider(provider: string) {
     const draft = providerDrafts[provider];
     if (!draft) return;
-    const res = await apiRequest("PUT", `/admin/providers/${provider}`, draft);
-    if (res.ok) {
+    const providerRes = await apiRequest("PUT", `/admin/providers/${provider}`, {
+      enabled: draft.enabled,
+      baseUrl: draft.baseUrl,
+      timeoutMs: draft.timeoutMs,
+      apiKey: draft.apiKey,
+    });
+    if (!providerRes.ok) {
+      enqueueToast("error", providerRes.message);
+      return;
+    }
+    if (provider !== SEARCH_ENGINE_PROVIDER) {
       enqueueToast("success", `${provider} provider saved.`);
       void refreshAll();
-    } else {
-      enqueueToast("error", res.message);
+      return;
     }
+    const systemRes = await apiRequest<SystemSettings>("PUT", "/admin/system", {
+      ...system,
+      defaultSearchModel: draft.searchModel,
+    });
+    if (!systemRes.ok) {
+      enqueueToast("warning", "search_engine saved, but the default search model could not be updated.");
+      enqueueToast("error", systemRes.message);
+      return;
+    }
+    enqueueToast("success", "search_engine settings saved.");
+    setSystem(systemRes.data);
+    void refreshAll();
   }
 
   async function saveMcpAccess(bearerToken: string): Promise<boolean> {
@@ -205,6 +233,13 @@ export function App() {
     setMcpAccess(res.data);
     enqueueToast("success", "MCP access key saved. New token is live.");
     return true;
+  }
+
+  function probeSearchModels(): Promise<ApiResult<SearchEngineModelsResponse>> {
+    return apiRequest<SearchEngineModelsResponse>(
+      "GET",
+      `/admin/providers/${SEARCH_ENGINE_PROVIDER}/models`,
+    );
   }
 
   if (!session) {
@@ -259,6 +294,7 @@ export function App() {
                 drafts={providerDrafts}
                 loading={isRefreshing}
                 onSave={(provider) => void saveProvider(provider)}
+                onProbeSearchModels={probeSearchModels}
                 providers={providers}
                 setDrafts={setProviderDrafts}
               />

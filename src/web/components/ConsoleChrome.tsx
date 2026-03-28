@@ -48,7 +48,7 @@ const NAV_ITEMS: NavItem[] = [
     icon: Server,
     label: "Providers",
     title: "Integration Control",
-    description: "Manage Grok, Tavily, and Firecrawl provider configuration.",
+    description: "Manage Search Engine, Tavily, and Firecrawl provider configuration.",
   },
   {
     href: "/keys",

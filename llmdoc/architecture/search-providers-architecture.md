@@ -3,17 +3,17 @@
 ## 1. Identity
 
 - **What it is:** A three-provider search abstraction layer with automatic failover, key rotation, and multi-phase query planning.
-- **Purpose:** Routes search, extraction, and mapping operations across Grok, Tavily, and Firecrawl with resilient key management and telemetry.
+- **Purpose:** Routes search, extraction, and mapping operations across `search_engine`, Tavily, and Firecrawl with resilient key management and telemetry.
 
 ## 2. Core Components
 
 - `src/server/providers/fetch-router.ts` (`runWithKeyPool`, `resolveProviders`, `isFailoverError`, `classifyErrorType`): Central routing engine that selects providers, iterates key pools, handles failover, and logs telemetry.
-- `src/server/providers/grok-client.ts` (`searchWithGrok`, `buildSearchMessages`, `listGrokModels`): AI-powered search via OpenAI-compatible chat completion API with SSE streaming. Single-key model.
+- `src/server/providers/search-engine-client.ts` (`searchWithSearchEngine`, `buildSearchMessages`, `listSearchEngineModels`): AI-powered search via OpenAI-compatible chat completion API with SSE streaming. Single-key model.
 - `src/server/providers/tavily-client.ts` (`tavilySearch`, `tavilyExtract`, `tavilyMap`, `tavilyUsage`): Web search, URL content extraction, and site mapping. Key-pool model.
 - `src/server/providers/firecrawl-client.ts` (`firecrawlSearch`, `firecrawlScrape`, `firecrawlMap`, `firecrawlCreditUsage`): Web search, URL scraping, and site mapping. Key-pool model.
 - `src/server/services/planning-engine.ts` (`processPlanningPhase`, `PHASE_NAMES`, `REQUIRED_PHASES`): Multi-phase query analysis engine that decomposes queries by complexity level.
 - `src/server/repos/provider-repo.ts` (`getCandidateKeys`, `markKeyUsage`, `getProviderConfig`, `getProviderApiKey`, `importKeys`): Key pool storage and LRU rotation.
-- `src/server/repos/settings-repo.ts` (`getSystemSettings`): Provides fetchMode, providerPriority, and defaultGrokModel.
+- `src/server/repos/settings-repo.ts` (`getSystemSettings`): Provides fetchMode, providerPriority, and defaultSearchModel.
 - `src/server/repos/log-repo.ts` (`insertRequestLog`, `insertAttemptLogs`): Persists request and per-attempt telemetry.
 - `src/server/lib/http.ts` (`requestJson`, `requestTextStream`, `HttpRequestError`): HTTP transport for JSON and SSE streams.
 - `src/shared/contracts.ts` (`REMOTE_PROVIDERS`, `KEY_POOL_PROVIDERS`, `FETCH_MODES`, `SystemSettings`): Type definitions and constant enumerations.
@@ -31,11 +31,11 @@
 - **7. Error Path:** `isFailoverError()` at `src/server/providers/fetch-router.ts:69-84` classifies the error. Retryable errors (429, 408, 5xx, timeouts, generic) advance to next key. Non-retryable errors (other 4xx) break to next provider.
 - **8. Exhaustion:** If all providers and keys fail, returns `{ ok: false, error }` with last error summary.
 
-### 3.2 Grok Search (separate path)
+### 3.2 Search Engine Search (separate path)
 
-- **1. Config Assembly:** `requireGrokConfig()` at `src/server/mcp/register-tools.ts:85-98` loads provider config, decrypts single API key via `getProviderApiKey()`, reads `defaultGrokModel` from settings.
-- **2. Message Construction:** `buildSearchMessages()` at `src/server/providers/grok-client.ts:38-52` creates system+user messages, injects time context for time-sensitive queries.
-- **3. Streaming Call:** `searchWithGrok()` calls `/chat/completions` with `stream: true`, minimum 120s timeout. Response parsed as SSE via `requestTextStream()`.
+- **1. Config Assembly:** `requireSearchEngineConfig()` loads provider config, decrypts single API key via `getProviderApiKey()`, and reads `defaultSearchModel` from settings.
+- **2. Message Construction:** `buildSearchMessages()` at `src/server/providers/search-engine-client.ts` creates system+user messages, injects time context for time-sensitive queries.
+- **3. Streaming Call:** `searchWithSearchEngine()` calls `/chat/completions` with `stream: true`, minimum 120s timeout. Response parsed as SSE via `requestTextStream()`.
 - **4. Supplemental Sources:** `getExtraSources()` at `src/server/mcp/register-tools.ts:100-155` independently queries Tavily/Firecrawl for additional web results.
 
 ### 3.3 Planning Engine
@@ -48,7 +48,7 @@
 
 ## 4. Design Rationale
 
-- **Two-tier key model:** Grok uses a single key (stored in `provider_configs.api_key_encrypted`) because it serves as a dedicated AI search endpoint. Tavily/Firecrawl use key pools (stored in `provider_keys` table) to distribute rate limits across multiple keys.
+- **Two-tier key model:** `search_engine` uses a single key (stored in `provider_configs.api_key_encrypted`) because it serves as a dedicated AI search endpoint. Tavily/Firecrawl use key pools (stored in `provider_keys` table) to distribute rate limits across multiple keys.
 - **LRU rotation:** Keys sorted by `last_used_at ASC` ensures even distribution across pool, reducing per-key rate limit pressure.
 - **Error classification split:** Retryable vs non-retryable distinction prevents wasting attempts on permanent failures (e.g., 401 auth errors) while maximizing resilience for transient issues.
-- **Grok isolation:** Grok does not participate in the `runWithKeyPool` router because it has a fundamentally different interface (streaming chat completion vs. REST JSON), different output shape (prose with inline citations vs. structured results), and a single-key model.
+- **Search engine isolation:** `search_engine` does not participate in the `runWithKeyPool` router because it has a fundamentally different interface (streaming chat completion vs. REST JSON), different output shape (prose with inline citations vs. structured results), and a single-key model.

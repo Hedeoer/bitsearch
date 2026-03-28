@@ -5,11 +5,12 @@ import type {
   ProviderKeyRecord,
   RemoteProvider,
 } from "../../shared/contracts.js";
+import { REMOTE_PROVIDERS } from "../../shared/contracts.js";
 import type { AppDatabase } from "../db/database.js";
 import { decryptSecret, encryptSecret, fingerprintSecret } from "../lib/crypto.js";
 
 interface ProviderConfigRow {
-  provider: RemoteProvider;
+  provider: string;
   enabled: number;
   base_url: string;
   api_key_encrypted: string;
@@ -41,7 +42,7 @@ interface ProviderKeyRow {
 function mapProviderConfig(row: ProviderConfigRow): ProviderConfigRecord {
   const countRow = row as ProviderConfigRow & { key_count?: number };
   return {
-    provider: row.provider,
+    provider: row.provider as ProviderConfigRecord["provider"],
     enabled: Boolean(row.enabled),
     baseUrl: row.base_url,
     hasApiKey: Boolean(row.api_key_encrypted),
@@ -83,6 +84,8 @@ function mapProviderKey(row: ProviderKeyRow): ProviderKeyRecord {
 }
 
 export function listProviderConfigs(db: AppDatabase): ProviderConfigRecord[] {
+  const knownProviders = new Set<string>(REMOTE_PROVIDERS);
+  const providerOrder = new Map(REMOTE_PROVIDERS.map((provider, index) => [provider, index]));
   const rows = db.sqlite
     .prepare(
       `SELECT pc.provider, pc.enabled, pc.base_url, pc.api_key_encrypted, pc.timeout_ms, pc.updated_at,
@@ -93,7 +96,14 @@ export function listProviderConfigs(db: AppDatabase): ProviderConfigRecord[] {
        ORDER BY pc.provider`,
     )
     .all() as unknown as ProviderConfigRow[];
-  return rows.map(mapProviderConfig);
+  return rows
+    .filter((row) => knownProviders.has(row.provider))
+    .map(mapProviderConfig)
+    .sort(
+      (left, right) =>
+        (providerOrder.get(left.provider) ?? Number.MAX_SAFE_INTEGER) -
+        (providerOrder.get(right.provider) ?? Number.MAX_SAFE_INTEGER),
+    );
 }
 
 export function getProviderConfig(

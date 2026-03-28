@@ -1,5 +1,7 @@
 import { Router } from "express";
+import { SEARCH_ENGINE_PROVIDER } from "../../shared/contracts.js";
 import type { AppContext } from "../app-context.js";
+import { HttpRequestError } from "../lib/http.js";
 import { getDashboardSummary } from "../repos/dashboard-repo.js";
 import {
   getRequestActivity,
@@ -29,6 +31,7 @@ import {
 } from "../repos/settings-repo.js";
 import { syncKeyQuotas, testKeys } from "../services/key-pool-service.js";
 import { getMcpAccessInfo } from "../services/mcp-access-service.js";
+import { listAvailableSearchEngineModels } from "../services/search-engine-service.js";
 import {
   csvEscape,
   parseCsvKeys,
@@ -94,6 +97,30 @@ export function createAdminRouter(context: AppContext): Router {
       encryptionKey: context.bootstrap.encryptionKey,
     });
     res.json(listProviderConfigs(context.db));
+  });
+
+  router.get("/providers/:provider/models", (req, res) => {
+    const provider = parseRemoteProvider(req.params.provider);
+    if (provider !== SEARCH_ENGINE_PROVIDER) {
+      res.status(400).json({ error: "provider_model_listing_not_supported" });
+      return;
+    }
+    listAvailableSearchEngineModels(context)
+      .then((models) => {
+        res.json({
+          provider,
+          models,
+        });
+      })
+      .catch((error) => {
+        if (error instanceof HttpRequestError) {
+          res.status(502).json({ message: error.message || "search_engine_models_fetch_failed" });
+          return;
+        }
+        res.status(400).json({
+          message: error instanceof Error ? error.message : "search_engine_models_unavailable",
+        });
+      });
   });
 
   router.get("/keys", (req, res) => {

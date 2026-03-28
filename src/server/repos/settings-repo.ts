@@ -1,6 +1,7 @@
 import type { AppDatabase } from "../db/database.js";
 import type { FetchMode, KeyPoolProvider, SystemSettings } from "../../shared/contracts.js";
 
+const DEFAULT_SEARCH_MODEL_KEY = "default_search_model";
 const MCP_BEARER_TOKEN_KEY = "mcp_bearer_token";
 
 interface SettingRow {
@@ -36,7 +37,9 @@ export function getSystemSettings(db: AppDatabase): SystemSettings {
     providerPriority: parseJson<KeyPoolProvider[]>(
       map.get("provider_priority") ?? "[\"tavily\",\"firecrawl\"]",
     ),
-    defaultGrokModel: parseJson<string>(map.get("default_grok_model") ?? "\"grok-4-fast\""),
+    defaultSearchModel: parseJson<string>(
+      map.get(DEFAULT_SEARCH_MODEL_KEY) ?? "\"grok-4-fast\"",
+    ),
     logRetentionDays: parseJson<number>(map.get("log_retention_days") ?? "7"),
     allowedOrigins: parseJson<string[]>(map.get("allowed_origins") ?? "[]"),
   };
@@ -59,8 +62,8 @@ export function saveSystemSettings(db: AppDatabase, settings: Partial<SystemSett
   if (settings.providerPriority) {
     saveSystemSetting(db, "provider_priority", settings.providerPriority);
   }
-  if (settings.defaultGrokModel) {
-    saveSystemSetting(db, "default_grok_model", settings.defaultGrokModel);
+  if (settings.defaultSearchModel) {
+    saveSystemSetting(db, DEFAULT_SEARCH_MODEL_KEY, settings.defaultSearchModel);
   }
   if (typeof settings.logRetentionDays === "number") {
     saveSystemSetting(db, "log_retention_days", settings.logRetentionDays);

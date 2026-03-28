@@ -15,6 +15,7 @@ export type ProviderDraft = {
   baseUrl: string;
   timeoutMs: number;
   apiKey: string;
+  searchModel: string;
 };
 
 export type ProviderDrafts = Record<string, ProviderDraft>;

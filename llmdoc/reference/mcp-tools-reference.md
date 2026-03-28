@@ -14,13 +14,13 @@ The bitsearch MCP server exposes 13 tools across three categories: search (4), c
 ## 3. Search Tools
 
 ### `web_search` (lines 228-307)
-Deep web search via Grok API. Optionally fetches extra sources from Tavily/Firecrawl.
+Deep web search via `search_engine`. Optionally fetches extra sources from Tavily/Firecrawl.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
 | `query` | string | yes | -- | Search query |
 | `platform` | string | no | `""` | Platform hint for search context |
-| `model` | string | no | `""` | Override Grok model (uses system default if empty) |
+| `model` | string | no | `""` | Override the default search model (uses system default if empty) |
 | `extra_sources` | integer | no | `0` | Number of extra sources from Tavily/Firecrawl (min: 0) |
 
 **Returns:** `{ session_id, content, sources_count }`
@@ -60,16 +60,16 @@ Maps website structure, returns discovered URLs. Routes through key pool to Tavi
 ## 4. Configuration Tools
 
 ### `get_config_info` (lines 385-435)
-Returns server configuration and Grok API connectivity test. No parameters.
+Returns server configuration and `search_engine` connectivity test. No parameters.
 
 **Returns:** `{ settings, providers, key_pool_status, connection_test }`
 
 ### `switch_model` (lines 437-462)
-Persists a new default Grok model to system settings.
+Persists a new default search model to system settings.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `model` | string | yes | Grok model identifier |
+| `model` | string | yes | Search model identifier |
 
 **Returns:** `{ status, previous_model, current_model, message }`
 

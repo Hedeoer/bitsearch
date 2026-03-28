@@ -1,6 +1,10 @@
 import type { Dispatch, SetStateAction } from "react";
 import { Save, Settings } from "lucide-react";
-import type { KeyPoolProvider, McpAccessInfo, SystemSettings } from "@shared/contracts";
+import {
+  type KeyPoolProvider,
+  type McpAccessInfo,
+  type SystemSettings,
+} from "@shared/contracts";
 import { LoadingOverlay } from "./Feedback";
 import type { ToastTone } from "./Feedback";
 import { McpAccessFields } from "./McpAccessFields";
@@ -32,31 +36,6 @@ function FetchModeField(props: StrategyPanelProps) {
         <option value="auto_ordered">auto_ordered</option>
         <option value="strict_tavily">strict_tavily</option>
         <option value="strict_firecrawl">strict_firecrawl</option>
-      </select>
-    </label>
-  );
-}
-
-function DefaultModelField(props: StrategyPanelProps) {
-  return (
-    <label className="field">
-      <span>Default Grok Model</span>
-      <select
-        disabled={props.loading}
-        value={props.system.defaultGrokModel}
-        onChange={(event) =>
-          props.setSystem((current) => ({
-            ...current,
-            defaultGrokModel: event.target.value,
-          }))
-        }
-      >
-        <option value="grok-4-fast">grok-4-fast</option>
-        <option value="grok-4">grok-4</option>
-        <option value="grok-3">grok-3</option>
-        <option value="grok-3-fast">grok-3-fast</option>
-        <option value="grok-3-mini">grok-3-mini</option>
-        <option value="grok-3-mini-fast">grok-3-mini-fast</option>
       </select>
     </label>
   );
@@ -140,7 +119,6 @@ export function StrategyPanel(props: StrategyPanelProps) {
         <Settings size={16} className="section-icon" />
       </div>
       <FetchModeField {...props} />
-      <DefaultModelField {...props} />
       <ProviderPriorityFields {...props} />
       <StrategyMetaFields {...props} />
       <div className="action-row">

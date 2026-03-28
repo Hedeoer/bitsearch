@@ -44,7 +44,7 @@ const providerConfigSchema = z.object({
 const systemSettingsSchema = z.object({
   fetchMode: z.enum(FETCH_MODES),
   providerPriority: providerPrioritySchema,
-  defaultGrokModel: z.string().trim().min(1).max(MAX_MODEL_NAME_LENGTH),
+  defaultSearchModel: z.string().trim().min(1).max(MAX_MODEL_NAME_LENGTH),
   logRetentionDays: z.coerce.number().int().min(1).max(MAX_RETENTION_DAYS),
   allowedOrigins: z.array(z.string().trim().min(1)).max(MAX_ALLOWED_ORIGINS),
 });

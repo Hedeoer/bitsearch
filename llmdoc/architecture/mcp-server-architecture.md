@@ -7,7 +7,7 @@
 
 ## 2. Core Components
 
-- `src/server/mcp/register-tools.ts` (`createMcpServer`): Factory that instantiates `McpServer` and registers all 13 tools with Zod input schemas. Contains helper functions for Grok config resolution, extra source fetching, and key-pool-routed web fetch/map operations.
+- `src/server/mcp/register-tools.ts` (`createMcpServer`): Factory that instantiates `McpServer` and registers all 13 tools with Zod input schemas. Contains helper functions for `search_engine` config resolution, extra source fetching, and key-pool-routed web fetch/map operations.
 - `src/server/mcp/transport-router.ts` (`handleMcpPost`, `handleMcpGet`, `handleMcpDelete`): Session-aware HTTP handlers that manage `StreamableHTTPServerTransport` instances in an in-memory Map keyed by session ID.
 - `src/server/app.ts` (`createApp`, lines 53-61): Mounts the three MCP HTTP methods at `/mcp` with authentication middleware.
 - `src/server/http/middleware.ts` (`requireMcpAuth`, `requireAllowedOrigin`): Two-layer auth: Bearer token validation and Origin whitelist check.
@@ -33,8 +33,8 @@
 ### 3.3 Tool Invocation (web_search example)
 
 - **1.** MCP SDK deserializes JSON-RPC call and routes to the `web_search` handler in `register-tools.ts:228-307`.
-- **2.** Handler calls `requireGrokConfig` (line 85-98) to load Grok provider config and API key from database.
-- **3.** `searchWithGrok` and `getExtraSources` run in parallel via `Promise.all` (line 265-268).
+- **2.** Handler calls `requireSearchEngineConfig` to load the `search_engine` provider config and API key from database.
+- **3.** `searchWithSearchEngine` and `getExtraSources` run in parallel via `Promise.all`.
 - **4.** Results are split/merged via `source-utils.js`, cached in SQLite via `saveSearchSession`, and logged via `logSearchRequest`.
 - **5.** Returns structured JSON with `session_id`, `content`, and `sources_count`.
 
@@ -49,7 +49,7 @@
 
 | Tool | Purpose | Key Parameters |
 |------|---------|----------------|
-| `web_search` | Deep web search via Grok API with optional extra sources | `query`, `platform?`, `model?`, `extra_sources?` |
+| `web_search` | Deep web search via `search_engine` with optional extra sources | `query`, `platform?`, `model?`, `extra_sources?` |
 | `get_sources` | Retrieve cached sources from a prior `web_search` | `session_id` |
 | `web_fetch` | Extract URL content as Markdown via Tavily/Firecrawl | `url` |
 | `web_map` | Map website structure, return discovered URLs | `url`, `instructions?`, `max_depth?`, `max_breadth?`, `limit?`, `timeout?` |
@@ -58,8 +58,8 @@
 
 | Tool | Purpose | Key Parameters |
 |------|---------|----------------|
-| `get_config_info` | Return server config and test Grok connectivity | (none) |
-| `switch_model` | Change default Grok model | `model` |
+| `get_config_info` | Return server config and test `search_engine` connectivity | (none) |
+| `switch_model` | Change default search model | `model` |
 | `toggle_builtin_tools` | Stub; returns error for remote deployment | `action?` |
 
 ### Planning Tools (6)

@@ -6,7 +6,7 @@ const SEARCH_PROMPT = [
   "At the end, include a source section with markdown links when available.",
 ].join(" ");
 
-export interface GrokMessage {
+export interface SearchEngineMessage {
   role: "system" | "user";
   content: string;
 }
@@ -38,7 +38,7 @@ function buildUserPrompt(query: string, platform: string): string {
 export function buildSearchMessages(
   query: string,
   platform: string,
-): GrokMessage[] {
+): SearchEngineMessage[] {
   return [
     {
       role: "system",
@@ -51,14 +51,16 @@ export function buildSearchMessages(
   ];
 }
 
-export interface GrokClientConfig {
+export interface SearchEngineClientConfig {
   apiUrl: string;
   apiKey: string;
   model: string;
   timeoutMs: number;
 }
 
-export async function listGrokModels(config: GrokClientConfig): Promise<string[]> {
+export async function listSearchEngineModels(
+  config: SearchEngineClientConfig,
+): Promise<string[]> {
   const data = await requestJson<{ data?: Array<{ id?: string }> }>(
     `${config.apiUrl.replace(/\/$/, "")}/models`,
     {
@@ -72,9 +74,9 @@ export async function listGrokModels(config: GrokClientConfig): Promise<string[]
   return (data.data ?? []).flatMap((item) => (item.id ? [item.id] : []));
 }
 
-export async function searchWithGrok(
-  config: GrokClientConfig,
-  messages: GrokMessage[],
+export async function searchWithSearchEngine(
+  config: SearchEngineClientConfig,
+  messages: SearchEngineMessage[],
 ): Promise<string> {
   return requestTextStream(`${config.apiUrl.replace(/\/$/, "")}/chat/completions`, {
     headers: {

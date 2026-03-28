@@ -291,6 +291,10 @@
   z-index: 1;
 }
 
+.provider-card {
+  overflow: visible;
+}
+
 .provider-meta {
   display: flex;
   align-items: center;

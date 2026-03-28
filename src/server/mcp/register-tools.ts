@@ -2,13 +2,16 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import { nanoid } from "nanoid";
+import {
+  REMOTE_PROVIDERS,
+  SEARCH_ENGINE_PROVIDER,
+} from "../../shared/contracts.js";
 import type { AppContext } from "../app-context.js";
 import {
   insertRequestLog,
 } from "../repos/log-repo.js";
 import {
   getCandidateKeys,
-  getProviderApiKey,
   getProviderConfig,
   markKeyUsage,
 } from "../repos/provider-repo.js";
@@ -20,9 +23,9 @@ import {
 import { splitAnswerAndSources, mergeSources } from "../lib/source-utils.js";
 import {
   buildSearchMessages,
-  listGrokModels,
-  searchWithGrok,
-} from "../providers/grok-client.js";
+  listSearchEngineModels,
+  searchWithSearchEngine,
+} from "../providers/search-engine-client.js";
 import {
   tavilyExtract,
   tavilyMap,
@@ -35,6 +38,9 @@ import {
 } from "../providers/firecrawl-client.js";
 import { runWithKeyPool } from "../providers/fetch-router.js";
 import { processPlanningPhase } from "../services/planning-engine.js";
+import {
+  requireSearchEngineConfig,
+} from "../services/search-engine-service.js";
 
 function toJsonText(value: unknown): string {
   return JSON.stringify(value, null, 2);
@@ -67,7 +73,7 @@ function logSearchRequest(
     toolName: payload.toolName,
     targetUrl: payload.targetUrl ?? null,
     strategy: null,
-    finalProvider: "grok",
+    finalProvider: SEARCH_ENGINE_PROVIDER,
     finalKeyFingerprint: null,
     attempts: 1,
     status: payload.status,
@@ -79,21 +85,6 @@ function logSearchRequest(
     providerOrder: settings.providerPriority,
     metadata: payload.metadata ?? {},
   });
-}
-
-function requireGrokConfig(context: AppContext, overrideModel = "") {
-  const providerConfig = getProviderConfig(context.db, "grok");
-  const apiKey = getProviderApiKey(context.db, "grok", context.bootstrap.encryptionKey);
-  const settings = getSystemSettings(context.db);
-  if (!providerConfig?.baseUrl || !apiKey) {
-    throw new Error("配置错误: Grok provider 未完整配置");
-  }
-  return {
-    apiUrl: providerConfig.baseUrl,
-    apiKey,
-    model: overrideModel || settings.defaultGrokModel,
-    timeoutMs: providerConfig.timeoutMs,
-  };
 }
 
 async function getExtraSources(context: AppContext, query: string, count: number) {
@@ -227,7 +218,7 @@ export function createMcpServer(context: AppContext): McpServer {
   server.registerTool(
     "web_search",
     {
-      description: "Performs a deep web search based on the given query and returns Grok's answer directly.",
+      description: "Performs a deep web search based on the given query and returns the search engine answer directly.",
       inputSchema: z.object({
         query: z.string(),
         platform: z.string().optional().default(""),
@@ -239,9 +230,9 @@ export function createMcpServer(context: AppContext): McpServer {
       const startedAt = Date.now();
       const sessionId = Math.random().toString(16).slice(2, 14);
       try {
-        const grokConfig = requireGrokConfig(context, model);
+        const searchEngineConfig = requireSearchEngineConfig(context, model);
         if (model) {
-          const models = await listGrokModels(grokConfig);
+          const models = await listSearchEngineModels(searchEngineConfig);
           if (models.length > 0 && !models.includes(model)) {
             const invalidResult = {
               session_id: sessionId,
@@ -262,7 +253,7 @@ export function createMcpServer(context: AppContext): McpServer {
 
         const messages = buildSearchMessages(query, platform);
         const [answerText, extraSources] = await Promise.all([
-          searchWithGrok(grokConfig, messages),
+          searchWithSearchEngine(searchEngineConfig, messages),
           getExtraSources(context, query, extra_sources),
         ]);
         const { answer, sources } = splitAnswerAndSources(answerText);
@@ -384,21 +375,21 @@ export function createMcpServer(context: AppContext): McpServer {
   server.registerTool(
     "get_config_info",
     {
-      description: "Returns current server configuration and tests Grok API connectivity.",
+      description: "Returns current server configuration and tests search engine connectivity.",
       inputSchema: z.object({}),
     },
     async () => {
-      const providerConfigs = ["grok", "tavily", "firecrawl"].map((provider) =>
-        getProviderConfig(context.db, provider as "grok" | "tavily" | "firecrawl"),
+      const providerConfigs = REMOTE_PROVIDERS.map((provider) =>
+        getProviderConfig(context.db, provider),
       );
       const settings = getSystemSettings(context.db);
       let connectionTest: Record<string, unknown> = {
         status: "未测试",
-        message: "请先配置 Grok",
+        message: "请先配置 search_engine",
       };
 
       try {
-        const models = await listGrokModels(requireGrokConfig(context));
+        const models = await listSearchEngineModels(requireSearchEngineConfig(context));
         connectionTest = {
           status: "✅ 连接成功",
           message: `成功获取模型列表，共 ${models.length} 个模型`,
@@ -419,7 +410,7 @@ export function createMcpServer(context: AppContext): McpServer {
               settings,
               providers: providerConfigs,
               key_pool_status: providerConfigs
-                .filter((item) => item?.provider !== "grok")
+                .filter((item) => item?.provider !== SEARCH_ENGINE_PROVIDER)
                 .map((item) => ({
                   provider: item?.provider,
                   enabled: item?.enabled,
@@ -436,14 +427,14 @@ export function createMcpServer(context: AppContext): McpServer {
   server.registerTool(
     "switch_model",
     {
-      description: "Switches the default Grok model used for search operations.",
+      description: "Switches the default search model used for web_search operations.",
       inputSchema: z.object({
         model: z.string(),
       }),
     },
     async ({ model }) => {
-      const previous = getSystemSettings(context.db).defaultGrokModel;
-      saveSystemSetting(context.db, "default_grok_model", model);
+      const previous = getSystemSettings(context.db).defaultSearchModel;
+      saveSystemSetting(context.db, "default_search_model", model);
       return {
         content: [
           {

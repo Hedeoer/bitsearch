@@ -126,7 +126,7 @@ function seedSystemSettings(
   const defaults = [
     ["fetch_mode", JSON.stringify("auto_ordered")],
     ["provider_priority", JSON.stringify(["tavily", "firecrawl"])],
-    ["default_grok_model", JSON.stringify("grok-4-fast")],
+    ["default_search_model", JSON.stringify("grok-4-fast")],
     ["log_retention_days", JSON.stringify(7)],
     ["allowed_origins", JSON.stringify([])],
     ["mcp_bearer_token", JSON.stringify(mcpBearerToken)],
@@ -143,7 +143,7 @@ function seedProviderConfigs(db: DatabaseSync, now: string): void {
   const stmt = db.prepare(
     "INSERT OR IGNORE INTO provider_configs (provider, enabled, base_url, api_key_encrypted, timeout_ms, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
   );
-  stmt.run("grok", 0, "", "", 30000, now);
+  stmt.run("search_engine", 0, "", "", 30000, now);
   stmt.run("tavily", 0, "https://api.tavily.com", "", 30000, now);
   stmt.run("firecrawl", 0, "https://api.firecrawl.dev/v2", "", 30000, now);
 }
