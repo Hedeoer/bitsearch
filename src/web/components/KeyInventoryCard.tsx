@@ -80,6 +80,19 @@ export function renderFirecrawlQuota(
   return joinSummary(teamText, `history ${formatNumber(historical.historicalCredits)}`);
 }
 
+function MetaSep() {
+  return <span className="meta-sep" aria-hidden="true">·</span>;
+}
+
+function MetaItem(props: { label: string; value: string }) {
+  return (
+    <>
+      <span className="meta-label">{props.label}</span>
+      <span className="meta-value">{props.value}</span>
+    </>
+  );
+}
+
 export function KeyInventoryCard(props: KeyCardProps) {
   const [noteDraft, setNoteDraft] = useState(props.item.note);
 
@@ -87,8 +100,16 @@ export function KeyInventoryCard(props: KeyCardProps) {
     setNoteDraft(props.item.note);
   }, [props.item.note]);
 
+  const quotaText = props.item.provider === "tavily"
+    ? renderTavilyQuota(props.item, props.item.quota?.tavily?.account ?? null)
+    : renderFirecrawlQuota(
+        props.item.quota?.firecrawl?.team ?? null,
+        props.item.quota?.firecrawl?.historical ?? null,
+      );
+
   return (
     <article className={`key-card interactive-card ${props.selected ? "key-card-selected" : ""}`}>
+      {/* Row 1: Status + Key value + Tags */}
       <div className="key-card-head">
         <label className="selection-toggle">
           <input
@@ -99,109 +120,98 @@ export function KeyInventoryCard(props: KeyCardProps) {
           <span className={`status-pill ${props.item.enabled ? "positive" : "danger"}`}>
             {props.item.enabled ? "enabled" : "disabled"}
           </span>
+          <span
+            className={`status-pill ${
+              props.item.healthStatus === "healthy"
+                ? "positive"
+                : props.item.healthStatus === "unhealthy"
+                  ? "danger"
+                  : "neutral"
+            }`}
+          >
+            {healthLabel(props.item.healthStatus)}
+          </span>
         </label>
-        <span
-          className={`status-pill ${
-            props.item.healthStatus === "healthy"
-              ? "positive"
-              : props.item.healthStatus === "unhealthy"
-                ? "danger"
-                : "neutral"
-          }`}
-        >
-          {healthLabel(props.item.healthStatus)}
-        </span>
+        <div className="tag-list">
+          {props.item.tags.length > 0 ? props.item.tags.map((tag) => (
+            <span key={`${props.item.id}-${tag}`} className="tag-chip">{tag}</span>
+          )) : <span className="tag-chip">untagged</span>}
+        </div>
       </div>
+
+      {/* Row 2: Masked key value */}
       <div className="key-card-value mono">
         {props.revealedValue ?? props.item.maskedValue}
       </div>
-      <div className="key-card-meta-grid">
-        <div className="key-meta-card">
-          <span>Fingerprint</span>
-          <strong className="mono">{props.item.fingerprint}</strong>
-        </div>
-        <div className="key-meta-card">
-          <span>Last Used</span>
-          <strong>{formatDateTime(props.item.lastUsedAt)}</strong>
-        </div>
-        <div className="key-meta-card">
-          <span>Checked</span>
-          <strong>{formatDateTime(props.item.lastCheckedAt)}</strong>
-        </div>
-        <div className="key-meta-card">
-          <span>Created At</span>
-          <strong>{formatDateTime(props.item.createdAt)}</strong>
-        </div>
+
+      {/* Row 3: Inline metadata */}
+      <div className="key-inline-meta">
+        <MetaItem label="Fingerprint:" value={props.item.fingerprint} />
+        <MetaSep />
+        <MetaItem label="Used:" value={formatDateTime(props.item.lastUsedAt)} />
+        <MetaSep />
+        <MetaItem label="Checked:" value={formatDateTime(props.item.lastCheckedAt)} />
+        <MetaSep />
+        <MetaItem label="Created:" value={formatDateTime(props.item.createdAt)} />
       </div>
-      <div className="key-stat-grid">
-        <div className="key-stat-card">
-          <span>Requests</span>
-          <strong>{formatNumber(props.item.requestCount)}</strong>
-        </div>
-        <div className="key-stat-card">
-          <span>Failures</span>
-          <strong>{formatNumber(props.item.failureCount)}</strong>
-        </div>
-        <div className="key-stat-card key-stat-wide">
-          <span>Quota</span>
-          <strong>
-            {props.item.provider === "tavily"
-              ? renderTavilyQuota(props.item, props.item.quota?.tavily?.account ?? null)
-              : renderFirecrawlQuota(
-                  props.item.quota?.firecrawl?.team ?? null,
-                  props.item.quota?.firecrawl?.historical ?? null,
-                )}
-          </strong>
-        </div>
+
+      {/* Row 4: Inline stats */}
+      <div className="key-inline-stats">
+        <MetaItem label="Requests:" value={formatNumber(props.item.requestCount)} />
+        <MetaSep />
+        <MetaItem label="Failures:" value={formatNumber(props.item.failureCount)} />
+        <MetaSep />
+        <MetaItem label="Quota:" value={quotaText} />
       </div>
-      <div className="tag-list">
-        {props.item.tags.length > 0 ? props.item.tags.map((tag) => (
-          <span key={`${props.item.id}-${tag}`} className="tag-chip">{tag}</span>
-        )) : <span className="tag-chip">untagged</span>}
-      </div>
+
+      {/* Row 5: Error (conditional) */}
       {props.item.lastError || props.item.lastCheckError ? (
         <p className="supporting compact key-card-error">
           {props.item.lastCheckError ?? props.item.lastError}
         </p>
       ) : null}
-      <label className="field note-editor">
-        <span>Note</span>
-        <div className="note-editor-row">
-          <input
-            value={noteDraft}
-            onChange={(event) => setNoteDraft(event.target.value)}
-            placeholder="Add operational note"
-          />
-          <button
-            className="secondary-button key-action-button"
-            disabled={props.isSavingNote || noteDraft === props.item.note}
-            onClick={() => props.onSaveNote(props.item.id, noteDraft)}
-          >
-            {props.isSavingNote ? <InlineSpinner label="Saving" /> : "Save Note"}
+
+      {/* Row 6: Note editor + Actions */}
+      <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "flex-end" }}>
+        <label className="field note-editor" style={{ flex: "1 1 280px", margin: 0 }}>
+          <span>Note</span>
+          <div className="note-editor-row">
+            <input
+              value={noteDraft}
+              onChange={(event) => setNoteDraft(event.target.value)}
+              placeholder="Add operational note"
+            />
+            <button
+              className="secondary-button key-action-button"
+              disabled={props.isSavingNote || noteDraft === props.item.note}
+              onClick={() => props.onSaveNote(props.item.id, noteDraft)}
+            >
+              {props.isSavingNote ? <InlineSpinner label="Saving" /> : "Save"}
+            </button>
+          </div>
+        </label>
+        <div className="key-card-actions">
+          <button className="secondary-button key-action-button" disabled={props.isRevealing} onClick={() => props.onToggleReveal(props.item.id)}>
+            {props.isRevealing ? <InlineSpinner label="" /> : props.revealedValue ? <><EyeOff size={13} /> Hide</> : <><Eye size={13} /> Show</>}
+          </button>
+          <button className="secondary-button key-action-button" disabled={props.isCopying || props.isRevealing} onClick={() => props.onCopy(props.item.id)}>
+            {props.isCopying ? <InlineSpinner label="" /> : <><Copy size={13} /> Copy</>}
+          </button>
+          <button className="secondary-button key-action-button" disabled={props.isTesting} onClick={() => props.onTest([props.item.id])}>
+            {props.isTesting ? <InlineSpinner label="" /> : <><FlaskConical size={13} /> Test</>}
+          </button>
+          <button className="secondary-button key-action-button" disabled={props.isSyncing} onClick={() => props.onSyncQuota([props.item.id])}>
+            {props.isSyncing ? <InlineSpinner label="" /> : <><RefreshCw size={13} /> Sync</>}
+          </button>
+          <button className="secondary-button key-action-button" disabled={props.isTogglingEnabled} onClick={() => props.onToggleEnabled(props.item.id, !props.item.enabled)}>
+            {props.isTogglingEnabled
+              ? <InlineSpinner label="" />
+              : <><Power size={13} /> {props.item.enabled ? "Disable" : "Enable"}</>}
+          </button>
+          <button className="danger-button key-action-button" disabled={props.isDeleting} onClick={() => props.onDelete([props.item.id])}>
+            {props.isDeleting ? <InlineSpinner label="" /> : <><Trash2 size={13} /> Del</>}
           </button>
         </div>
-      </label>
-      <div className="key-card-actions">
-        <button className="secondary-button key-action-button" disabled={props.isRevealing} onClick={() => props.onToggleReveal(props.item.id)}>
-          {props.isRevealing ? <InlineSpinner label="Loading" /> : props.revealedValue ? <><EyeOff size={13} /> Hide</> : <><Eye size={13} /> Show</>}
-        </button>
-        <button className="secondary-button key-action-button" disabled={props.isCopying || props.isRevealing} onClick={() => props.onCopy(props.item.id)}>
-          {props.isCopying ? <InlineSpinner label="Copying" /> : <><Copy size={13} /> Copy</>}
-        </button>
-        <button className="secondary-button key-action-button" disabled={props.isTesting} onClick={() => props.onTest([props.item.id])}>
-          {props.isTesting ? <InlineSpinner label="Testing" /> : <><FlaskConical size={13} /> Test</>}
-        </button>
-        <button className="secondary-button key-action-button" disabled={props.isSyncing} onClick={() => props.onSyncQuota([props.item.id])}>
-          {props.isSyncing ? <InlineSpinner label="Syncing" /> : <><RefreshCw size={13} /> Sync</>}
-        </button>
-        <button className="secondary-button key-action-button" disabled={props.isTogglingEnabled} onClick={() => props.onToggleEnabled(props.item.id, !props.item.enabled)}>
-          {props.isTogglingEnabled
-            ? <InlineSpinner label="Updating" />
-            : <><Power size={13} /> {props.item.enabled ? "Disable" : "Enable"}</>}
-        </button>
-        <button className="danger-button key-action-button" disabled={props.isDeleting} onClick={() => props.onDelete([props.item.id])}>
-          {props.isDeleting ? <InlineSpinner label="Deleting" /> : <><Trash2 size={13} /> Delete</>}
-        </button>
       </div>
     </article>
   );

@@ -16,24 +16,22 @@
 .note-editor,
 .note-editor-row {
   display: flex;
-  gap: 1rem;
+  gap: 0.65rem;
   flex-wrap: wrap;
 }
 
 .key-side-metrics,
 .key-summary-grid,
 .key-grid {
-  margin-top: 1.2rem;
+  margin-top: 0.85rem;
 }
 
 .key-side-metrics,
 .key-summary-grid,
 .inventory-toolbar,
-.inventory-filters,
-.key-card-meta-grid,
-.key-stat-grid {
+.inventory-filters {
   display: grid;
-  gap: 1rem;
+  gap: 0.75rem;
 }
 
 .key-side-metrics {
@@ -42,47 +40,38 @@
 
 .key-inventory-panel {
   display: grid;
-  gap: 1.25rem;
+  gap: 0.85rem;
 }
 
 .key-summary-grid {
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   position: relative;
 }
 
 .key-summary-card,
 .inventory-block,
-.inventory-filters,
-.key-meta-card,
-.key-stat-card {
-  border-radius: 16px;
+.inventory-filters {
+  border-radius: 12px;
   background: rgba(223, 226, 235, 0.03);
   border: 1px solid rgba(59, 73, 76, 0.34);
 }
 
 .key-summary-card {
-  min-height: 112px;
-  padding: 1rem 1.1rem;
+  padding: 0.65rem 0.85rem;
 }
 
-.key-summary-card span,
-.key-meta-card span,
-.key-stat-card span {
+.key-summary-card span {
   display: block;
   color: var(--text-soft);
-  font-size: 0.78rem;
-}
-
-.key-summary-card strong,
-.key-meta-card strong,
-.key-stat-card strong {
-  display: block;
-  margin-top: 0.55rem;
-  line-height: 1.45;
+  font-size: 0.72rem;
 }
 
 .key-summary-card strong {
+  display: block;
+  margin-top: 0.3rem;
+  line-height: 1.35;
   color: var(--primary-strong);
+  font-size: 0.95rem;
 }
 
 .key-summary-note {
@@ -92,12 +81,12 @@
 
 .sticky-toolbar {
   position: sticky;
-  top: calc(var(--topbar-h) + 0.5rem);
+  top: calc(var(--topbar-h) + 0.25rem);
   z-index: 10;
   display: grid;
-  gap: 1rem;
-  padding: 1.15rem;
-  margin: 0 -1.25rem;
+  gap: 0.65rem;
+  padding: 0.75rem 0.85rem;
+  margin: 0 -1.15rem;
   background: linear-gradient(180deg, rgba(16, 20, 26, 0.95), rgba(16, 20, 26, 0.88));
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
@@ -105,16 +94,16 @@
 }
 
 .inventory-toolbar {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
 }
 
 .inventory-block,
 .inventory-filters {
-  padding: 1rem 1.1rem;
+  padding: 0.65rem 0.85rem;
 }
 
 .inventory-block {
-  gap: 0.85rem;
+  gap: 0.55rem;
 }
 
 .inventory-block-wide,
@@ -123,28 +112,29 @@
 }
 
 .toolbar-actions {
-  gap: 0.65rem;
+  gap: 0.45rem;
 }
 
 .toolbar-actions > * {
-  flex: 1 1 130px;
+  flex: 0 1 auto;
 }
 
 .toolbar-separator {
   flex: 0 0 1px;
-  min-height: 42px;
+  min-height: 34px;
   background: rgba(132, 147, 150, 0.2);
 }
 
 .selection-summary {
   display: inline-flex;
   align-items: center;
-  min-height: 44px;
-  padding: 0.75rem 1rem;
-  border-radius: 14px;
+  min-height: 34px;
+  padding: 0.4rem 0.75rem;
+  border-radius: 10px;
   color: var(--primary-strong);
   background: rgba(0, 229, 255, 0.08);
   border: 1px solid rgba(0, 229, 255, 0.16);
+  font-size: 0.82rem;
 }
 
 .inventory-filters {
@@ -152,20 +142,21 @@
 }
 
 .inventory-field span {
-  margin-bottom: 0.55rem;
+  margin-bottom: 0.35rem;
 }
 
 .key-grid {
   display: grid;
-  gap: 1.25rem;
+  gap: 0.85rem;
   grid-template-columns: 1fr;
 }
 
+/* ─── Key Card (compact) ─── */
 .key-card {
   display: grid;
-  gap: 1rem;
-  padding: 1.2rem;
-  border-radius: 22px;
+  gap: 0.6rem;
+  padding: 0.85rem 1rem;
+  border-radius: 16px;
   background: linear-gradient(180deg, rgba(28, 32, 38, 0.88), rgba(14, 18, 24, 0.94));
   border: 1px solid rgba(59, 73, 76, 0.4);
   box-shadow: var(--shadow-sm);
@@ -188,7 +179,7 @@
 }
 
 .selection-toggle {
-  gap: 0.75rem;
+  gap: 0.5rem;
 }
 
 .selection-toggle input {
@@ -197,72 +188,92 @@
 }
 
 .key-card-value {
-  padding: 0.95rem 1rem;
-  border-radius: 14px;
+  padding: 0.55rem 0.75rem;
+  border-radius: 10px;
   background: rgba(0, 229, 255, 0.05);
   border: 1px solid rgba(0, 229, 255, 0.12);
   word-break: break-all;
-  font-size: 0.88rem;
-  line-height: 1.55;
+  font-size: 0.84rem;
+  line-height: 1.45;
 }
 
-.key-card-meta-grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+/* ─── Inline metadata & stats (compact rows) ─── */
+.key-inline-meta,
+.key-inline-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.75rem;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  padding: 0.45rem 0.7rem;
+  border-radius: 10px;
+  background: rgba(223, 226, 235, 0.025);
+  border: 1px solid rgba(59, 73, 76, 0.25);
 }
 
-.key-meta-card,
-.key-stat-card {
-  min-height: 88px;
-  padding: 0.9rem 1rem;
+.key-inline-meta .meta-label,
+.key-inline-stats .meta-label {
+  color: var(--text-dim);
 }
 
-.key-stat-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+.key-inline-meta .meta-value,
+.key-inline-stats .meta-value {
+  color: var(--text);
+}
+
+.key-inline-meta .meta-sep,
+.key-inline-stats .meta-sep {
+  color: rgba(132, 147, 150, 0.3);
+  user-select: none;
 }
 
 .key-card-error {
   margin: 0;
-  padding: 0.9rem 1rem;
-  border-radius: 14px;
+  padding: 0.55rem 0.7rem;
+  border-radius: 10px;
   color: var(--warning);
   background: rgba(216, 170, 87, 0.08);
   border: 1px solid rgba(216, 170, 87, 0.2);
+  font-size: 0.8rem;
 }
 
 .tag-chip {
   display: inline-flex;
   align-items: center;
-  min-height: 28px;
-  padding: 0.36rem 0.72rem;
+  min-height: 24px;
+  padding: 0.2rem 0.55rem;
   border-radius: 999px;
   color: var(--primary-strong);
   background: rgba(0, 229, 255, 0.08);
   border: 1px solid rgba(0, 229, 255, 0.16);
-  font-size: 0.76rem;
+  font-size: 0.72rem;
 }
 
 .note-editor {
   display: grid;
-  gap: 0.55rem;
+  gap: 0.35rem;
 }
 
 .note-editor-row {
   align-items: center;
+  gap: 0.45rem;
 }
 
 .note-editor-row input {
-  flex: 1 1 240px;
+  flex: 1 1 200px;
 }
 
 .key-card-actions {
-  display: grid;
-  gap: 0.65rem;
-  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
 }
 
 .key-action-button {
   justify-content: center;
-  min-height: 40px;
+  min-height: 34px;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.8rem;
 }
 
 @media (min-width: 1680px) {
@@ -276,8 +287,6 @@
   .key-summary-grid,
   .inventory-toolbar,
   .inventory-filters,
-  .key-card-meta-grid,
-  .key-stat-grid,
   .key-grid {
     grid-template-columns: 1fr;
   }

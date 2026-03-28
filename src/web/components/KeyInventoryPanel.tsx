@@ -76,36 +76,38 @@ function renderSummaryQuota(summary: KeyPoolSummary | null): string {
 }
 
 function SummaryCards(props: { summary: KeyPoolSummary | null; loading: boolean }) {
+  const s = props.summary;
+  const loading = props.loading;
   return (
     <div className="key-summary-grid">
       <div className="key-summary-card">
         <span>Keys</span>
-        <strong>{props.loading ? "..." : formatNumber(props.summary?.totalKeys ?? 0)}</strong>
+        <strong>{loading ? "..." : formatNumber(s?.totalKeys ?? 0)}</strong>
       </div>
       <div className="key-summary-card">
         <span>Healthy</span>
-        <strong>{props.loading ? "..." : formatNumber(props.summary?.healthyKeys ?? 0)}</strong>
+        <strong>{loading ? "..." : formatNumber(s?.healthyKeys ?? 0)}</strong>
       </div>
       <div className="key-summary-card">
         <span>Enabled</span>
-        <strong>{props.loading ? "..." : formatNumber(props.summary?.enabledKeys ?? 0)}</strong>
+        <strong>{loading ? "..." : formatNumber(s?.enabledKeys ?? 0)}</strong>
       </div>
       <div className="key-summary-card">
-        <span>Requests / Failures</span>
+        <span>Req / Fail</span>
         <strong>
-          {props.loading
+          {loading
             ? "..."
-            : `${formatNumber(props.summary?.totalRequests ?? 0)} / ${formatNumber(props.summary?.totalFailures ?? 0)}`}
+            : `${formatNumber(s?.totalRequests ?? 0)} / ${formatNumber(s?.totalFailures ?? 0)}`}
         </strong>
       </div>
       <div className="key-summary-card">
         <span>Quota</span>
-        <strong>{props.loading ? "..." : renderSummaryQuota(props.summary)}</strong>
+        <strong>{loading ? "..." : renderSummaryQuota(s)}</strong>
       </div>
-      {props.summary?.quotaNote ? (
-        <p className="warning-banner compact key-summary-note">{props.summary.quotaNote}</p>
+      {s?.quotaNote ? (
+        <p className="warning-banner compact key-summary-note">{s.quotaNote}</p>
       ) : null}
-      {props.loading ? <LoadingOverlay label="Refreshing key summary" /> : null}
+      {loading ? <LoadingOverlay label="Refreshing" /> : null}
     </div>
   );
 }
@@ -128,38 +130,33 @@ export function KeyInventoryPanel(props: KeyInventoryPanelProps) {
       </div>
       <SummaryCards loading={props.loading} summary={props.summary} />
       <div className="sticky-toolbar">
-        <div className="inventory-toolbar">
-          <div className="inventory-block inventory-block-wide">
-            <div className="eyebrow">Selection Toolbar</div>
-            <div className="selection-summary">
-              {props.selectedIds.length} selected
-            </div>
-            <div className="toolbar-actions">
-              <button className="secondary-button" disabled={props.isBulkUpdating} onClick={props.onEnableSelected}>
-                {props.isBulkUpdating ? <InlineSpinner label="Updating" /> : <><Power size={13} /> Enable</>}
-              </button>
-              <button className="secondary-button" disabled={props.isBulkUpdating} onClick={props.onDisableSelected}>
-                {props.isBulkUpdating ? <InlineSpinner label="Updating" /> : <><Power size={13} /> Disable</>}
-              </button>
-              <span className="toolbar-separator" aria-hidden="true" />
-              <button className="primary-button" disabled={props.isBatchTesting} onClick={props.onTestSelected}>
-                {props.isBatchTesting ? <InlineSpinner label="Testing" /> : <><FlaskConical size={13} /> Test Selected</>}
-              </button>
-              <button className="secondary-button" disabled={props.isBatchSyncing} onClick={props.onSyncSelected}>
-                {props.isBatchSyncing ? <InlineSpinner label="Syncing" /> : <><RefreshCw size={13} /> Refresh Quota</>}
-              </button>
-              <span className="toolbar-separator" aria-hidden="true" />
-              <button className="danger-button" disabled={props.isBatchDeleting} onClick={props.onDeleteSelected}>
-                {props.isBatchDeleting ? <InlineSpinner label="Deleting" /> : <><Trash2 size={13} /> Delete Selected</>}
-              </button>
-              <button className="secondary-button" onClick={props.onSelectAll}>
-                Select Visible
-              </button>
-              <button className="secondary-button" onClick={props.onClearSelection}>
-                Clear
-              </button>
-            </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.45rem", flexWrap: "wrap" }}>
+          <div className="selection-summary">
+            {props.selectedIds.length} selected
           </div>
+          <button className="secondary-button key-action-button" disabled={props.isBulkUpdating} onClick={props.onEnableSelected}>
+            <Power size={12} /> Enable
+          </button>
+          <button className="secondary-button key-action-button" disabled={props.isBulkUpdating} onClick={props.onDisableSelected}>
+            <Power size={12} /> Disable
+          </button>
+          <span className="toolbar-separator" aria-hidden="true" />
+          <button className="primary-button key-action-button" disabled={props.isBatchTesting} onClick={props.onTestSelected}>
+            {props.isBatchTesting ? <InlineSpinner label="Testing" /> : <><FlaskConical size={12} /> Test</>}
+          </button>
+          <button className="secondary-button key-action-button" disabled={props.isBatchSyncing} onClick={props.onSyncSelected}>
+            {props.isBatchSyncing ? <InlineSpinner label="Syncing" /> : <><RefreshCw size={12} /> Sync</>}
+          </button>
+          <span className="toolbar-separator" aria-hidden="true" />
+          <button className="danger-button key-action-button" disabled={props.isBatchDeleting} onClick={props.onDeleteSelected}>
+            {props.isBatchDeleting ? <InlineSpinner label="" /> : <><Trash2 size={12} /> Delete</>}
+          </button>
+          <button className="secondary-button key-action-button" onClick={props.onSelectAll}>
+            <CheckSquare size={12} /> All
+          </button>
+          <button className="secondary-button key-action-button" onClick={props.onClearSelection}>
+            <Square size={12} /> Clear
+          </button>
         </div>
         <div className="inventory-filters">
           <label className="field inventory-field">
