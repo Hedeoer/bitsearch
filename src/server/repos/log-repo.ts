@@ -1,5 +1,6 @@
 import { nanoid } from "nanoid";
 import type {
+  ActivityPageResult,
   RequestActivityRecord,
   RequestAttemptRecord,
   RequestLogRecord,
@@ -165,14 +166,89 @@ export function listRequestAttempts(
   return rows.map(mapAttemptLog);
 }
 
+export type ActivityFilters = {
+  query?: string;
+  toolName?: string;
+  status?: string;
+  timePreset?: string;
+  customStart?: string;
+  customEnd?: string;
+};
+
+function buildActivityWhere(filters: ActivityFilters): { where: string; params: unknown[] } {
+  const conditions: string[] = [];
+  const params: unknown[] = [];
+
+  if (filters.query) {
+    const like = `%${filters.query}%`;
+    conditions.push(
+      "(tool_name LIKE ? OR target_url LIKE ? OR final_provider LIKE ? OR error_summary LIKE ?)",
+    );
+    params.push(like, like, like, like);
+  }
+
+  if (filters.toolName && filters.toolName !== "all") {
+    conditions.push("tool_name = ?");
+    params.push(filters.toolName);
+  }
+
+  if (filters.status && filters.status !== "all") {
+    conditions.push("status = ?");
+    params.push(filters.status);
+  }
+
+  const preset = filters.timePreset;
+  if (preset && preset !== "all") {
+    if (preset === "today") {
+      conditions.push("date(created_at) = date('now', 'localtime')");
+    } else if (preset === "last_hour") {
+      conditions.push("created_at >= datetime('now', '-1 hour')");
+    } else if (preset === "last_24_hours") {
+      conditions.push("created_at >= datetime('now', '-24 hours')");
+    } else if (preset === "custom") {
+      if (filters.customStart) {
+        conditions.push("created_at >= ?");
+        params.push(filters.customStart);
+      }
+      if (filters.customEnd) {
+        conditions.push("created_at <= ?");
+        params.push(filters.customEnd);
+      }
+    }
+  }
+
+  const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+  return { where, params };
+}
+
+export function countRequestActivities(db: AppDatabase, filters: ActivityFilters): number {
+  const { where, params } = buildActivityWhere(filters);
+  const row = db.sqlite
+    .prepare(`SELECT COUNT(*) as cnt FROM request_logs ${where}`)
+    .get(...(params as Parameters<typeof db.sqlite.prepare>[0][])) as { cnt: number };
+  return row.cnt;
+}
+
 export function listRequestActivities(
   db: AppDatabase,
-  limit: number,
-): RequestActivityRecord[] {
-  const requests = listRequestLogs(db, limit);
+  page: number,
+  pageSize: number,
+  filters: ActivityFilters,
+): ActivityPageResult {
+  const { where, params } = buildActivityWhere(filters);
+  const total = countRequestActivities(db, filters);
+  const offset = page * pageSize;
+
+  const requests = (db.sqlite
+    .prepare(
+      `SELECT * FROM request_logs ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+    )
+    .all(...([...params, pageSize, offset] as Parameters<typeof db.sqlite.prepare>[0][])) as Record<string, unknown>[]).map(mapRequestLog);
+
   if (requests.length === 0) {
-    return [];
+    return { items: [], total, page, pageSize };
   }
+
   const ids = requests.map((item) => item.id);
   const placeholders = ids.map(() => "?").join(", ");
   const attempts = db.sqlite
@@ -191,10 +267,15 @@ export function listRequestActivities(
     grouped.set(mapped.requestLogId, bucket);
   }
 
-  return requests.map((request) => ({
-    request,
-    attempts: grouped.get(request.id) ?? [],
-  }));
+  return {
+    items: requests.map((request) => ({
+      request,
+      attempts: grouped.get(request.id) ?? [],
+    })),
+    total,
+    page,
+    pageSize,
+  };
 }
 
 export function getRequestActivity(

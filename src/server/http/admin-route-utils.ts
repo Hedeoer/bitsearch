@@ -132,6 +132,14 @@ export function parseLimit(raw: unknown, fallback: number, max: number): number 
   return Math.min(parsed, max);
 }
 
+export function parsePage(raw: unknown): number {
+  const parsed = Number.parseInt(String(raw ?? "0"), 10);
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    return 0;
+  }
+  return parsed;
+}
+
 export function parseOptionalKeyPoolProvider(
   raw: unknown,
 ): KeyPoolProvider | undefined {

@@ -1,8 +1,13 @@
 .activity-hub {
   display: grid;
   gap: 1rem;
-  grid-template-columns: minmax(360px, 0.92fr) minmax(0, 1.08fr);
+  grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
   align-items: start;
+}
+
+.activity-hub > .surface-card {
+  overflow: hidden;
+  min-width: 0;
 }
 
 .activity-filters,
@@ -43,11 +48,38 @@
   margin-bottom: 1rem;
 }
 
-.activity-list,
+.activity-list {
+  display: grid;
+  gap: 0.65rem;
+  overflow-y: auto;
+  overflow-x: hidden;
+  max-height: calc(100vh - var(--topbar-h) - 14rem);
+  min-height: 200px;
+  padding-right: 0.25rem;
+}
+
+.activity-list::-webkit-scrollbar {
+  width: 5px;
+}
+
+.activity-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.activity-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+}
+
+.activity-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
 .attempt-stack,
 .message-stack {
   display: grid;
   gap: 0.65rem;
+  overflow: hidden;
 }
 
 .activity-item,
@@ -66,6 +98,8 @@
   color: inherit;
   text-align: left;
   cursor: pointer;
+  overflow: hidden;
+  min-width: 0;
 }
 
 .activity-item:hover {
@@ -76,6 +110,17 @@
 .activity-item-selected {
   border-color: rgba(0, 229, 255, 0.24);
   background: linear-gradient(135deg, rgba(0, 229, 255, 0.1), rgba(223, 226, 235, 0.02));
+}
+
+.activity-item-summary {
+  margin: 0.35rem 0 0;
+  color: var(--text-soft);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
 }
 
 .activity-item-top,
@@ -167,6 +212,7 @@
   max-height: calc(100vh - var(--topbar-h) - 2rem);
   overflow-y: auto;
   align-self: start;
+  min-width: 0;
 }
 
 .detail-card span,
@@ -237,7 +283,39 @@
   border: 1px solid rgba(0, 229, 255, 0.16);
 }
 
-@media (max-width: 980px) {
+.activity-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.65rem 0 0.1rem;
+  border-top: 1px solid var(--border);
+  margin-top: 0.75rem;
+}
+
+.activity-pagination-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 8px;
+}
+
+.activity-pagination-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.activity-pagination-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  min-width: 4rem;
+  text-align: center;
+}
+
+@media (max-width: 1180px) {
   .activity-hub {
     grid-template-columns: 1fr;
   }

@@ -65,7 +65,7 @@ export function App() {
   const [providerDrafts, setProviderDrafts] = useState<ProviderDrafts>({});
   const [system, setSystem] = useState<SystemSettings>(EMPTY_SYSTEM);
   const [mcpAccess, setMcpAccess] = useState<McpAccessInfo>(EMPTY_MCP_ACCESS);
-  const [activity, setActivity] = useState<AppDataBundle["activity"]>([]);
+  const [activity, setActivity] = useState<AppDataBundle["activity"]>(null);
   const [authKey, setAuthKey] = useState("");
   const [loginMessage, setLoginMessage] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -98,12 +98,11 @@ export function App() {
 
   async function refreshAll() {
     await withRefresh(async () => {
-      const [dashRes, provRes, sysRes, mcpRes, actRes] = await Promise.all([
+      const [dashRes, provRes, sysRes, mcpRes] = await Promise.all([
         apiRequest<AppDataBundle["dashboard"]>("GET", "/admin/dashboard"),
         apiRequest<AppDataBundle["providers"]>("GET", "/admin/providers"),
         apiRequest<SystemSettings>("GET", "/admin/system"),
         apiRequest<McpAccessInfo>("GET", "/admin/mcp-access"),
-        apiRequest<AppDataBundle["activity"]>("GET", "/admin/activity"),
       ]);
       const nextSystem = sysRes.ok ? sysRes.data : system;
       if (dashRes.ok) setDashboard(dashRes.data);
@@ -113,7 +112,6 @@ export function App() {
       }
       if (sysRes.ok) setSystem(sysRes.data);
       if (mcpRes.ok) setMcpAccess(mcpRes.data);
-      if (actRes.ok) setActivity(actRes.data);
       setWorkspaceRefreshNonce((current) => current + 1);
     });
   }
@@ -176,7 +174,7 @@ export function App() {
     setProviders([]);
     setProviderDrafts({});
     setMcpAccess(EMPTY_MCP_ACCESS);
-    setActivity([]);
+    setActivity(null);
     setAuthKey("");
   }
 
@@ -312,10 +310,7 @@ export function App() {
           <Route
             path="/activity"
             element={
-              <ActivityWorkspace
-                activity={activity}
-                loading={isRefreshing}
-              />
+              <ActivityWorkspace />
             }
           />
           <Route path="*" element={<Navigate replace to="/overview" />} />

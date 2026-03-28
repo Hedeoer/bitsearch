@@ -1,7 +1,6 @@
 services:
   bitsearch:
-    build: .
-    image: bitsearch:latest
+    image: ${BITSEARCH_IMAGE:-docker.io/your-dockerhub-namespace/bitsearch:latest}
     container_name: bitsearch
     restart: unless-stopped
     ports:

@@ -1,8 +1,8 @@
 import type {
+  ActivityPageResult,
   DashboardSummary,
   ProviderConfigRecord,
   ProviderKeyRecord,
-  RequestActivityRecord,
   SystemSettings,
 } from "@shared/contracts";
 
@@ -32,5 +32,5 @@ export type AppDataBundle = {
   providers: ProviderConfigRecord[];
   keys: ProviderKeyRecord[];
   system: SystemSettings;
-  activity: RequestActivityRecord[];
+  activity: ActivityPageResult | null;
 };

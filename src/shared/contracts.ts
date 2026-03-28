@@ -224,6 +224,13 @@ export interface RequestActivityRecord {
   attempts: RequestAttemptRecord[];
 }
 
+export interface ActivityPageResult {
+  items: RequestActivityRecord[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
 export interface SearchSessionRecord {
   id: string;
   content: string;

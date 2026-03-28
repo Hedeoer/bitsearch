@@ -8,6 +8,7 @@ import {
   listRequestActivities,
   listRequestAttempts,
   listRequestLogs,
+  type ActivityFilters,
 } from "../repos/log-repo.js";
 import {
   deleteKeys,
@@ -41,6 +42,7 @@ import {
   parseKeyPoolProvider,
   parseKeyStatus,
   parseLimit,
+  parsePage,
   parseOptionalKeyPoolProvider,
   parseProviderConfigPayload,
   parseRemoteProvider,
@@ -234,7 +236,17 @@ export function createAdminRouter(context: AppContext): Router {
   });
 
   router.get("/activity", (req, res) => {
-    res.json(listRequestActivities(context.db, parseLimit(req.query.limit, 100, 500)));
+    const page = parsePage(req.query.page);
+    const pageSize = parseLimit(req.query.pageSize, 25, 100);
+    const filters: ActivityFilters = {
+      toolName: req.query.toolName ? String(req.query.toolName) : undefined,
+      status: req.query.status ? String(req.query.status) : undefined,
+      timePreset: req.query.timePreset ? String(req.query.timePreset) : undefined,
+      customStart: req.query.customStart ? String(req.query.customStart) : undefined,
+      customEnd: req.query.customEnd ? String(req.query.customEnd) : undefined,
+      query: req.query.q ? String(req.query.q) : undefined,
+    };
+    res.json(listRequestActivities(context.db, page, pageSize, filters));
   });
 
   router.get("/activity/:requestId", (req, res) => {

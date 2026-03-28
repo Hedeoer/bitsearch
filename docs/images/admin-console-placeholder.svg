@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" role="img" aria-labelledby="title desc">
+  <title id="title">BitSearch admin console placeholder</title>
+  <desc id="desc">Placeholder image for the BitSearch admin console screenshot.</desc>
+  <rect width="1280" height="720" fill="#0f172a"/>
+  <rect x="48" y="48" width="1184" height="624" rx="24" fill="#111827" stroke="#334155" stroke-width="2"/>
+  <rect x="48" y="48" width="1184" height="72" rx="24" fill="#1e293b"/>
+  <circle cx="96" cy="84" r="10" fill="#f87171"/>
+  <circle cx="128" cy="84" r="10" fill="#fbbf24"/>
+  <circle cx="160" cy="84" r="10" fill="#34d399"/>
+  <rect x="88" y="164" width="260" height="468" rx="18" fill="#172554"/>
+  <rect x="388" y="164" width="368" height="212" rx="18" fill="#1d4ed8"/>
+  <rect x="780" y="164" width="404" height="212" rx="18" fill="#0f766e"/>
+  <rect x="388" y="396" width="796" height="236" rx="18" fill="#1f2937"/>
+  <text x="88" y="610" fill="#93c5fd" font-family="Arial, Helvetica, sans-serif" font-size="28">Overview</text>
+  <text x="388" y="332" fill="#dbeafe" font-family="Arial, Helvetica, sans-serif" font-size="34">Admin Console Placeholder</text>
+  <text x="388" y="442" fill="#cbd5e1" font-family="Arial, Helvetica, sans-serif" font-size="30">Replace this SVG with a real dashboard screenshot.</text>
+  <text x="388" y="492" fill="#94a3b8" font-family="Arial, Helvetica, sans-serif" font-size="24">Suggested path: docs/images/admin-console.png</text>
+  <text x="88" y="94" fill="#e2e8f0" font-family="Arial, Helvetica, sans-serif" font-size="24">BitSearch</text>
+</svg>

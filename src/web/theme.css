@@ -379,6 +379,7 @@ a[aria-disabled="true"] {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  border-radius: inherit;
   background:
     radial-gradient(circle at top right, rgba(0, 229, 255, 0.08), transparent 26%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.015), transparent 36%);

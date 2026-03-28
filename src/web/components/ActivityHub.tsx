@@ -1,92 +1,65 @@
-import { useEffect, useMemo, useState } from "react";
-import { Activity, Search, Globe, Server, Timer } from "lucide-react";
-import type { RequestActivityRecord } from "@shared/contracts";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Activity, Search, Globe, Server, Timer, ChevronLeft, ChevronRight } from "lucide-react";
+import type { ActivityPageResult, RequestActivityRecord } from "@shared/contracts";
+import { apiRequest } from "../api";
 import { formatDuration, statusTone } from "../format";
 import { EmptyState, LoadingOverlay } from "./Feedback";
 import { RequestDetails } from "./RequestDetails";
 
-type ActivityHubProps = {
-  activity: RequestActivityRecord[];
-  loading: boolean;
-};
+const PAGE_SIZE = 25;
 
 type TimeRangePreset = "all" | "today" | "last_hour" | "last_24_hours" | "custom";
 
-function isWithinTimeRange(
-  createdAt: string,
-  preset: TimeRangePreset,
-  customStart: string,
-  customEnd: string,
-) {
-  const timestamp = Date.parse(createdAt);
-  if (!Number.isFinite(timestamp)) {
-    return preset === "all";
-  }
-  const now = Date.now();
-  if (preset === "today") {
-    return timestamp >= new Date().setHours(0, 0, 0, 0);
-  }
-  if (preset === "last_hour") {
-    return timestamp >= now - 60 * 60 * 1000;
-  }
-  if (preset === "last_24_hours") {
-    return timestamp >= now - 24 * 60 * 60 * 1000;
-  }
-  if (preset === "custom") {
-    const start = customStart ? Date.parse(customStart) : Number.NEGATIVE_INFINITY;
-    const end = customEnd ? Date.parse(customEnd) : Number.POSITIVE_INFINITY;
-    return timestamp >= start && timestamp <= end;
-  }
-  return true;
-}
-
-export function ActivityHub(props: ActivityHubProps) {
+export function ActivityHub() {
   const [query, setQuery] = useState("");
   const [toolFilter, setToolFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [timeRange, setTimeRange] = useState<TimeRangePreset>("all");
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
+  const [page, setPage] = useState(0);
+  const [result, setResult] = useState<ActivityPageResult | null>(null);
+  const [loading, setLoading] = useState(false);
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const toolOptions = useMemo(() => {
-    return [...new Set(props.activity.map((item) => item.request.toolName))].sort();
-  }, [props.activity]);
+  const fetchPage = useCallback(
+    async (p: number, q: string, tool: string, status: string, preset: TimeRangePreset, cStart: string, cEnd: string) => {
+      setLoading(true);
+      const params = new URLSearchParams();
+      params.set("page", String(p));
+      params.set("pageSize", String(PAGE_SIZE));
+      if (q) params.set("q", q);
+      if (tool !== "all") params.set("toolName", tool);
+      if (status !== "all") params.set("status", status);
+      if (preset !== "all") params.set("timePreset", preset);
+      if (preset === "custom" && cStart) params.set("customStart", cStart);
+      if (preset === "custom" && cEnd) params.set("customEnd", cEnd);
 
-  const filtered = useMemo(() => {
-    return props.activity.filter((item) => {
-      const { request } = item;
-      const haystack = [
-        request.toolName,
-        request.targetUrl ?? "",
-        request.finalProvider ?? "",
-        request.errorSummary ?? "",
-      ]
-        .join(" ")
-        .toLowerCase();
-      if (query && !haystack.includes(query.toLowerCase())) {
-        return false;
+      const res = await apiRequest<ActivityPageResult>("GET", `/admin/activity?${params.toString()}`);
+      setLoading(false);
+      if (res.ok) {
+        setResult(res.data);
+        setSelectedRequestId((prev) => {
+          const items = res.data.items;
+          if (items.length === 0) return null;
+          if (prev && items.some((item) => item.request.id === prev)) return prev;
+          return items[0].request.id;
+        });
       }
-      if (toolFilter !== "all" && request.toolName !== toolFilter) {
-        return false;
-      }
-      if (statusFilter !== "all" && request.status !== statusFilter) {
-        return false;
-      }
-      return isWithinTimeRange(request.createdAt, timeRange, customStart, customEnd);
-    });
-  }, [props.activity, customEnd, customStart, query, statusFilter, timeRange, toolFilter]);
+    },
+    [],
+  );
 
   useEffect(() => {
-    if (filtered.length === 0) {
-      setSelectedRequestId(null);
-      return;
-    }
-    const hasSelected = filtered.some((item) => item.request.id === selectedRequestId);
-    if (!hasSelected) {
-      setSelectedRequestId(filtered[0].request.id);
-    }
-  }, [filtered, selectedRequestId]);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      void fetchPage(page, query, toolFilter, statusFilter, timeRange, customStart, customEnd);
+    }, 300);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [fetchPage, page, query, toolFilter, statusFilter, timeRange, customStart, customEnd]);
 
   function resetFilters() {
     setQuery("");
@@ -95,106 +68,182 @@ export function ActivityHub(props: ActivityHubProps) {
     setTimeRange("all");
     setCustomStart("");
     setCustomEnd("");
+    setPage(0);
   }
 
-  const selected =
-    filtered.find((item) => item.request.id === selectedRequestId) ?? null;
+  function handleFilterChange(fn: () => void) {
+    fn();
+    setPage(0);
+  }
+
+  const items = result?.items ?? [];
+  const total = result?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const selected = items.find((item) => item.request.id === selectedRequestId) ?? null;
+
+  const toolOptions = [...new Set(items.map((item) => item.request.toolName))].sort();
+
+  const hasFilters =
+    query !== "" ||
+    toolFilter !== "all" ||
+    statusFilter !== "all" ||
+    timeRange !== "all";
 
   return (
-    <section className="activity-hub" id="activity">
+    <section className="activity-hub">
       <article className="surface-card">
-        {props.loading ? <LoadingOverlay label="Refreshing activity" /> : null}
-        <div className="section-heading">
-          <div>
-            <div className="eyebrow">Activity</div>
-            <h3>Request Feed</h3>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-            <span className="chip neutral-chip">{filtered.length} visible</span>
-            <Activity size={16} className="section-icon" />
-          </div>
-        </div>
+        <header style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "1rem" }}>
+          <Activity size={16} style={{ color: "var(--primary)" }} />
+          <h2 style={{ margin: 0, fontSize: "0.95rem", fontWeight: 600 }}>Request Feed</h2>
+          {total > 0 && (
+            <span style={{ marginLeft: "auto", fontSize: "0.78rem", color: "var(--text-muted)" }}>
+              {total} total
+            </span>
+          )}
+        </header>
+
         <div className="activity-filters">
-          <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", flex: "1 1 200px", background: "rgba(0,0,0,0.2)", borderRadius: "6px", padding: "0 0.5rem" }}>
-            <Search size={14} color="var(--text-dim)" />
-            <input
-              placeholder="Search tool / url / provider / error"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              style={{ border: "none", background: "transparent", outline: "none", width: "100%", height: "32px", fontSize: "0.85rem", color: "var(--text)" }}
-            />
-          </div>
-          <select value={toolFilter} onChange={(event) => setToolFilter(event.target.value)} style={{ height: "32px", fontSize: "0.8rem", borderRadius: "6px", border: "none", background: "rgba(255,255,255,0.05)", outline: "none", color: "var(--text)", padding: "0 0.6rem" }}>
-            <option value="all">Tool: All</option>
-            {toolOptions.map((toolName) => (
-              <option key={toolName} value={toolName}>Tool: {toolName}</option>
+          <Search size={14} style={{ color: "var(--text-muted)", flexShrink: 0 }} />
+          <input
+            aria-label="Search requests"
+            placeholder="Search tool, URL, provider…"
+            style={{ flex: 1, minWidth: "10rem" }}
+            type="search"
+            value={query}
+            onChange={(e) => handleFilterChange(() => setQuery(e.target.value))}
+          />
+          <select
+            aria-label="Filter by tool"
+            value={toolFilter}
+            onChange={(e) => handleFilterChange(() => setToolFilter(e.target.value))}
+          >
+            <option value="all">All tools</option>
+            {toolOptions.map((t) => (
+              <option key={t} value={t}>{t}</option>
             ))}
           </select>
-          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} style={{ height: "32px", fontSize: "0.8rem", borderRadius: "6px", border: "none", background: "rgba(255,255,255,0.05)", outline: "none", color: "var(--text)", padding: "0 0.6rem" }}>
-            <option value="all">Status: All</option>
-            <option value="success">Status: Success</option>
-            <option value="failed">Status: Failed</option>
+          <select
+            aria-label="Filter by status"
+            value={statusFilter}
+            onChange={(e) => handleFilterChange(() => setStatusFilter(e.target.value))}
+          >
+            <option value="all">All statuses</option>
+            <option value="success">Success</option>
+            <option value="failed">Failed</option>
           </select>
-          <select value={timeRange} onChange={(event) => setTimeRange(event.target.value as TimeRangePreset)} style={{ height: "32px", fontSize: "0.8rem", borderRadius: "6px", border: "none", background: "rgba(255,255,255,0.05)", outline: "none", color: "var(--text)", padding: "0 0.6rem" }}>
-            <option value="all">Time: All</option>
-            <option value="today">Time: Today</option>
-            <option value="last_hour">Time: Last 1 Hr</option>
-            <option value="last_24_hours">Time: Last 24 Hrs</option>
-            <option value="custom">Time: Custom</option>
+          <select
+            aria-label="Time range"
+            value={timeRange}
+            onChange={(e) => handleFilterChange(() => setTimeRange(e.target.value as TimeRangePreset))}
+          >
+            <option value="all">All time</option>
+            <option value="today">Today</option>
+            <option value="last_hour">Last hour</option>
+            <option value="last_24_hours">Last 24 h</option>
+            <option value="custom">Custom…</option>
           </select>
+          {hasFilters && (
+            <button className="btn-ghost" style={{ fontSize: "0.78rem" }} type="button" onClick={resetFilters}>
+              Clear
+            </button>
+          )}
         </div>
-        {timeRange === "custom" ? (
+
+        {timeRange === "custom" && (
           <div className="activity-custom-range">
-            <label className="field">
-              <span>Start</span>
-              <input type="datetime-local" value={customStart} onChange={(event) => setCustomStart(event.target.value)} />
+            <label>
+              <span style={{ fontSize: "0.76rem", color: "var(--text-muted)" }}>From</span>
+              <input
+                type="datetime-local"
+                value={customStart}
+                onChange={(e) => handleFilterChange(() => setCustomStart(e.target.value))}
+              />
             </label>
-            <label className="field">
-              <span>End</span>
-              <input type="datetime-local" value={customEnd} onChange={(event) => setCustomEnd(event.target.value)} />
+            <label>
+              <span style={{ fontSize: "0.76rem", color: "var(--text-muted)" }}>To</span>
+              <input
+                type="datetime-local"
+                value={customEnd}
+                onChange={(e) => handleFilterChange(() => setCustomEnd(e.target.value))}
+              />
             </label>
           </div>
-        ) : null}
-        <div className="activity-list">
-          {props.activity.length === 0 ? (
+        )}
+
+        <div className="activity-list" style={{ position: "relative" }}>
+          {loading && <LoadingOverlay />}
+          {!loading && items.length === 0 && (
             <EmptyState
-              description="Requests sent through the MCP endpoint will appear here once traffic starts flowing."
-              title="No request activity yet"
+              title="No requests found"
+              description={hasFilters ? "Try adjusting your filters." : "No activity recorded yet."}
             />
-          ) : filtered.length === 0 ? (
-            <EmptyState
-              actionLabel="Clear filters"
-              description="No activity matches the current filters. Clear them to inspect the broader request history."
-              onAction={resetFilters}
-              title="No matching requests"
-            />
-          ) : filtered.map((item) => (
-            <button
-              key={item.request.id}
-              type="button"
-              className={`activity-item ${
-                item.request.id === selectedRequestId ? "activity-item-selected" : ""
-              }`}
-              onClick={() => setSelectedRequestId(item.request.id)}
-            >
-              <div className="activity-item-top">
-                <strong>{item.request.toolName}</strong>
-                <span className={`status-pill ${statusTone(item.request.status)}`}>
-                  {item.request.status}
-                </span>
-              </div>
-              <div className="activity-item-meta">
-                <span className="url-chip mono"><Globe size={10} />{item.request.targetUrl ?? "no target url"}</span>
-                <span><Server size={10} />{item.request.finalProvider ?? "-"}</span>
-                <span><Timer size={10} />{formatDuration(item.request.durationMs)}</span>
-              </div>
-              <p className="supporting compact ellipsis-text" style={{ maxWidth: "100%", WebkitLineClamp: 1, display: "-webkit-box", WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-                {item.request.errorSummary ?? item.request.resultPreview ?? "No summary"}
-              </p>
-            </button>
-          ))}
+          )}
+          {items.map((item) => {
+            const { request } = item;
+            const tone = statusTone(request.status);
+            const isSelected = request.id === selectedRequestId;
+            return (
+              <button
+                className={`activity-item${isSelected ? " activity-item--selected" : ""}`}
+                key={request.id}
+                type="button"
+                onClick={() => setSelectedRequestId(request.id)}
+              >
+                <div className="activity-item-top">
+                  <span className="activity-item-tool">
+                    <Server size={12} />
+                    {request.toolName}
+                  </span>
+                  <span className={`status-badge status-badge--${tone}`}>{request.status}</span>
+                </div>
+                {request.targetUrl && (
+                  <p className="activity-item-url">
+                    <Globe size={11} />
+                    {request.targetUrl}
+                  </p>
+                )}
+                <div className="activity-item-meta">
+                  <span style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
+                    <Timer size={11} />
+                    {formatDuration(request.durationMs)}
+                  </span>
+                  <span style={{ color: "var(--text-muted)", fontSize: "0.74rem" }}>
+                    {new Date(request.createdAt).toLocaleString()}
+                  </span>
+                </div>
+                <p className="activity-item-preview">
+                  {request.errorSummary ?? request.resultPreview ?? "No summary"}
+                </p>
+              </button>
+            );
+          })}
         </div>
+
+        {totalPages > 1 && (
+          <div className="activity-pagination">
+            <button
+              className="btn-ghost activity-pagination-btn"
+              disabled={page === 0}
+              type="button"
+              onClick={() => setPage((p) => Math.max(0, p - 1))}
+            >
+              <ChevronLeft size={14} />
+            </button>
+            <span className="activity-pagination-label">
+              {page + 1} / {totalPages}
+            </span>
+            <button
+              className="btn-ghost activity-pagination-btn"
+              disabled={page >= totalPages - 1}
+              type="button"
+              onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+            >
+              <ChevronRight size={14} />
+            </button>
+          </div>
+        )}
       </article>
+
       <RequestDetails activity={selected} />
     </section>
   );
