@@ -39,37 +39,13 @@ function MetricCard(props: MetricCardProps) {
 
 function LoadingMetrics() {
   return (
-    <div className="metric-grid">
-      {Array.from({ length: 4 }, (_, index) => (
+    <div className="metric-grid metric-grid--3col">
+      {Array.from({ length: 6 }, (_, index) => (
         <div key={index} className="metric-card metric-card--primary">
           <span className="skeleton-text" />
           <span className="skeleton-text" />
         </div>
       ))}
-    </div>
-  );
-}
-
-function MetaSummary(props: Readonly<{ providers: ProviderConfigRecord[] }>) {
-  const activeProviders = props.providers.filter((provider) => provider.enabled).length;
-  const totalKeys = props.providers.reduce((sum, provider) => sum + provider.keyCount, 0);
-
-  return (
-    <div className="overview-meta-grid">
-      <div className="overview-meta-card">
-        <span className="chip neutral-chip">
-          <Server size={12} />
-          Active Providers
-        </span>
-        <strong>{formatNumber(activeProviders)}</strong>
-      </div>
-      <div className="overview-meta-card">
-        <span className="chip neutral-chip">
-          <KeyRound size={12} />
-          Total Keys
-        </span>
-        <strong>{formatNumber(totalKeys)}</strong>
-      </div>
     </div>
   );
 }
@@ -85,9 +61,11 @@ function PanelHeading() {
   );
 }
 
-function DashboardMetrics(props: Readonly<{ dashboard: DashboardSummary }>) {
+function DashboardMetrics(props: Readonly<{ dashboard: DashboardSummary; providers: ProviderConfigRecord[] }>) {
+  const activeProviders = props.providers.filter((p) => p.enabled).length;
+  const totalKeys = props.providers.reduce((sum, p) => sum + p.keyCount, 0);
   return (
-    <div className="metric-grid">
+    <div className="metric-grid metric-grid--3col">
       <MetricCard
         icon={Activity}
         label="10m RPM"
@@ -116,22 +94,44 @@ function DashboardMetrics(props: Readonly<{ dashboard: DashboardSummary }>) {
         value={formatPercentage(props.dashboard.delivery24h.errorRate)}
         supporting="Failed / total over rolling 24h"
       />
+      <MetricCard
+        icon={Server}
+        label="Active Providers"
+        tone="success"
+        value={String(activeProviders)}
+        supporting={`${props.providers.length} providers configured`}
+      />
+      <MetricCard
+        icon={KeyRound}
+        label="Total Keys"
+        tone="primary"
+        value={String(totalKeys)}
+        supporting="Across all key pool providers"
+      />
     </div>
   );
 }
 
-function ProviderErrorChips(props: Readonly<{ dashboard: DashboardSummary }>) {
-  if (props.dashboard.providerErrors24h.length === 0) {
-    return null;
-  }
+function ProviderAlertBlock(props: Readonly<{ dashboard: DashboardSummary }>) {
+  const errors = props.dashboard.providerErrors24h;
   return (
-    <div className="chip-row">
-      {props.dashboard.providerErrors24h.map((item) => (
-        <span key={item.provider} className="chip warning-chip">
-          <AlertTriangle size={11} />
-          {item.provider}: {formatNumber(item.count)} failed attempts / 24h
+    <div className="provider-alert-block">
+      <span className="eyebrow provider-alert-title">Provider Alerts</span>
+      {errors.length === 0 ? (
+        <span className="chip success-chip">
+          <CheckCircle size={11} />
+          All providers healthy
         </span>
-      ))}
+      ) : (
+        errors.map((item) => (
+          <div key={item.provider} className="provider-alert-row">
+            <AlertTriangle size={12} />
+            <span className="provider-alert-name">{item.provider}</span>
+            <span className="provider-alert-count">{formatNumber(item.count)}</span>
+            <span className="provider-alert-suffix">failed / 24h</span>
+          </div>
+        ))
+      )}
     </div>
   );
 }
@@ -141,9 +141,8 @@ export function OverviewPulsePanel(props: OverviewPulsePanelProps) {
     <article className="surface-card page-panel">
       {props.loading ? <LoadingOverlay label="Refreshing overview" /> : null}
       <PanelHeading />
-      {props.dashboard ? <DashboardMetrics dashboard={props.dashboard} /> : <LoadingMetrics />}
-      <MetaSummary providers={props.providers} />
-      {props.dashboard ? <ProviderErrorChips dashboard={props.dashboard} /> : null}
+      {props.dashboard ? <DashboardMetrics dashboard={props.dashboard} providers={props.providers} /> : <LoadingMetrics />}
+      {props.dashboard ? <ProviderAlertBlock dashboard={props.dashboard} /> : null}
     </article>
   );
 }

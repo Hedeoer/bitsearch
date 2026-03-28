@@ -420,3 +420,64 @@
   opacity: 0.45;
   filter: grayscale(0.5);
 }
+
+/* ─── Key Pagination ─── */
+.key-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-top: 1rem;
+  padding: 0.65rem 0.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.key-pagination-info {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+}
+
+.key-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.key-pagination-btn {
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0.25rem 0.5rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  color: var(--text-soft);
+  background: rgba(223, 226, 235, 0.03);
+  cursor: pointer;
+  transition: border-color 160ms ease, background 160ms ease, color 160ms ease;
+}
+
+.key-pagination-btn:hover:not(:disabled) {
+  border-color: rgba(0, 229, 255, 0.36);
+  background: rgba(0, 229, 255, 0.08);
+  color: var(--text);
+}
+
+.key-pagination-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.key-pagination-btn--active {
+  border-color: rgba(0, 229, 255, 0.4);
+  background: rgba(0, 229, 255, 0.14);
+  color: var(--primary-strong);
+}
+
+.key-pagination-ellipsis {
+  padding: 0 0.3rem;
+  color: var(--text-dim);
+  font-size: 0.82rem;
+  user-select: none;
+}

@@ -1,5 +1,7 @@
 import { Upload, Download, Key, Database, Trash2, RefreshCw, FlaskConical, Power, CheckSquare, Square, ChevronDown, ChevronRight, Heart, Activity, CheckCircle, AlertTriangle, Search, XSquare } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+
+const PAGE_SIZE = 16;
 import type { ToastTone } from "./Feedback";
 import { ConfirmDialog, InlineSpinner, LoadingOverlay, EmptyState } from "./Feedback";
 import { formatNumber, formatDateTime } from "../format";
@@ -105,7 +107,15 @@ type KeyPoolsWorkspaceProps = {
 export function KeyPoolsWorkspace(props: KeyPoolsWorkspaceProps) {
   const workspace = useKeyWorkspace(props.refreshNonce, props.onToast);
   const [isImportOpen, setIsImportOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   const hasActiveFilters = workspace.status !== "all" || workspace.tag.length > 0 || workspace.query.trim().length > 0;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [workspace.keys.length]);
+
+  const totalPages = Math.ceil(workspace.keys.length / PAGE_SIZE);
+  const pagedKeys = workspace.keys.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   return (
     <>
@@ -282,7 +292,7 @@ export function KeyPoolsWorkspace(props: KeyPoolsWorkspaceProps) {
             />
           ) : null}
           <div className="key-grid">
-            {workspace.keys.map((item) => (
+            {pagedKeys.map((item) => (
               <KeyInventoryCard
                 key={item.id}
                 isCopying={workspace.copyingIds.has(item.id)}
@@ -306,6 +316,50 @@ export function KeyPoolsWorkspace(props: KeyPoolsWorkspaceProps) {
               />
             ))}
           </div>
+          {totalPages > 1 && (
+            <div className="key-pagination">
+              <span className="key-pagination-info">
+                {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, workspace.keys.length)} of {workspace.keys.length}
+              </span>
+              <div className="key-pagination-controls">
+                <button
+                  className="key-pagination-btn"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(p => p - 1)}
+                >
+                  ‹
+                </button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+                  .reduce<(number | string)[]>((acc, p, idx, arr) => {
+                    if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push(`ellipsis-${p}`);
+                    acc.push(p);
+                    return acc;
+                  }, [])
+                  .map((item) =>
+                    typeof item === "string" ? (
+                      <span key={item} className="key-pagination-ellipsis">…</span>
+                    ) : (
+                      <button
+                        key={item}
+                        className={`key-pagination-btn${item === currentPage ? " key-pagination-btn--active" : ""}`}
+                        onClick={() => setCurrentPage(item)}
+                      >
+                        {item}
+                      </button>
+                    )
+                  )
+                }
+                <button
+                  className="key-pagination-btn"
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage(p => p + 1)}
+                >
+                  ›
+                </button>
+              </div>
+            </div>
+          )}
         </article>
       </section>
       <ConfirmDialog

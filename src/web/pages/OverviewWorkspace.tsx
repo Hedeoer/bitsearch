@@ -56,17 +56,17 @@ function LatestErrorsPanel(props: Readonly<{
           {props.failedCount24h} failures / 24h
         </span>
       </div>
-      <div className="workspace-feed">
+      <div className="error-feed">
         {props.errors.slice(0, 4).map((item) => (
-          <div key={item.id} className="workspace-feed-item">
+          <div key={item.id} className="error-feed-item">
             <div className="workspace-feed-top">
               <strong>{item.toolName}</strong>
-              <span className="mono">{formatDateTime(item.createdAt)}</span>
+              <span className="mono text-dim">{formatDateTime(item.createdAt)}</span>
             </div>
             <p className="supporting compact mono">
               {item.finalProvider ?? "no provider"} · {item.targetUrl ?? "no target"}
             </p>
-            <p className="supporting compact">
+            <p className="supporting compact error-summary">
               {item.errorSummary ?? item.resultPreview ?? "No summary"}
             </p>
           </div>

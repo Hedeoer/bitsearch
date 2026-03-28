@@ -1,25 +1,31 @@
 import type { DashboardTrendPoint } from "@shared/contracts";
 import { Activity, CheckCircle, XCircle } from "lucide-react";
+import {
+  CartesianGrid,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { formatNumber } from "../format";
 import { LoadingOverlay } from "./Feedback";
 
-const SVG_WIDTH = 760;
-const SVG_HEIGHT = 280;
-const PADDING_TOP = 24;
-const PADDING_RIGHT = 18;
-const PADDING_BOTTOM = 30;
-const PADDING_LEFT = 44;
-const HOUR_LABEL_STEP = 4;
+const SUCCESS_COLOR = "#40e56c";
+const DANGER_COLOR = "#ff8e7d";
+const GRID_COLOR = "rgba(132, 147, 150, 0.14)";
+const AXIS_COLOR = "#7a8898";
 
 type RequestTrendPanelProps = Readonly<{
   loading: boolean;
   trend: DashboardTrendPoint[];
 }>;
 
-type ChartPoint = {
-  x: number;
-  successY: number;
-  failedY: number;
+type ChartDatum = {
+  label: string;
+  success: number;
+  failed: number;
 };
 
 function formatHourLabel(bucketStart: string): string {
@@ -34,98 +40,86 @@ function formatHourLabel(bucketStart: string): string {
   });
 }
 
-function getTickValues(maxValue: number): number[] {
-  if (maxValue <= 0) {
-    return [0];
-  }
-  const values = new Set([0, Math.ceil(maxValue / 2), maxValue]);
-  return [...values].sort((left, right) => left - right);
-}
-
-function toY(value: number, maxValue: number, plotHeight: number): number {
-  if (maxValue <= 0) {
-    return PADDING_TOP + plotHeight;
-  }
-  return PADDING_TOP + ((maxValue - value) / maxValue) * plotHeight;
-}
-
-function buildPoints(trend: DashboardTrendPoint[], maxValue: number): ChartPoint[] {
-  const plotWidth = SVG_WIDTH - PADDING_LEFT - PADDING_RIGHT;
-  const plotHeight = SVG_HEIGHT - PADDING_TOP - PADDING_BOTTOM;
-  const xStep = trend.length > 1 ? plotWidth / (trend.length - 1) : 0;
-  return trend.map((point, index) => ({
-    x: PADDING_LEFT + index * xStep,
-    successY: toY(point.successCount, maxValue, plotHeight),
-    failedY: toY(point.failedCount, maxValue, plotHeight),
+function toChartData(trend: DashboardTrendPoint[]): ChartDatum[] {
+  return trend.map((point) => ({
+    label: formatHourLabel(point.bucketStart),
+    success: point.successCount,
+    failed: point.failedCount,
   }));
 }
 
-function buildPath(points: ChartPoint[], key: "successY" | "failedY"): string {
-  return points
-    .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point[key]}`)
-    .join(" ");
-}
-
-function renderXAxisLabels(trend: DashboardTrendPoint[]) {
-  const lastIndex = trend.length - 1;
-  const plotWidth = SVG_WIDTH - PADDING_LEFT - PADDING_RIGHT;
-  const xStep = trend.length > 1 ? plotWidth / (trend.length - 1) : 0;
-  return trend.map((point, index) => {
-    if (index !== lastIndex && index % HOUR_LABEL_STEP !== 0) {
-      return null;
-    }
-    const x = PADDING_LEFT + index * xStep;
-    return (
-      <text key={point.bucketStart} x={x} y={SVG_HEIGHT - 8} className="trend-axis-label">
-        {formatHourLabel(point.bucketStart)}
-      </text>
-    );
-  });
-}
-
-function renderChart(trend: DashboardTrendPoint[]) {
-  const maxValue = Math.max(
-    0,
-    ...trend.map((point) => Math.max(point.successCount, point.failedCount)),
+function CustomTooltip(props: Readonly<{
+  active?: boolean;
+  payload?: Array<{ name: string; value: number; color: string }>;
+  label?: string;
+}>) {
+  if (!props.active || !props.payload?.length) return null;
+  return (
+    <div className="trend-tooltip">
+      <span className="trend-tooltip-label">{props.label}</span>
+      {props.payload.map((entry) => (
+        <div key={entry.name} className="trend-tooltip-row">
+          <span className="trend-tooltip-dot" style={{ background: entry.color }} />
+          <span>{entry.name === "success" ? "Successful" : "Failed"}:</span>
+          <strong>{formatNumber(entry.value)}</strong>
+        </div>
+      ))}
+    </div>
   );
-  if (maxValue === 0) {
-    return <div className="trend-chart-empty">No requests recorded in the last 24 hours.</div>;
+}
+
+function TrendChart(props: Readonly<{ trend: DashboardTrendPoint[] }>) {
+  if (props.trend.length === 0) {
+    return (
+      <div className="trend-chart-empty">
+        <Activity size={28} />
+        <span>No data in the last 24 hours</span>
+      </div>
+    );
   }
 
-  const plotWidth = SVG_WIDTH - PADDING_LEFT - PADDING_RIGHT;
-  const plotHeight = SVG_HEIGHT - PADDING_TOP - PADDING_BOTTOM;
-  const points = buildPoints(trend, maxValue);
-  const tickValues = getTickValues(maxValue);
+  const data = toChartData(props.trend);
 
   return (
-    <svg
-      viewBox={`0 0 ${SVG_WIDTH} ${SVG_HEIGHT}`}
-      className="trend-chart-svg"
-      role="img"
-      aria-label="24 hour request trend"
-      preserveAspectRatio="none"
-    >
-      {tickValues.map((tick) => {
-        const y = toY(tick, maxValue, plotHeight);
-        return (
-          <g key={tick}>
-            <line x1={PADDING_LEFT} y1={y} x2={PADDING_LEFT + plotWidth} y2={y} className="trend-grid-line" />
-            <text x={PADDING_LEFT - 10} y={y + 4} className="trend-axis-label trend-axis-label--y">
-              {formatNumber(tick)}
-            </text>
-          </g>
-        );
-      })}
-      <path d={buildPath(points, "successY")} className="trend-line trend-line--success" />
-      <path d={buildPath(points, "failedY")} className="trend-line trend-line--failed" />
-      {points.map((point, index) => (
-        <g key={trend[index].bucketStart}>
-          <circle cx={point.x} cy={point.successY} r="3.5" className="trend-point trend-point--success" />
-          <circle cx={point.x} cy={point.failedY} r="3.5" className="trend-point trend-point--failed" />
-        </g>
-      ))}
-      {renderXAxisLabels(trend)}
-    </svg>
+    <ResponsiveContainer width="100%" height={280}>
+      <LineChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+        <CartesianGrid stroke={GRID_COLOR} strokeDasharray="" vertical={false} />
+        <XAxis
+          dataKey="label"
+          tick={{ fill: AXIS_COLOR, fontSize: 12, fontFamily: "IBM Plex Mono, monospace" }}
+          tickLine={false}
+          axisLine={false}
+          interval={3}
+        />
+        <YAxis
+          tick={{ fill: AXIS_COLOR, fontSize: 12, fontFamily: "IBM Plex Mono, monospace" }}
+          tickLine={false}
+          axisLine={false}
+          tickFormatter={(v: number) => formatNumber(v)}
+          width={40}
+          allowDecimals={false}
+        />
+        <Tooltip content={<CustomTooltip />} cursor={{ stroke: GRID_COLOR, strokeWidth: 1 }} />
+        <Line
+          type="linear"
+          dataKey="success"
+          stroke={SUCCESS_COLOR}
+          strokeWidth={2.5}
+          dot={{ r: 3.5, fill: SUCCESS_COLOR, stroke: "rgba(10,14,20,0.94)", strokeWidth: 2 }}
+          activeDot={{ r: 5 }}
+          isAnimationActive={false}
+        />
+        <Line
+          type="linear"
+          dataKey="failed"
+          stroke={DANGER_COLOR}
+          strokeWidth={2.5}
+          dot={{ r: 3.5, fill: DANGER_COLOR, stroke: "rgba(10,14,20,0.94)", strokeWidth: 2 }}
+          activeDot={{ r: 5 }}
+          isAnimationActive={false}
+        />
+      </LineChart>
+    </ResponsiveContainer>
   );
 }
 
@@ -153,7 +147,9 @@ export function RequestTrendPanel(props: RequestTrendPanelProps) {
           </span>
         </div>
       </div>
-      <div className="trend-chart-shell">{renderChart(props.trend)}</div>
+      <div className="trend-chart-shell">
+        <TrendChart trend={props.trend} />
+      </div>
     </article>
   );
 }
