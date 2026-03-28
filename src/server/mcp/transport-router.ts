@@ -31,15 +31,28 @@ async function createTransport(context: AppContext) {
   return transport;
 }
 
-function sendInvalidSession(res: Response): void {
-  res.status(400).json({
+function sendJsonRpcError(
+  res: Response,
+  status: number,
+  code: number,
+  message: string,
+): void {
+  res.status(status).json({
     jsonrpc: "2.0",
     error: {
-      code: -32000,
-      message: "Bad Request: No valid session ID provided",
+      code,
+      message,
     },
     id: null,
   });
+}
+
+function sendMissingSession(res: Response): void {
+  sendJsonRpcError(res, 400, -32000, "Bad Request: Mcp-Session-Id header is required");
+}
+
+function sendSessionNotFound(res: Response): void {
+  sendJsonRpcError(res, 404, -32001, "Session not found");
 }
 
 export async function handleMcpPost(
@@ -47,7 +60,7 @@ export async function handleMcpPost(
   req: Request,
   res: Response,
 ): Promise<void> {
-  const sessionId = req.headers["mcp-session-id"] as string | undefined;
+  const sessionId = req.header("mcp-session-id");
   const existingTransport = getExistingTransport(sessionId);
   if (existingTransport) {
     await existingTransport.handleRequest(req, res, req.body);
@@ -58,24 +71,36 @@ export async function handleMcpPost(
     await transport.handleRequest(req, res, req.body);
     return;
   }
-  sendInvalidSession(res);
+  if (!sessionId) {
+    sendMissingSession(res);
+    return;
+  }
+  sendSessionNotFound(res);
 }
 
 export async function handleMcpGet(req: Request, res: Response): Promise<void> {
-  const sessionId = req.headers["mcp-session-id"] as string | undefined;
+  const sessionId = req.header("mcp-session-id");
   const transport = getExistingTransport(sessionId);
   if (!transport) {
-    res.status(400).send("Invalid or missing session ID");
+    if (!sessionId) {
+      sendMissingSession(res);
+      return;
+    }
+    sendSessionNotFound(res);
     return;
   }
   await transport.handleRequest(req, res);
 }
 
 export async function handleMcpDelete(req: Request, res: Response): Promise<void> {
-  const sessionId = req.headers["mcp-session-id"] as string | undefined;
+  const sessionId = req.header("mcp-session-id");
   const transport = getExistingTransport(sessionId);
   if (!transport) {
-    res.status(400).send("Invalid or missing session ID");
+    if (!sessionId) {
+      sendMissingSession(res);
+      return;
+    }
+    sendSessionNotFound(res);
     return;
   }
   await transport.handleRequest(req, res);
