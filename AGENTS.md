@@ -23,4 +23,4 @@ No dedicated test runner is checked in yet; there is no `vitest` or `jest` confi
 Recent history uses Conventional Commit style with scopes, for example `feat(activity): add detail tabs and web_search messages` and `chore: bootstrap bitsearch admin service`. Keep commits in the form `<type>(<scope>): <summary>` when a scope adds clarity. PRs should describe user-visible changes, list verification steps, reference related issues, and include screenshots for UI work.
 
 ## Security & Configuration Tips
-Configuration is read from environment variables in `src/server/bootstrap.ts`. Set real values for `SESSION_SECRET`, `APP_ENCRYPTION_KEY`, `ADMIN_PASSWORD`, and `MCP_BEARER_TOKEN` outside local development, and never commit secrets or populated `data/*.db` files.
+Configuration is read from environment variables in `src/server/bootstrap.ts`. Set real values for `SESSION_SECRET`, `APP_ENCRYPTION_KEY`, `ADMIN_AUTH_KEY`, and `MCP_BEARER_TOKEN` outside local development, and never commit secrets or populated `data/*.db` files.

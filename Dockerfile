@@ -15,6 +15,8 @@ RUN npm run build
 # ── Stage 2: Runner ───────────────────────────────────────────────────────────
 FROM node:22-alpine AS runner
 
+ENV NODE_ENV=production
+
 RUN addgroup -S bitsearch && adduser -S bitsearch -G bitsearch
 
 WORKDIR /app

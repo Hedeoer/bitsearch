@@ -13,6 +13,8 @@ import {
 } from "@shared/contracts";
 import {
   ChevronDown,
+  Eye,
+  EyeOff,
   Server,
   Zap,
   Save,
@@ -208,6 +210,8 @@ function SearchEngineModelField(
 }
 
 export function ProviderGrid(props: ProviderGridProps) {
+  const [visibleBaseUrls, setVisibleBaseUrls] = useState<Record<string, boolean>>({});
+
   if (props.loading && props.providers.length === 0) {
     return (
       <section className="provider-grid">
@@ -292,19 +296,37 @@ export function ProviderGrid(props: ProviderGridProps) {
               </label>
               <label className="field">
                 <span>Base URL</span>
-                <input
-                  disabled={props.loading}
-                  value={draft.baseUrl}
-                  onChange={(event) =>
-                    props.setDrafts((current) => ({
-                      ...current,
-                      [provider.provider]: {
-                        ...current[provider.provider],
-                        baseUrl: event.target.value,
-                      },
-                    }))
-                  }
-                />
+                <div className="field-with-action">
+                  <input
+                    disabled={props.loading}
+                    type={provider.provider === SEARCH_ENGINE_PROVIDER && !visibleBaseUrls[provider.provider] ? "password" : "text"}
+                    value={draft.baseUrl}
+                    onChange={(event) =>
+                      props.setDrafts((current) => ({
+                        ...current,
+                        [provider.provider]: {
+                          ...current[provider.provider],
+                          baseUrl: event.target.value,
+                        },
+                      }))
+                    }
+                  />
+                  {provider.provider === SEARCH_ENGINE_PROVIDER ? (
+                    <button
+                      className="icon-button"
+                      type="button"
+                      aria-label={visibleBaseUrls[provider.provider] ? "Hide Base URL" : "Show Base URL"}
+                      onClick={() =>
+                        setVisibleBaseUrls((current) => ({
+                          ...current,
+                          [provider.provider]: !current[provider.provider],
+                        }))
+                      }
+                    >
+                      {visibleBaseUrls[provider.provider] ? <EyeOff size={14} /> : <Eye size={14} />}
+                    </button>
+                  ) : null}
+                </div>
               </label>
               <label className="field">
                 <span>Timeout (ms)</span>
