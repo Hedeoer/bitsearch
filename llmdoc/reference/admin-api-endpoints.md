@@ -4,7 +4,7 @@ This document provides a summary and pointers to the admin REST API. All endpoin
 
 ## 1. Core Summary
 
-The admin API consists of 26 endpoints split across two routers: a public auth router (3 endpoints) and a session-protected admin router (23 endpoints). All protected endpoints require a valid session cookie set by the login flow. Request/response types are defined in `src/shared/contracts.ts`.
+The admin API consists of **28 endpoints** split across two routers: a public auth router (3 endpoints) and a session-protected admin router (25 endpoints). All protected endpoints require a valid session cookie set by the login flow. Request/response types are defined in `src/shared/contracts.ts`.
 
 ## 2. Source of Truth
 
@@ -21,16 +21,22 @@ The admin API consists of 26 endpoints split across two routers: a public auth r
 | Method | Path | Request Body | Response Type | Description |
 |--------|------|-------------|---------------|-------------|
 | GET | `/session` | -- | `AdminSessionPayload` | Check current session status |
-| POST | `/login` | `{username, password}` | `AdminSessionPayload` | Authenticate, set session cookie |
+| POST | `/login` | `{authKey}` | `AdminSessionPayload` | Authenticate, set session cookie |
 | POST | `/logout` | -- | `AdminSessionPayload` | Destroy session |
 
-### Dashboard & Profile (session required)
+### Dashboard (session required)
 
 | Method | Path | Request Body | Response Type | Description |
 |--------|------|-------------|---------------|-------------|
 | GET | `/dashboard` | -- | `DashboardSummary` | Request count metrics, error stats |
-| GET | `/profile` | -- | `AdminProfile` | Admin username, creation/update dates |
-| PUT | `/profile/password` | `{currentPassword, nextPassword}` | `{ok: true}` | Change admin password (min 8 chars) |
+
+### MCP Access (session required)
+
+| Method | Path | Params / Body | Response Type | Description |
+|--------|------|--------------|---------------|-------------|
+| GET | `/mcp-access` | -- | `McpAccessInfo` | Get MCP access info (URL, auth scheme, token preview) |
+| PUT | `/mcp-access` | `{token}` | `McpAccessInfo` | Update MCP Bearer Token |
+| POST | `/mcp-access/reveal` | -- | `{token}` | Reveal current Bearer Token |
 
 ### System Settings (session required)
 
@@ -68,15 +74,15 @@ The admin API consists of 26 endpoints split across two routers: a public auth r
 | Method | Path | Params | Response Type | Description |
 |--------|------|--------|---------------|-------------|
 | GET | `/logs` | `?limit` (max 500) | `RequestLogRecord[]` | Request logs |
-| GET | `/activity` | `?limit` (max 500) | `RequestActivityRecord[]` | Requests with attempts |
+| GET | `/activity` | `?page, ?pageSize` (max 100), `?toolName, ?status, ?timePreset, ?customStart, ?customEnd, ?q` | `ActivityPageResult` | Paginated requests with attempts (`{items, total, page, pageSize}`) |
 | GET | `/activity/:requestId` | -- | `RequestActivityRecord` | Single request detail |
 | GET | `/logs/attempts` | `?limit` (max 1000) | `RequestAttemptRecord[]` | Raw attempt records |
 
 ## 4. Error Response Conventions
 
 All errors return JSON with an `error` field:
-- `401`: `{error: "unauthorized"}` or `{error: "invalid_credentials"}`
+- `401`: `{error: "unauthorized"}` or `{error: "invalid_auth_key"}`
 - `403`: `{error: "origin_not_allowed"}`
-- `404`: `{error: "admin_profile_not_found"}`, `{error: "key_not_found"}`, `{error: "activity_not_found"}`
-- `400`: `{ok: false, error: "current_password_incorrect"}`, `{error: "password_too_short"}`, `{error: "invalid_key_pool_provider"}`
+- `404`: `{error: "key_not_found"}`, `{error: "activity_not_found"}`
+- `400`: `{error: "invalid_key_pool_provider"}`, `{error: "invalid_token"}`, `{error: "key_not_found"}`
 - `500`: `{error: "<message>"}` (global error handler)

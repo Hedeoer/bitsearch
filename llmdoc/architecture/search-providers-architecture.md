@@ -11,7 +11,7 @@
 - `src/server/providers/search-engine-client.ts` (`searchWithSearchEngine`, `buildSearchMessages`, `listSearchEngineModels`): AI-powered search via OpenAI-compatible chat completion API with SSE streaming. Single-key model.
 - `src/server/providers/tavily-client.ts` (`tavilySearch`, `tavilyExtract`, `tavilyMap`, `tavilyUsage`): Web search, URL content extraction, and site mapping. Key-pool model.
 - `src/server/providers/firecrawl-client.ts` (`firecrawlSearch`, `firecrawlScrape`, `firecrawlMap`, `firecrawlCreditUsage`): Web search, URL scraping, and site mapping. Key-pool model.
-- `src/server/services/planning-engine.ts` (`processPlanningPhase`, `PHASE_NAMES`, `REQUIRED_PHASES`): Multi-phase query analysis engine that decomposes queries by complexity level.
+- `src/server/services/planning-engine.ts` (`processPlanningPhase`): Multi-phase query analysis engine that decomposes queries by complexity level.
 - `src/server/repos/provider-repo.ts` (`getCandidateKeys`, `markKeyUsage`, `getProviderConfig`, `getProviderApiKey`, `importKeys`): Key pool storage and LRU rotation.
 - `src/server/repos/settings-repo.ts` (`getSystemSettings`): Provides fetchMode, providerPriority, and defaultSearchModel.
 - `src/server/repos/log-repo.ts` (`insertRequestLog`, `insertAttemptLogs`): Persists request and per-attempt telemetry.

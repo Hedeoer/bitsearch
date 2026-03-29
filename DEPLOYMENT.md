@@ -51,7 +51,7 @@ If you deploy from a published image instead of building from source, set the op
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `BITSEARCH_IMAGE` | For prebuilt-image compose only | `docker.io/your-dockerhub-namespace/bitsearch:latest` | Full image reference to pull |
+| `BITSEARCH_IMAGE` | For prebuilt-image compose only | `docker.io/hedeoerwang/bitsearch:latest` | Full image reference to pull |
 
 ---
 
@@ -160,7 +160,7 @@ cp .env.example .env
 
 # Point to the published image you want to run
 # Example:
-# BITSEARCH_IMAGE=docker.io/<your-dockerhub-namespace>/bitsearch:latest
+# BITSEARCH_IMAGE=docker.io/hedeoerwang/bitsearch:latest
 
 # Start
 docker compose -f docker-compose.image.yml up -d

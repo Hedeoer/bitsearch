@@ -35,7 +35,7 @@ BitSearch is a split frontend/backend TypeScript monorepo. The **server** layer 
 - **API key pool management:** Bulk import, LRU rotation, health monitoring, quota synchronization, and per-key telemetry for Tavily and Firecrawl.
 - **Query planning engine:** Six-phase workflow (intent, complexity, sub-queries, search terms, tool mapping, execution order) with complexity-based phase gating.
 - **Activity tracking:** Two-level logging (request + attempt) with provider failover visibility, dashboard metrics, and configurable retention.
-- **Admin console:** Single-page dark-themed operations surface with provider config, key inventory, security settings, and request observability.
+- **Admin console:** React Router 7 SPA with four workspace routes: `/overview`, `/providers`, `/keys`, `/activity`. Each workspace is a separate routed page component under `src/web/pages/`.
 
 ## 6. MCP Tools (13 total)
 

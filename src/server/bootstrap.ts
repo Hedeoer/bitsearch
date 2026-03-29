@@ -1,4 +1,6 @@
 import path from "node:path";
+import type { RuntimeSecretsState } from "./lib/runtime-secrets.js";
+import { resolveRuntimeSecrets } from "./lib/runtime-secrets.js";
 
 export interface BootstrapConfig {
   port: number;
@@ -9,6 +11,7 @@ export interface BootstrapConfig {
   sessionSecret: string;
   mcpBearerToken: string;
   trustProxy: boolean;
+  runtimeSecrets: RuntimeSecretsState;
 }
 
 const DEFAULT_DATABASE_PATH = path.resolve(process.cwd(), "data/bitsearch.db");
@@ -27,17 +30,6 @@ function readPort(): number {
   return parsed;
 }
 
-function readSecret(name: string, fallback: string): string {
-  const value = process.env[name]?.trim();
-  if (value) {
-    return value;
-  }
-  if (process.env.NODE_ENV === "production") {
-    throw new Error(`${name} is required in production`);
-  }
-  return fallback;
-}
-
 function readTrustProxy(): boolean {
   const value = process.env.TRUST_PROXY?.trim().toLowerCase();
   if (!value || value === "0" || value === "false") {
@@ -50,14 +42,17 @@ function readTrustProxy(): boolean {
 }
 
 export function readBootstrapConfig(): BootstrapConfig {
+  const databasePath = readString("DATABASE_PATH", DEFAULT_DATABASE_PATH);
+  const runtimeSecrets = resolveRuntimeSecrets(databasePath);
   return {
     port: readPort(),
     host: readString("APP_HOST", "0.0.0.0"),
-    databasePath: readString("DATABASE_PATH", DEFAULT_DATABASE_PATH),
-    encryptionKey: readSecret("APP_ENCRYPTION_KEY", "dev-encryption-secret"),
-    adminAuthKey: readSecret("ADMIN_AUTH_KEY", "bitsearch-admin-dev-key"),
-    sessionSecret: readSecret("SESSION_SECRET", "bitsearch-session-dev-secret"),
-    mcpBearerToken: readSecret("MCP_BEARER_TOKEN", "bitsearch-dev-token"),
+    databasePath,
+    encryptionKey: runtimeSecrets.values.encryptionKey,
+    adminAuthKey: runtimeSecrets.values.adminAuthKey,
+    sessionSecret: runtimeSecrets.values.sessionSecret,
+    mcpBearerToken: runtimeSecrets.values.mcpBearerToken,
     trustProxy: readTrustProxy(),
+    runtimeSecrets,
   };
 }

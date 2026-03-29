@@ -177,8 +177,17 @@ export interface McpAccessInfo {
   tokenPreview: string | null;
 }
 
+export interface AdminAccessInfo {
+  hasAuthKey: boolean;
+  authKeyPreview: string | null;
+}
+
 export interface UpdateMcpAccessPayload {
   bearerToken: string;
+}
+
+export interface UpdateAdminAccessPayload {
+  authKey: string;
 }
 
 export interface McpAccessSecretResponse {

@@ -8,7 +8,7 @@
 ## 2. Core Components
 
 - `src/server/mcp/register-tools.ts` (`createMcpServer`): Factory that instantiates `McpServer` and registers all 13 tools with Zod input schemas. Contains helper functions for `search_engine` config resolution, extra source fetching, and key-pool-routed web fetch/map operations.
-- `src/server/mcp/transport-router.ts` (`handleMcpPost`, `handleMcpGet`, `handleMcpDelete`): Session-aware HTTP handlers that manage `StreamableHTTPServerTransport` instances in an in-memory Map keyed by session ID.
+- `src/server/mcp/transport-router.ts` (`handleMcpPost`, `handleMcpGet`, `handleMcpDelete`): Session-aware HTTP handlers that manage `StreamableHTTPServerTransport` instances in an in-memory Map keyed by session ID. Sessions are stored as `TransportSession { transport, lastSeenAt }` to track last activity time. Idle sessions are automatically cleaned up after 30 minutes of inactivity (`MCP_SESSION_TTL_MS`); a sweep timer runs every 5 minutes (`MCP_SESSION_SWEEP_INTERVAL_MS`) calling `cleanupIdleTransports()`. The sweep timer is unref'd via `sweepTimer.unref()` so it does not prevent process exit.
 - `src/server/app.ts` (`createApp`, lines 53-61): Mounts the three MCP HTTP methods at `/mcp` with authentication middleware.
 - `src/server/http/middleware.ts` (`requireMcpAuth`, `requireAllowedOrigin`): Two-layer auth: Bearer token validation and Origin whitelist check.
 - `src/server/services/planning-engine.ts` (`processPlanningPhase`): Stateful 6-phase planning workflow engine persisted in SQLite, used by all `plan_*` tools.
@@ -28,7 +28,8 @@
 - **3. Session Storage:** On `onsessioninitialized` callback, the transport is stored in the `transports` Map (line 7).
 - **4. Subsequent Requests:** Client includes `mcp-session-id` header; `handleMcpPost` (line 50-54) looks up existing transport and delegates.
 - **5. SSE Streaming:** `handleMcpGet` (line 64-72) provides SSE channel for server-initiated messages on an existing session.
-- **6. Cleanup:** `handleMcpDelete` (line 74-82) triggers transport close; `onclose` callback removes session from Map.
+- **6. Cleanup:** `handleMcpDelete` triggers transport close; `onclose` callback removes session from Map.
+- **7. Idle Expiry:** Sessions inactive for 30 minutes are automatically evicted by `cleanupIdleTransports()`, which runs on a 5-minute sweep interval. Each incoming request updates `lastSeenAt` on the `TransportSession` entry. `sweepTimer.unref()` ensures the timer does not block process exit.
 
 ### 3.3 Tool Invocation (web_search example)
 

@@ -8,9 +8,13 @@ A guide for adding features, panels, and API connections to the Aether Console.
 
 2. **Add shared types** if needed in `src/shared/contracts.ts`. This is the single source of truth for types shared between frontend and backend. Frontend-only types go in `src/web/types.ts`.
 
-3. **Import and render in App.tsx.** Add the component inside `<div className="console-main">` at `src/web/App.tsx:174-221`. Give the wrapping `<section>` an `id` attribute matching the hash anchor (e.g., `id="mypanel"`).
+3. **Create a workspace page** in `src/web/pages/` (e.g., `src/web/pages/MyWorkspace.tsx`). Export a single functional component. Register it as a route in `App.tsx` inside the `<Routes>` block:
 
-4. **Add sidebar navigation link** in `src/web/components/ConsoleChrome.tsx` (`ConsoleSidebar`). Add an `<a href="#mypanel">` entry to the nav list.
+   ```tsx
+   <Route path="/mypage" element={<MyWorkspace />} />
+   ```
+
+4. **Add sidebar navigation link** in `src/web/components/ConsoleChrome.tsx` (`ConsoleSidebar`). Use `<NavLink to="/mypage">` (from `react-router-dom`), **not** `<a href="#anchor">`.
 
 5. **Wire up state** in `App.tsx`. Add `useState` hooks for the panel's data. If the data comes from the server, add the fetch call to the `refreshAll()` function's `Promise.all` array at `src/web/App.tsx:76-83`.
 
@@ -21,7 +25,7 @@ A guide for adding features, panels, and API connections to the Aether Console.
 - **Functional components only.** No class components. TypeScript props via type aliases.
 - **Controlled inputs.** All form fields use `value` + `onChange` with local state.
 - **Callback props for mutations.** Child components emit events upward (e.g., `onSave`, `onMessage`). Parent handles API calls and state refresh.
-- **Toast feedback.** Pass `setMessage` (or `onMessage` prop) and call it with a string to show `StatusToast`.
+- **Toast feedback.** Import `enqueueToast` from `src/web/toast-store.ts` and call `enqueueToast(type, message)` where `type` is `'success' | 'error' | 'info'`. Do not use `setMessage` / `onMessage` prop patterns.
 - **Data refresh after mutation.** After any write operation, call `refreshAll()` or a local refresh function to re-fetch current state. No optimistic updates.
 
 ## CSS Architecture
@@ -38,6 +42,12 @@ A guide for adding features, panels, and API connections to the Aether Console.
 
 2. **Add repository/service functions** in `src/server/repos/` or `src/server/services/` for data access and business logic. Route handlers should delegate to these.
 
-3. **Call from the frontend** using `apiRequest<ResponseType>("/api/admin/your-endpoint")` from `src/web/api.ts`. The function handles JSON parsing, credentials, and error throwing.
+3. **Call from the frontend** using `apiRequest<ResponseType>(method, path, body?)` from `src/web/api.ts`. The full signature is:
+
+   ```ts
+   apiRequest<T>(method: string, path: string, body?: unknown): Promise<ApiResult<T>>
+   ```
+
+   Path is relative to `/api` (e.g., `"/admin/your-endpoint"`). Returns `{ ok: true, data: T }` on success or `{ ok: false, status: number, message: string }` on failure. Always check `result.ok` before using `result.data`.
 
 4. **Verify** by running `npm run dev` (starts both Vite dev server and Express backend). Check the browser console for fetch errors and the terminal for server-side exceptions.

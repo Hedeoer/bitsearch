@@ -2,6 +2,11 @@ import fs from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import type { BootstrapConfig } from "../bootstrap.js";
+import {
+  isRuntimeSecretGenerated,
+  setRuntimeSecret,
+} from "../lib/runtime-secrets.js";
+import { getEffectiveMcpBearerToken } from "../repos/settings-repo.js";
 import { SCHEMA_SQL } from "./schema.js";
 
 export interface AppDatabase {
@@ -29,6 +34,34 @@ function ensureColumn(
 
 function ensureDataDirectory(databasePath: string): void {
   fs.mkdirSync(path.dirname(databasePath), { recursive: true });
+}
+
+function hasEncryptedProviderData(db: DatabaseSync): boolean {
+  const configRow = db.prepare(
+    "SELECT EXISTS(SELECT 1 FROM provider_configs WHERE api_key_encrypted <> '') AS present",
+  ).get() as { present: number };
+  if (configRow.present === 1) {
+    return true;
+  }
+  const keyRow = db.prepare(
+    "SELECT EXISTS(SELECT 1 FROM provider_keys LIMIT 1) AS present",
+  ).get() as { present: number };
+  return keyRow.present === 1;
+}
+
+function assertEncryptionKeyCompatibility(
+  db: DatabaseSync,
+  config: BootstrapConfig,
+): void {
+  if (!isRuntimeSecretGenerated(config.runtimeSecrets, "encryptionKey")) {
+    return;
+  }
+  if (!hasEncryptedProviderData(db)) {
+    return;
+  }
+  throw new Error(
+    "APP_ENCRYPTION_KEY is missing, but encrypted provider secrets already exist. Restore runtime-secrets.json or set APP_ENCRYPTION_KEY explicitly.",
+  );
 }
 
 function applyMigrations(db: DatabaseSync): void {
@@ -153,11 +186,18 @@ export function createDatabase(config: BootstrapConfig): AppDatabase {
   const sqlite = new DatabaseSync(config.databasePath);
   sqlite.exec(SCHEMA_SQL);
   applyMigrations(sqlite);
+  assertEncryptionKeyCompatibility(sqlite, config);
   const now = new Date().toISOString();
   seedSystemSettings(sqlite, now, config.mcpBearerToken);
   seedProviderConfigs(sqlite, now);
-  return {
+  const db = {
     sqlite,
     now: () => new Date().toISOString(),
   };
+  const effectiveMcpBearerToken = getEffectiveMcpBearerToken(db, config.mcpBearerToken);
+  if (effectiveMcpBearerToken !== config.mcpBearerToken) {
+    config.mcpBearerToken = effectiveMcpBearerToken;
+    setRuntimeSecret(config.runtimeSecrets, "mcpBearerToken", effectiveMcpBearerToken);
+  }
+  return db;
 }

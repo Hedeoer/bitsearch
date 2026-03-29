@@ -1,12 +1,14 @@
 import { readBootstrapConfig } from "./bootstrap.js";
 import { createDatabase } from "./db/database.js";
 import { createAdminSessionStore } from "./lib/admin-session.js";
+import { persistRuntimeSecrets } from "./lib/runtime-secrets.js";
 import { startMaintenance } from "./services/maintenance-service.js";
 import { createApp } from "./app.js";
 
 async function main() {
   const bootstrap = readBootstrapConfig();
   const db = createDatabase(bootstrap);
+  persistRuntimeSecrets(bootstrap.runtimeSecrets);
   const context = {
     bootstrap,
     db,

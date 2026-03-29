@@ -9,8 +9,8 @@
 
 - `src/server/repos/provider-repo.ts` (`importKeys`, `getCandidateKeys`, `markKeyUsage`, `setKeysEnabled`, `deleteKeys`): Key lifecycle operations -- import with deduplication, LRU selection, usage tracking, enable/disable, and deletion.
 - `src/server/services/key-pool-service.ts` (`testKeys`, `syncKeyQuotas`, `refreshTavilyKeys`, `refreshFirecrawlKeys`): Health checking and quota synchronization by calling provider APIs.
-- `src/server/repos/key-pool-repo.ts` (`listManagedKeys`, `listActionableKeys`, `getKeyPoolSummary`, `saveKeyHealth`, `saveKeyQuota`): Admin inventory views, health persistence, and quota storage.
-- `src/server/repos/key-pool-summary.ts` (`buildKeyPoolSummary`, `buildTavilySummary`, `buildFirecrawlSummary`): Aggregates per-key quota data into pool-level summaries with provider-specific logic.
+- `src/server/repos/key-pool-repo.ts` (`listManagedKeys`, `listActionableKeys`, `getKeyPoolSummary`, `saveKeyHealth`, `saveKeyQuota`, `getKeySecret`): Admin inventory views, health persistence, quota storage, and secret decryption for key reveal.
+- `src/server/repos/key-pool-summary.ts` (`buildKeyPoolSummary`): Aggregates per-key quota data into pool-level summaries with provider-specific logic.
 - `src/server/providers/fetch-router.ts` (`runWithKeyPool`): Runtime key selection and failover -- iterates LRU-sorted keys, retries on transient errors, logs all attempts.
 - `src/server/lib/crypto.ts` (`encryptSecret`, `decryptSecret`, `fingerprintSecret`, `deriveKey`): AES-256-GCM encryption and SHA-256 fingerprinting for key security.
 - `src/shared/contracts.ts` (`ProviderKeyRecord`, `KeyPoolSummary`, `ProviderKeyQuotaSnapshot`): Type definitions for key records, summaries, and quota snapshots.

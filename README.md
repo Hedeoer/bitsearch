@@ -145,20 +145,12 @@ Copy-Item .env.example .env
 
 3. Fill in the required production values.
 
-Required in production:
+At minimum, set these before any production deployment:
 
 - `APP_ENCRYPTION_KEY`
 - `ADMIN_AUTH_KEY`
 - `SESSION_SECRET`
 - `MCP_BEARER_TOKEN`
-
-Common runtime settings:
-
-- `APP_PORT` defaults to `8097`
-- `APP_HOST` defaults to `0.0.0.0`
-- `TRUST_PROXY=true` is required when a reverse proxy terminates TLS
-- `DATABASE_PATH` controls the SQLite file path
-- `BITSEARCH_IMAGE` can be set to `docker.io/hedeoerwang/bitsearch:<tag>` when running a published image
 
 4. Generate random secrets when needed.
 
@@ -194,27 +186,62 @@ This starts the production server from local source and serves the built admin U
 
 #### Option 2: Docker deployment
 
-Build and run the local container image with Docker Compose:
+Docker deployment uses these files:
+
+| File | Used for | Notes |
+|------|----------|-------|
+| `.env` | Runtime configuration | Copy from `.env.example` and fill in the required values |
+| `docker-compose.yml` | Build and run from local source | Uses the local `Dockerfile` |
+| `docker-compose.image.yml` | Run a published image | Pulls `BITSEARCH_IMAGE` directly from Docker Hub |
+| `docker-compose.prod.yml` | Optional production hardening | Adds restart policy, resource limits, and log rotation |
+
+Container runtime variables:
+
+| Variable | Required | Default / Example | Purpose |
+|----------|----------|-------------------|---------|
+| `APP_PORT` | No | `8097` | Container port exposed on the host |
+| `APP_HOST` | No | `0.0.0.0` | Bind address inside the container |
+| `TRUST_PROXY` | No | `false` | Set to `true` when running behind Nginx, Caddy, Traefik, or another reverse proxy |
+| `DATABASE_PATH` | No | `/app/data/bitsearch.db` | SQLite file path inside the container; compose already points it to the mounted volume |
+| `APP_ENCRYPTION_KEY` | Yes | random 32-byte hex string | Encrypts stored provider credentials |
+| `ADMIN_AUTH_KEY` | Yes | custom bearer token | Used to access the admin API and sign in to the admin console |
+| `SESSION_SECRET` | Yes | random 32-byte hex string | Signs the admin session cookie |
+| `MCP_BEARER_TOKEN` | Yes | custom bearer token | Required by MCP clients calling `/mcp` |
+| `BITSEARCH_IMAGE` | Only for published-image mode | `docker.io/hedeoerwang/bitsearch:latest` | Image reference used by `docker-compose.image.yml` |
+| `NODE_ENV` | No | `production` | Already set by the compose files; normally no manual change is needed |
+
+Path A: build and run the image from local source:
 
 ```bash
+cp .env.example .env
+# edit .env
 docker compose up -d --build
 ```
 
-Useful commands:
+Path B: run the already published Docker Hub image:
 
 ```bash
-docker compose logs -f
-docker compose down
-```
-
-Published image deployment after the first successful GitHub Actions publish run:
-
-```bash
+cp .env.example .env
+# edit .env
 export BITSEARCH_IMAGE=docker.io/hedeoerwang/bitsearch:latest
 docker compose -f docker-compose.image.yml up -d
 ```
 
-The Docker publish workflow runs on pushes to `main` and on tags matching `v*.*.*`. The first successful push to `main` is what makes `docker.io/hedeoerwang/bitsearch:latest` available.
+Common Docker commands:
+
+```bash
+docker compose logs -f
+docker compose down
+docker compose -f docker-compose.image.yml pull
+docker compose -f docker-compose.image.yml up -d
+docker compose -f docker-compose.image.yml -f docker-compose.prod.yml up -d
+```
+
+The GitHub Actions Docker publish workflow pushes:
+
+- `latest` and `main` on successful pushes to `main`
+- `sha-*` tags for traceability
+- semantic version tags when you push tags matching `v*.*.*`
 
 #### Option 3: Development mode
 For local development, run the Vite frontend and TSX backend concurrently:
@@ -272,6 +299,49 @@ Example streamable HTTP client configuration. The exact field names vary by clie
 3. Sign in with `ADMIN_AUTH_KEY`.
 4. Configure provider base URLs, import Tavily / Firecrawl keys, and review the MCP access panel.
 5. Use the Overview, Providers, Keys, and Activity workspaces to monitor routing behavior and failures.
+
+### 4. Configure providers
+
+#### search_engine (OpenAI-compatible endpoint)
+
+`search_engine` is the core search provider. Point it at any OpenAI-compatible chat completions service.
+
+In the **Providers** workspace, set:
+
+- **Base URL** — the root of the OpenAI-compatible API, e.g.:
+  - OpenAI: `https://api.openai.com/v1`
+  - Ollama (local): `http://localhost:11434/v1`
+  - Any third-party relay: follow the provider's documentation
+- **API Key** — the API key for the service (stored encrypted, never logged)
+- **Model** — the model ID to use for search; can also be switched at runtime via the `switch_model` MCP tool
+- **Timeout** — set to ≥ 120 000 ms; search completions take longer than regular chat requests
+
+#### Tavily (key pool)
+
+Tavily supplies extra sources for `web_search` and handles `web_fetch` / `web_map` requests.
+
+1. Get a key at <https://tavily.com> — the free tier includes 1 000 API calls/month.
+2. Open the **Keys** workspace, select **Tavily**, paste one or more keys (one per line), and click **Import**.
+3. Keys are deduplicated automatically. View health status and quota in the same workspace.
+4. Base URL default: `https://api.tavily.com` — leave unchanged unless you use a proxy.
+
+#### Firecrawl (key pool)
+
+Firecrawl handles `web_fetch` (page scrape → Markdown), `web_map` (site URL graph), and `web_search` extra sources (search results supplement).
+
+1. Get a key at <https://www.firecrawl.dev> — the free tier includes 500 credits/month.
+2. Open the **Keys** workspace, select **Firecrawl**, paste the key, and click **Import**.
+3. Base URL default: `https://api.firecrawl.dev/v1` — leave unchanged unless you use a proxy.
+
+#### Fetch mode (routing strategy)
+
+Set in the **Providers** workspace under **Fetch Mode**:
+
+| Mode | Behavior |
+|------|----------|
+| `auto_ordered` (recommended) | Tries Tavily first; falls back to Firecrawl on failure or quota exhaustion |
+| `strict_tavily` | Uses Tavily only; fails if no Tavily keys are available |
+| `strict_firecrawl` | Uses Firecrawl only; fails if no Firecrawl keys are available |
 
 ### Screenshots
 
