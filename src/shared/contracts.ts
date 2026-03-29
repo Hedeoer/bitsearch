@@ -72,6 +72,55 @@ export interface ProviderKeyQuotaSnapshot {
   };
 }
 
+export interface TavilyCrawlPage {
+  url: string;
+  rawContent: string | null;
+  favicon: string | null;
+}
+
+export interface TavilyCrawlResult {
+  baseUrl: string;
+  results: TavilyCrawlPage[];
+  responseTime: number | null;
+  usage: Record<string, unknown> | null;
+  requestId: string | null;
+}
+
+export interface FirecrawlAsyncSubmitResult {
+  success: boolean;
+  id: string;
+  url: string | null;
+  invalidUrls: string[] | null;
+}
+
+export interface FirecrawlCrawlStatusResult {
+  status: string;
+  total: number | null;
+  completed: number | null;
+  creditsUsed: number | null;
+  expiresAt: string | null;
+  next: string | null;
+  data: Array<Record<string, unknown>>;
+}
+
+export interface FirecrawlBatchScrapeStatusResult {
+  status: string;
+  total: number | null;
+  completed: number | null;
+  creditsUsed: number | null;
+  expiresAt: string | null;
+  next: string | null;
+  data: Array<Record<string, unknown>>;
+}
+
+export interface FirecrawlExtractResult {
+  success: boolean;
+  data: unknown;
+  status: string;
+  expiresAt: string | null;
+  tokensUsed: number | null;
+}
+
 export interface ProviderConfigRecord {
   provider: RemoteProvider;
   enabled: boolean;

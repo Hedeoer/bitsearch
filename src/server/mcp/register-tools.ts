@@ -41,6 +41,7 @@ import { processPlanningPhase } from "../services/planning-engine.js";
 import {
   requireSearchEngineConfig,
 } from "../services/search-engine-service.js";
+import { registerProviderTools } from "./provider-tools.js";
 
 function toJsonText(value: unknown): string {
   return JSON.stringify(value, null, 2);
@@ -371,6 +372,8 @@ export function createMcpServer(context: AppContext): McpServer {
       ],
     }),
   );
+
+  registerProviderTools(server, context);
 
   server.registerTool(
     "get_config_info",

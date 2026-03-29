@@ -2,18 +2,19 @@
 
 ## 1. Core Summary
 
-The bitsearch MCP server exposes 13 tools across three categories: search (4), configuration (3), and planning (6). All tool input schemas are defined as Zod objects in `src/server/mcp/register-tools.ts`. All tools return MCP-compliant content arrays (text type). Planning tools share session state via `session_id` and return progress metadata.
+The bitsearch MCP server exposes 20 tools across four categories: search (4), provider-specific advanced retrieval (7), configuration (3), and planning (6). Tool schemas are defined in `src/server/mcp/register-tools.ts` and `src/server/mcp/provider-tools.ts`. Generic tools such as `web_fetch` and `web_map` use failover routing, while provider-specific tools execute only against their named provider. Planning tools share session state via `session_id` and return progress metadata.
 
 ## 2. Source of Truth
 
-- **Primary Code:** `src/server/mcp/register-tools.ts` -- All 13 tool registrations with Zod schemas and handler implementations.
+- **Primary Code:** `src/server/mcp/register-tools.ts` -- Main MCP server factory and built-in tool registrations.
+- **Provider-Specific Tools:** `src/server/mcp/provider-tools.ts` -- Tavily / Firecrawl crawl, batch scrape, and extract tools.
 - **Planning Engine:** `src/server/services/planning-engine.ts` -- Phase processing logic, complexity-level phase requirements.
 - **Provider Routing:** `src/server/providers/fetch-router.ts` -- Key pool failover used by `web_fetch` and `web_map`.
 - **Related Architecture:** `/llmdoc/architecture/mcp-server-architecture.md` -- Full execution flow and session lifecycle.
 
 ## 3. Search Tools
 
-### `web_search` (lines 228-307)
+### `web_search`
 Deep web search via `search_engine`. Optionally fetches extra sources from Tavily/Firecrawl.
 
 | Parameter | Type | Required | Default | Description |
@@ -25,7 +26,7 @@ Deep web search via `search_engine`. Optionally fetches extra sources from Tavil
 
 **Returns:** `{ session_id, content, sources_count }`
 
-### `get_sources` (lines 309-333)
+### `get_sources`
 Retrieves cached sources from a previous `web_search` call.
 
 | Parameter | Type | Required | Description |
@@ -34,7 +35,7 @@ Retrieves cached sources from a previous `web_search` call.
 
 **Returns:** `{ session_id, sources, sources_count }` or `{ error: "session_id_not_found_or_expired" }`
 
-### `web_fetch` (lines 335-346)
+### `web_fetch`
 Extracts full content from a URL as Markdown. Routes through key pool to Tavily Extract or Firecrawl Scrape.
 
 | Parameter | Type | Required | Description |
@@ -43,7 +44,7 @@ Extracts full content from a URL as Markdown. Routes through key pool to Tavily 
 
 **Returns:** Markdown text content or error message.
 
-### `web_map` (lines 348-383)
+### `web_map`
 Maps website structure, returns discovered URLs. Routes through key pool to Tavily Map or Firecrawl Map.
 
 | Parameter | Type | Required | Default | Description |
@@ -57,14 +58,132 @@ Maps website structure, returns discovered URLs. Routes through key pool to Tavi
 
 **Returns:** URL list text or error message.
 
-## 4. Configuration Tools
+## 4. Provider-Specific Advanced Retrieval Tools
 
-### `get_config_info` (lines 385-435)
+These tools bypass `fetchMode` and always use their named provider.
+
+### `tavily_crawl`
+Synchronously traverses a site and returns extracted page content from Tavily.
+
+Key parameters:
+
+- `url`
+- `instructions?`
+- `chunks_per_source?`
+- `max_depth?`
+- `max_breadth?`
+- `limit?`
+- `select_paths?`
+- `select_domains?`
+- `exclude_paths?`
+- `exclude_domains?`
+- `allow_external?`
+- `include_images?`
+- `extract_depth?`
+- `format?`
+- `include_favicon?`
+- `timeout?`
+- `include_usage?`
+
+**Returns:** `{ provider, base_url, results, response_time, usage, request_id }`
+
+### `firecrawl_crawl`
+Submits an asynchronous Firecrawl crawl job.
+
+Key parameters:
+
+- `url`
+- `prompt?`
+- `exclude_paths?`
+- `include_paths?`
+- `max_discovery_depth?`
+- `sitemap?`
+- `ignore_query_parameters?`
+- `regex_on_full_url?`
+- `limit?`
+- `crawl_entire_domain?`
+- `allow_external_links?`
+- `allow_subdomains?`
+- `delay?`
+- `max_concurrency?`
+- `webhook?`
+- `scrape_options?`
+- `zero_data_retention?`
+
+**Returns:** `{ provider, tool: "crawl", status: "submitted", success, id, url }`
+
+### `firecrawl_crawl_status`
+Polls Firecrawl crawl job state.
+
+**Returns:** `{ provider, tool: "crawl", id, status, total, completed, credits_used, expires_at, next, data }`
+
+### `firecrawl_batch_scrape`
+Submits an asynchronous Firecrawl batch scrape job for multiple URLs.
+
+Key parameters:
+
+- `urls`
+- `webhook?`
+- `max_concurrency?`
+- `ignore_invalid_urls?`
+- `formats?`
+- `only_main_content?`
+- `include_tags?`
+- `exclude_tags?`
+- `max_age?`
+- `min_age?`
+- `headers?`
+- `wait_for?`
+- `mobile?`
+- `skip_tls_verification?`
+- `timeout?`
+- `parsers?`
+- `actions?`
+- `location?`
+- `remove_base64_images?`
+- `block_ads?`
+- `proxy?`
+- `store_in_cache?`
+- `profile?`
+- `zero_data_retention?`
+
+**Returns:** `{ provider, tool: "batch_scrape", status: "submitted", success, id, url, invalid_urls }`
+
+### `firecrawl_batch_scrape_status`
+Polls batch scrape job state.
+
+**Returns:** `{ provider, tool: "batch_scrape", id, status, total, completed, credits_used, expires_at, next, data }`
+
+### `firecrawl_extract`
+Submits an asynchronous structured extraction job.
+
+Key parameters:
+
+- `urls`
+- `prompt?`
+- `schema?`
+- `enable_web_search?`
+- `ignore_sitemap?`
+- `include_subdomains?`
+- `show_sources?`
+- `scrape_options?`
+- `ignore_invalid_urls?`
+
+**Returns:** `{ provider, tool: "extract", status: "submitted", success, id, invalid_urls }`
+
+### `firecrawl_extract_status`
+Polls structured extraction job state.
+
+**Returns:** `{ provider, tool: "extract", id, success, status, data, expires_at, tokens_used }`
+
+## 5. Configuration Tools
+
+### `get_config_info`
 Returns server configuration and `search_engine` connectivity test. No parameters.
 
 **Returns:** `{ settings, providers, key_pool_status, connection_test }`
 
-### `switch_model` (lines 437-462)
+### `switch_model`
 Persists a new default search model to system settings.
 
 | Parameter | Type | Required | Description |
@@ -73,7 +192,7 @@ Persists a new default search model to system settings.
 
 **Returns:** `{ status, previous_model, current_model, message }`
 
-### `toggle_builtin_tools` (lines 464-486)
+### `toggle_builtin_tools`
 Stub tool. Always returns an error indicating remote MCP servers cannot modify local client settings.
 
 | Parameter | Type | Required | Default | Description |
@@ -82,11 +201,11 @@ Stub tool. Always returns an error indicating remote MCP servers cannot modify l
 
 **Returns:** Error with `isError: true`.
 
-## 5. Planning Tools
+## 6. Planning Tools
 
 All planning tools accept `session_id` (auto-generated on first call), `thought` (reasoning trace), `confidence` (0-1, default 1), and `is_revision` (boolean, default false). They return `{ session_id, completed_phases, complexity_level, plan_complete, phases_remaining, executable_plan }`.
 
-### `plan_intent` (lines 488-524) -- Phase 1: Intent Analysis
+### `plan_intent` -- Phase 1: Intent Analysis
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
@@ -98,7 +217,7 @@ All planning tools accept `session_id` (auto-generated on first call), `thought`
 | `ambiguities` | string | no | Comma-separated list of ambiguities |
 | `unverified_terms` | string | no | Comma-separated unverified terms |
 
-### `plan_complexity` (lines 526-551) -- Phase 2: Complexity Assessment
+### `plan_complexity` -- Phase 2: Complexity Assessment
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
@@ -107,7 +226,7 @@ All planning tools accept `session_id` (auto-generated on first call), `thought`
 | `estimated_tool_calls` | integer | yes | Expected number of tool invocations |
 | `justification` | string | yes | Reasoning for complexity level |
 
-### `plan_sub_query` (lines 553-585) -- Phase 3: Query Decomposition
+### `plan_sub_query` -- Phase 3: Query Decomposition
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
@@ -118,7 +237,7 @@ All planning tools accept `session_id` (auto-generated on first call), `thought`
 | `depends_on` | string | no | Comma-separated dependency sub-query IDs |
 | `tool_hint` | string | no | Suggested tool for this sub-query |
 
-### `plan_search_term` (lines 587-627) -- Phase 4: Search Strategy
+### `plan_search_term` -- Phase 4: Search Strategy
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
@@ -128,7 +247,7 @@ All planning tools accept `session_id` (auto-generated on first call), `thought`
 | `approach` | string | no | Search approach description |
 | `fallback_plan` | string | no | Fallback if term yields no results |
 
-### `plan_tool_mapping` (lines 629-664) -- Phase 5: Tool Selection
+### `plan_tool_mapping` -- Phase 5: Tool Selection
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
@@ -137,7 +256,7 @@ All planning tools accept `session_id` (auto-generated on first call), `thought`
 | `reason` | string | yes | Why this tool was chosen |
 | `params_json` | string | no | JSON string of tool parameters |
 
-### `plan_execution` (lines 666-709) -- Phase 6: Execution Order
+### `plan_execution` -- Phase 6: Execution Order
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|

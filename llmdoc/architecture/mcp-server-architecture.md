@@ -2,17 +2,18 @@
 
 ## 1. Identity
 
-- **What it is:** An HTTP-based Model Context Protocol (MCP) server embedded within the bitsearch Express application, exposing 13 tools for web search, content extraction, configuration, and search planning.
+- **What it is:** An HTTP-based Model Context Protocol (MCP) server embedded within the bitsearch Express application, exposing 20 tools for web search, provider-specific retrieval, configuration, and search planning.
 - **Purpose:** Provides a standardized MCP interface so LLM clients (e.g., Claude Code) can invoke bitsearch capabilities over HTTP+SSE without stdio coupling.
 
 ## 2. Core Components
 
-- `src/server/mcp/register-tools.ts` (`createMcpServer`): Factory that instantiates `McpServer` and registers all 13 tools with Zod input schemas. Contains helper functions for `search_engine` config resolution, extra source fetching, and key-pool-routed web fetch/map operations.
+- `src/server/mcp/register-tools.ts` (`createMcpServer`): Factory that instantiates `McpServer`, registers the generic search/config/planning tools, and delegates advanced provider-specific tools to `registerProviderTools`.
+- `src/server/mcp/provider-tools.ts` (`registerProviderTools`): Registers seven provider-specific tools for Tavily Crawl and Firecrawl crawl / batch scrape / extract submit-status pairs. Contains single-provider key-pool execution and request logging helpers.
 - `src/server/mcp/transport-router.ts` (`handleMcpPost`, `handleMcpGet`, `handleMcpDelete`): Session-aware HTTP handlers that manage `StreamableHTTPServerTransport` instances in an in-memory Map keyed by session ID. Sessions are stored as `TransportSession { transport, lastSeenAt }` to track last activity time. Idle sessions are automatically cleaned up after 30 minutes of inactivity (`MCP_SESSION_TTL_MS`); a sweep timer runs every 5 minutes (`MCP_SESSION_SWEEP_INTERVAL_MS`) calling `cleanupIdleTransports()`. The sweep timer is unref'd via `sweepTimer.unref()` so it does not prevent process exit.
 - `src/server/app.ts` (`createApp`, lines 53-61): Mounts the three MCP HTTP methods at `/mcp` with authentication middleware.
 - `src/server/http/middleware.ts` (`requireMcpAuth`, `requireAllowedOrigin`): Two-layer auth: Bearer token validation and Origin whitelist check.
 - `src/server/services/planning-engine.ts` (`processPlanningPhase`): Stateful 6-phase planning workflow engine persisted in SQLite, used by all `plan_*` tools.
-- `src/server/providers/fetch-router.ts` (`runWithKeyPool`): Provider failover router that cycles through Tavily/Firecrawl keys, used by `web_fetch` and `web_map` tools.
+- `src/server/providers/fetch-router.ts` (`runWithKeyPool`): Provider failover router that cycles through Tavily/Firecrawl keys, used only by `web_fetch` and `web_map`.
 
 ## 3. Execution Flow (LLM Retrieval Map)
 
@@ -44,7 +45,7 @@
 - **1. Bearer Token:** `middleware.ts:24-33` compares `Authorization` header against `context.bootstrap.mcpBearerToken` (from `MCP_BEARER_TOKEN` env var, dev default: `"bitsearch-dev-token"`). Returns 401 on mismatch.
 - **2. Origin Check:** `middleware.ts:35-45` reads `allowedOrigins` from system settings. Passes if: no Origin header, empty whitelist, or Origin is in list. Returns 403 on mismatch.
 
-## 4. Tool Inventory (13 Tools)
+## 4. Tool Inventory (20 Tools)
 
 ### Search Tools (4)
 
@@ -54,6 +55,18 @@
 | `get_sources` | Retrieve cached sources from a prior `web_search` | `session_id` |
 | `web_fetch` | Extract URL content as Markdown via Tavily/Firecrawl | `url` |
 | `web_map` | Map website structure, return discovered URLs | `url`, `instructions?`, `max_depth?`, `max_breadth?`, `limit?`, `timeout?` |
+
+### Provider-Specific Retrieval Tools (7)
+
+| Tool | Purpose | Key Parameters |
+|------|---------|----------------|
+| `tavily_crawl` | Synchronous Tavily crawl with page content output | `url`, `instructions?`, `max_depth?`, `max_breadth?`, `limit?`, `select_paths?`, `select_domains?` |
+| `firecrawl_crawl` | Submit async Firecrawl crawl job | `url`, `prompt?`, `include_paths?`, `exclude_paths?`, `max_discovery_depth?`, `scrape_options?` |
+| `firecrawl_crawl_status` | Poll Firecrawl crawl job state and data | `id` |
+| `firecrawl_batch_scrape` | Submit async multi-URL scrape job | `urls`, `formats?`, `only_main_content?`, `actions?`, `headers?` |
+| `firecrawl_batch_scrape_status` | Poll Firecrawl batch scrape job state and data | `id` |
+| `firecrawl_extract` | Submit async structured extraction job | `urls`, `prompt?`, `schema?`, `enable_web_search?`, `show_sources?` |
+| `firecrawl_extract_status` | Poll Firecrawl structured extraction result | `id` |
 
 ### Configuration Tools (3)
 
@@ -82,3 +95,4 @@ Planning phases required per complexity level: Level 1 = phases 1-3, Level 2 = p
 - **Per-session McpServer:** Each session gets its own `McpServer` instance via `createTransport`, providing isolation but sharing the same `AppContext`.
 - **In-memory session Map:** Simple session management without external state stores; acceptable given single-process deployment model.
 - **Zod-only validation at MCP boundary:** MCP tool inputs are validated with Zod schemas; downstream services rely on TypeScript types.
+- **Dual execution model:** `web_fetch` / `web_map` keep ordered failover, while `tavily_crawl` and `firecrawl_*` execute only against their named provider so advanced provider features can map cleanly to official APIs.

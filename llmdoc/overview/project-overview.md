@@ -37,11 +37,12 @@ BitSearch is a split frontend/backend TypeScript monorepo. The **server** layer 
 - **Activity tracking:** Two-level logging (request + attempt) with provider failover visibility, dashboard metrics, and configurable retention.
 - **Admin console:** React Router 7 SPA with four workspace routes: `/overview`, `/providers`, `/keys`, `/activity`. Each workspace is a separate routed page component under `src/web/pages/`.
 
-## 6. MCP Tools (13 total)
+## 6. MCP Tools (20 total)
 
 | Category       | Tools                                                                  |
 | -------------- | ---------------------------------------------------------------------- |
 | Core Search    | `web_search`, `get_sources`, `web_fetch`, `web_map`                    |
+| Provider-Specific Retrieval | `tavily_crawl`, `firecrawl_crawl`, `firecrawl_crawl_status`, `firecrawl_batch_scrape`, `firecrawl_batch_scrape_status`, `firecrawl_extract`, `firecrawl_extract_status` |
 | Configuration  | `get_config_info`, `switch_model`, `toggle_builtin_tools`              |
 | Planning       | `plan_intent`, `plan_complexity`, `plan_sub_query`, `plan_search_term`, `plan_tool_mapping`, `plan_execution` |
 
