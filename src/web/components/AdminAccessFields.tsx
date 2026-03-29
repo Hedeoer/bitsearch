@@ -23,7 +23,6 @@ function AccessSectionHeader() {
     </div>
   );
 }
-
 export function AdminAccessFields(props: AdminAccessFieldsProps) {
   const [draftKey, setDraftKey] = useState("");
   const [isEditing, setIsEditing] = useState(false);
@@ -167,4 +166,3 @@ export function AdminAccessFields(props: AdminAccessFieldsProps) {
     </>
   );
 }
-
