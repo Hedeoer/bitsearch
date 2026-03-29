@@ -1,6 +1,7 @@
 import type { Dispatch, SetStateAction } from "react";
 import { AlertTriangle, ShieldCheck } from "lucide-react";
 import type {
+  AdminAccessInfo,
   DashboardSummary,
   McpAccessInfo,
   ProviderConfigRecord,
@@ -15,6 +16,8 @@ import type { ToastTone } from "../components/Feedback";
 type OverviewWorkspaceProps = Readonly<{
   dashboard: DashboardSummary | null;
   loading: boolean;
+  adminAccess: AdminAccessInfo;
+  onSaveAdminAccess: (authKey: string) => Promise<boolean>;
   mcpAccess: McpAccessInfo;
   onSaveMcpAccess: (token: string) => Promise<boolean>;
   onSaveSystem: () => void;
@@ -96,6 +99,8 @@ export function OverviewWorkspace(props: OverviewWorkspaceProps) {
         />
         <StrategyPanel
           loading={props.loading}
+          adminAccess={props.adminAccess}
+          onSaveAdminAccess={props.onSaveAdminAccess}
           mcpAccess={props.mcpAccess}
           onSaveMcpAccess={props.onSaveMcpAccess}
           system={props.system}

@@ -1,16 +1,20 @@
 import type { Dispatch, SetStateAction } from "react";
 import { Save, Settings } from "lucide-react";
 import {
+  type AdminAccessInfo,
   type KeyPoolProvider,
   type McpAccessInfo,
   type SystemSettings,
 } from "@shared/contracts";
 import { LoadingOverlay } from "./Feedback";
 import type { ToastTone } from "./Feedback";
+import { AdminAccessFields } from "./AdminAccessFields";
 import { McpAccessFields } from "./McpAccessFields";
 
 type StrategyPanelProps = Readonly<{
   loading: boolean;
+  adminAccess: AdminAccessInfo;
+  onSaveAdminAccess: (authKey: string) => Promise<boolean>;
   mcpAccess: McpAccessInfo;
   onSaveMcpAccess: (token: string) => Promise<boolean>;
   system: SystemSettings;
@@ -127,6 +131,12 @@ export function StrategyPanel(props: StrategyPanelProps) {
           Save Strategy
         </button>
       </div>
+      <AdminAccessFields
+        adminAccess={props.adminAccess}
+        loading={props.loading}
+        onSaveAdminAccess={props.onSaveAdminAccess}
+        onToast={props.onToast}
+      />
       <McpAccessFields
         loading={props.loading}
         mcpAccess={props.mcpAccess}

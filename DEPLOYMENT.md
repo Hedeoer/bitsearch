@@ -17,7 +17,8 @@ For image distribution, the repository now also includes a GitHub Actions workfl
 
 ## Environment Variables
 
-Copy `.env.example` to `.env` and fill in the required values:
+Copy `.env.example` to `.env`. Secrets can be left empty — BitSearch will
+generate and persist them on first boot.
 
 ```bash
 cp .env.example .env
@@ -29,19 +30,30 @@ cp .env.example .env
 | `APP_HOST` | No | `0.0.0.0` | Bind address |
 | `TRUST_PROXY` | No | `false` | Set to `true` when the app is behind a reverse proxy that terminates TLS |
 | `DATABASE_PATH` | No | `./data/bitsearch.db` | SQLite file path (directory must exist) |
-| `APP_ENCRYPTION_KEY` | **Yes** | — | AES-256-GCM key for stored API keys |
-| `ADMIN_AUTH_KEY` | **Yes** | — | Admin API bearer token |
-| `SESSION_SECRET` | **Yes** | — | Admin session signing secret |
-| `MCP_BEARER_TOKEN` | **Yes** | — | MCP API bearer token |
-| `NODE_ENV` | No | — | Set to `production` to enforce secrets |
+| `RUNTIME_SECRETS_FILE` | No | `<DATABASE_PATH dir>/runtime-secrets.json` | Optional override for the persisted runtime secrets file path |
+| `APP_ENCRYPTION_KEY` | No (auto) | — | AES-256-GCM key for stored API keys (must remain stable) |
+| `ADMIN_AUTH_KEY` | No (auto) | — | Admin console login authorization key |
+| `SESSION_SECRET` | No (auto) | — | Admin session signing secret |
+| `MCP_BEARER_TOKEN` | No (auto) | — | MCP API bearer token |
+| `NODE_ENV` | No | — | Use `production` for deployments; affects provider URL validation and other safety checks |
 
-Generate a random encryption key:
+### Runtime secrets file
+
+By default, BitSearch persists generated/loaded secrets to a local file named
+`runtime-secrets.json` next to the SQLite DB. Environment variables override the
+file values.
+
+- Do not delete this file when migrating hosts; copy it together with the DB.
+- If encrypted provider secrets already exist and `APP_ENCRYPTION_KEY` is
+  missing, BitSearch refuses to start (to avoid silently generating a new key).
+
+Generate a random encryption key (only needed if you manage secrets externally):
 
 ```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
-Generate a random session secret:
+Generate a random session secret (only needed if you manage secrets externally):
 
 ```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
@@ -138,10 +150,12 @@ docker run -d \
 ```bash
 # Copy and edit environment file
 cp .env.example .env
-# Fill in APP_ENCRYPTION_KEY, ADMIN_AUTH_KEY, SESSION_SECRET, MCP_BEARER_TOKEN
 
 # Start
 docker compose up -d
+
+# If you let BitSearch generate secrets, fetch the admin login key from:
+docker exec -it bitsearch cat /app/data/runtime-secrets.json
 
 # View logs
 docker compose logs -f

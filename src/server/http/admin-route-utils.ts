@@ -4,6 +4,7 @@ import {
   KEY_LIST_STATUSES,
   KEY_POOL_PROVIDERS,
   REMOTE_PROVIDERS,
+  type UpdateAdminAccessPayload,
   type UpdateMcpAccessPayload,
   type KeyListStatus,
   type KeyPoolProvider,
@@ -15,6 +16,7 @@ import { isLocalHostname, normalizeOrigin } from "./origin-utils.js";
 
 const DEFAULT_LIMIT_MIN = 1;
 const MAX_ALLOWED_ORIGINS = 50;
+const MAX_ADMIN_AUTH_KEY_LENGTH = 512;
 const MAX_BEARER_TOKEN_LENGTH = 512;
 const MAX_MODEL_NAME_LENGTH = 120;
 const MAX_PROVIDER_TIMEOUT_MS = 120_000;
@@ -47,6 +49,9 @@ const systemSettingsSchema = z.object({
   defaultSearchModel: z.string().trim().min(1).max(MAX_MODEL_NAME_LENGTH),
   logRetentionDays: z.coerce.number().int().min(1).max(MAX_RETENTION_DAYS),
   allowedOrigins: z.array(z.string().trim().min(1)).max(MAX_ALLOWED_ORIGINS),
+});
+const adminAccessSchema = z.object({
+  authKey: z.string().trim().min(1).max(MAX_ADMIN_AUTH_KEY_LENGTH),
 });
 const mcpAccessSchema = z.object({
   bearerToken: z.string().trim().min(1).max(MAX_BEARER_TOKEN_LENGTH),
@@ -207,6 +212,12 @@ export function parseMcpAccessPayload(
   raw: unknown,
 ): UpdateMcpAccessPayload {
   return parseSchema(mcpAccessSchema, raw, "invalid_mcp_access");
+}
+
+export function parseAdminAccessPayload(
+  raw: unknown,
+): UpdateAdminAccessPayload {
+  return parseSchema(adminAccessSchema, raw, "invalid_admin_access");
 }
 
 export function parseTags(raw: unknown): string[] {

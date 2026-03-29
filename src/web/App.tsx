@@ -2,6 +2,7 @@ import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import {
   SEARCH_ENGINE_PROVIDER,
+  type AdminAccessInfo,
   type McpAccessInfo,
   type SearchEngineModelsResponse,
   type SystemSettings,
@@ -36,6 +37,10 @@ const EMPTY_MCP_ACCESS: McpAccessInfo = {
   hasBearerToken: false,
   tokenPreview: null,
 };
+const EMPTY_ADMIN_ACCESS: AdminAccessInfo = {
+  hasAuthKey: false,
+  authKeyPreview: null,
+};
 
 function createProviderDrafts(
   providers: AppDataBundle["providers"],
@@ -64,6 +69,7 @@ export function App() {
   const [providers, setProviders] = useState<AppDataBundle["providers"]>([]);
   const [providerDrafts, setProviderDrafts] = useState<ProviderDrafts>({});
   const [system, setSystem] = useState<SystemSettings>(EMPTY_SYSTEM);
+  const [adminAccess, setAdminAccess] = useState<AdminAccessInfo>(EMPTY_ADMIN_ACCESS);
   const [mcpAccess, setMcpAccess] = useState<McpAccessInfo>(EMPTY_MCP_ACCESS);
   const [activity, setActivity] = useState<AppDataBundle["activity"]>(null);
   const [authKey, setAuthKey] = useState("");
@@ -98,10 +104,11 @@ export function App() {
 
   async function refreshAll() {
     await withRefresh(async () => {
-      const [dashRes, provRes, sysRes, mcpRes] = await Promise.all([
+      const [dashRes, provRes, sysRes, adminRes, mcpRes] = await Promise.all([
         apiRequest<AppDataBundle["dashboard"]>("GET", "/admin/dashboard"),
         apiRequest<AppDataBundle["providers"]>("GET", "/admin/providers"),
         apiRequest<SystemSettings>("GET", "/admin/system"),
+        apiRequest<AdminAccessInfo>("GET", "/admin/admin-access"),
         apiRequest<McpAccessInfo>("GET", "/admin/mcp-access"),
       ]);
       const nextSystem = sysRes.ok ? sysRes.data : system;
@@ -111,6 +118,7 @@ export function App() {
         setProviderDrafts(createProviderDrafts(provRes.data, nextSystem));
       }
       if (sysRes.ok) setSystem(sysRes.data);
+      if (adminRes.ok) setAdminAccess(adminRes.data);
       if (mcpRes.ok) setMcpAccess(mcpRes.data);
       setWorkspaceRefreshNonce((current) => current + 1);
     });
@@ -173,6 +181,7 @@ export function App() {
     setDashboard(null);
     setProviders([]);
     setProviderDrafts({});
+    setAdminAccess(EMPTY_ADMIN_ACCESS);
     setMcpAccess(EMPTY_MCP_ACCESS);
     setActivity(null);
     setAuthKey("");
@@ -233,6 +242,19 @@ export function App() {
     return true;
   }
 
+  async function saveAdminAccess(nextAuthKey: string): Promise<boolean> {
+    const res = await apiRequest<AdminAccessInfo>("PUT", "/admin/admin-access", {
+      authKey: nextAuthKey,
+    });
+    if (!res.ok) {
+      enqueueToast("error", res.message);
+      return false;
+    }
+    setAdminAccess(res.data);
+    enqueueToast("success", "Admin authorization key saved. New key is live.");
+    return true;
+  }
+
   function probeSearchModels(): Promise<ApiResult<SearchEngineModelsResponse>> {
     return apiRequest<SearchEngineModelsResponse>(
       "GET",
@@ -272,14 +294,16 @@ export function App() {
           <Route
             path="/overview"
             element={
-              <OverviewWorkspace
-                dashboard={dashboard}
-                loading={isRefreshing}
-                mcpAccess={mcpAccess}
-                onSaveMcpAccess={saveMcpAccess}
-                onSaveSystem={() => void saveSystem()}
-                onToast={(type, message) => enqueueToast(type, message)}
-                setSystem={setSystem}
+            <OverviewWorkspace
+              dashboard={dashboard}
+              loading={isRefreshing}
+              adminAccess={adminAccess}
+              onSaveAdminAccess={saveAdminAccess}
+              mcpAccess={mcpAccess}
+              onSaveMcpAccess={saveMcpAccess}
+              onSaveSystem={() => void saveSystem()}
+              onToast={(type, message) => enqueueToast(type, message)}
+              setSystem={setSystem}
                 system={system}
                 providers={providers}
               />

@@ -143,14 +143,19 @@ cp .env.example .env
 Copy-Item .env.example .env
 ```
 
-3. Fill in the required production values.
+3. Configure secrets (optional).
 
-At minimum, set these before any production deployment:
+BitSearch supports a low-ops default: if you leave the secret env vars empty, it
+generates them on first boot and persists them to `data/runtime-secrets.json`
+(next to your SQLite DB). You can still override any value via environment
+variables.
 
-- `APP_ENCRYPTION_KEY`
-- `ADMIN_AUTH_KEY`
-- `SESSION_SECRET`
-- `MCP_BEARER_TOKEN`
+If you prefer to manage secrets externally, set these explicitly:
+
+- `APP_ENCRYPTION_KEY` (must remain stable or stored secrets become unreadable)
+- `ADMIN_AUTH_KEY` (admin console login key)
+- `SESSION_SECRET` (admin session cookie signing secret)
+- `MCP_BEARER_TOKEN` (MCP `/mcp` bearer token)
 
 4. Generate random secrets when needed.
 
@@ -166,6 +171,19 @@ mkdir -p data
 
 ```powershell
 New-Item -ItemType Directory -Force data | Out-Null
+```
+
+If you let BitSearch auto-generate secrets, start the app once and then read the
+admin login key from the persisted runtime secrets file:
+
+```bash
+cat data/runtime-secrets.json
+```
+
+For Docker:
+
+```bash
+docker exec -it bitsearch cat /app/data/runtime-secrets.json
 ```
 
 > Docker Compose reads `.env` automatically. npm deployment does not; export the variables from `.env` into your shell before starting the server.
@@ -190,7 +208,7 @@ Docker deployment uses these files:
 
 | File | Used for | Notes |
 |------|----------|-------|
-| `.env` | Runtime configuration | Copy from `.env.example` and fill in the required values |
+| `.env` | Runtime configuration | Copy from `.env.example`. Secrets can be left empty and will be generated + persisted on first boot |
 | `docker-compose.yml` | Build and run from local source | Uses the local `Dockerfile` |
 | `docker-compose.image.yml` | Run a published image | Pulls `BITSEARCH_IMAGE` directly from Docker Hub |
 | `docker-compose.prod.yml` | Optional production hardening | Adds restart policy, resource limits, and log rotation |
@@ -203,10 +221,11 @@ Container runtime variables:
 | `APP_HOST` | No | `0.0.0.0` | Bind address inside the container |
 | `TRUST_PROXY` | No | `false` | Set to `true` when running behind Nginx, Caddy, Traefik, or another reverse proxy |
 | `DATABASE_PATH` | No | `/app/data/bitsearch.db` | SQLite file path inside the container; compose already points it to the mounted volume |
-| `APP_ENCRYPTION_KEY` | Yes | random 32-byte hex string | Encrypts stored provider credentials |
-| `ADMIN_AUTH_KEY` | Yes | custom bearer token | Used to access the admin API and sign in to the admin console |
-| `SESSION_SECRET` | Yes | random 32-byte hex string | Signs the admin session cookie |
-| `MCP_BEARER_TOKEN` | Yes | custom bearer token | Required by MCP clients calling `/mcp` |
+| `RUNTIME_SECRETS_FILE` | No | `/app/data/runtime-secrets.json` | Optional override for the persisted runtime secrets file path |
+| `APP_ENCRYPTION_KEY` | No (auto) | random 32-byte hex string | Encrypts stored provider credentials (must remain stable) |
+| `ADMIN_AUTH_KEY` | No (auto) | custom bearer token | Used to sign in to the admin console |
+| `SESSION_SECRET` | No (auto) | random 32-byte hex string | Signs the admin session cookie |
+| `MCP_BEARER_TOKEN` | No (auto) | custom bearer token | Required by MCP clients calling `/mcp` |
 | `BITSEARCH_IMAGE` | Only for published-image mode | `docker.io/hedeoerwang/bitsearch:latest` | Image reference used by `docker-compose.image.yml` |
 | `NODE_ENV` | No | `production` | Already set by the compose files; normally no manual change is needed |
 
@@ -296,8 +315,8 @@ Example streamable HTTP client configuration. The exact field names vary by clie
 
 1. Start the app with one of the deployment modes above.
 2. Open `http://127.0.0.1:8097`.
-3. Sign in with `ADMIN_AUTH_KEY`.
-4. Configure provider base URLs, import Tavily / Firecrawl keys, and review the MCP access panel.
+3. Sign in with `ADMIN_AUTH_KEY` (from `.env`, or from `data/runtime-secrets.json` if auto-generated).
+4. Configure provider base URLs, import Tavily / Firecrawl keys, and review the Admin/MCP access panels.
 5. Use the Overview, Providers, Keys, and Activity workspaces to monitor routing behavior and failures.
 
 ### 4. Configure providers
@@ -360,7 +379,7 @@ Set in the **Providers** workspace under **Fetch Mode**:
 - **Q: What happens when Tavily keys run out of quota?**
   A: The Failover Router will mark the exhausted key as invalid for a timeout period and rotate to the next active Tavily key. If no Tavily keys remain, it gracefully downgrades to Firecrawl.
 - **Q: I lost my `APP_ENCRYPTION_KEY`. Can I recover my API keys?**
-  A: No. Keys are securely stored in SQLite using AES-256-GCM. If you lose the encryption key, you cannot decrypt the payload and must truncate the database to re-import keys.
+  A: No. Keys are stored encrypted (AES-256-GCM). Restore `data/runtime-secrets.json` (or set `APP_ENCRYPTION_KEY`) to regain access. If encrypted provider secrets exist and the key is missing, BitSearch refuses to start to avoid silently generating a new key. If you cannot recover the key, you must wipe the stored provider secrets and re-import them.
 
 ## Acknowledgments
 

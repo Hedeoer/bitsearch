@@ -30,11 +30,17 @@ import {
   saveMcpBearerToken,
   saveSystemSettings,
 } from "../repos/settings-repo.js";
+import {
+  getAdminAccessInfo,
+  getAdminAuthKey,
+  saveAdminAuthKey,
+} from "../services/admin-access-service.js";
 import { syncKeyQuotas, testKeys } from "../services/key-pool-service.js";
 import { getMcpAccessInfo } from "../services/mcp-access-service.js";
 import { listAvailableSearchEngineModels } from "../services/search-engine-service.js";
 import {
   csvEscape,
+  parseAdminAccessPayload,
   parseCsvKeys,
   parseIds,
   parseKeyLines,
@@ -84,6 +90,22 @@ export function createAdminRouter(context: AppContext): Router {
         context.db,
         context.bootstrap.mcpBearerToken,
       ),
+    });
+  });
+
+  router.get("/admin-access", (_req, res) => {
+    res.json(getAdminAccessInfo(context));
+  });
+
+  router.put("/admin-access", (req, res) => {
+    const payload = parseAdminAccessPayload(req.body ?? {});
+    saveAdminAuthKey(context, payload.authKey);
+    res.json(getAdminAccessInfo(context));
+  });
+
+  router.post("/admin-access/reveal", (_req, res) => {
+    res.json({
+      secret: getAdminAuthKey(context),
     });
   });
 
