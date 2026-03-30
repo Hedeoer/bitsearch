@@ -1,9 +1,9 @@
-import { ActivityHub } from "../components/ActivityHub";
+import { ActivityWorkbench } from "../components/activity/ActivityWorkbench";
 
 export function ActivityWorkspace() {
   return (
     <div className="workspace-stack">
-      <ActivityHub />
+      <ActivityWorkbench />
     </div>
   );
 }

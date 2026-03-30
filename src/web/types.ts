@@ -1,5 +1,5 @@
 import type {
-  ActivityPageResult,
+  ActivityListPageResult,
   DashboardSummary,
   ProviderConfigRecord,
   ProviderKeyRecord,
@@ -34,5 +34,5 @@ export type AppDataBundle = {
   keys: ProviderKeyRecord[];
   system: SystemSettings;
   toolSurface: ToolSurfaceSnapshot;
-  activity: ActivityPageResult | null;
+  activity: ActivityListPageResult | null;
 };

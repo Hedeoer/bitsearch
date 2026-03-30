@@ -103,6 +103,15 @@ CREATE TABLE IF NOT EXISTS search_sessions (
   created_at TEXT NOT NULL
 );
 
+CREATE VIRTUAL TABLE IF NOT EXISTS request_logs_fts USING fts5(
+  request_id UNINDEXED,
+  tool_name,
+  target_url,
+  final_provider,
+  error_summary,
+  result_preview
+);
+
 CREATE TABLE IF NOT EXISTS planning_sessions (
   id TEXT PRIMARY KEY,
   complexity_level INTEGER,
@@ -128,11 +137,29 @@ CREATE INDEX IF NOT EXISTS idx_request_logs_created_at
 CREATE INDEX IF NOT EXISTS idx_request_logs_status_created_at
   ON request_logs(status, created_at);
 
+CREATE INDEX IF NOT EXISTS idx_request_logs_tool_name_created_at
+  ON request_logs(tool_name, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_request_logs_final_provider_created_at
+  ON request_logs(final_provider, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_request_logs_duration_ms_created_at
+  ON request_logs(duration_ms, created_at DESC);
+
 CREATE INDEX IF NOT EXISTS idx_request_attempt_logs_created_at
   ON request_attempt_logs(created_at);
 
 CREATE INDEX IF NOT EXISTS idx_request_attempt_logs_request_log_id_attempt_no_created_at
   ON request_attempt_logs(request_log_id, attempt_no, created_at);
+
+CREATE INDEX IF NOT EXISTS idx_request_attempt_logs_provider_created_at
+  ON request_attempt_logs(provider, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_request_attempt_logs_error_type_created_at
+  ON request_attempt_logs(error_type, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_request_attempt_logs_request_log_id_status_attempt_no
+  ON request_attempt_logs(request_log_id, status, attempt_no);
 
 CREATE INDEX IF NOT EXISTS idx_provider_async_jobs_provider_upstream_job_id
   ON provider_async_jobs(provider, upstream_job_id);
@@ -151,4 +178,53 @@ CREATE INDEX IF NOT EXISTS idx_search_sessions_created_at
 
 CREATE INDEX IF NOT EXISTS idx_planning_sessions_updated_at
   ON planning_sessions(updated_at);
+
+CREATE TRIGGER IF NOT EXISTS request_logs_ai
+AFTER INSERT ON request_logs
+BEGIN
+  INSERT INTO request_logs_fts(
+    request_id,
+    tool_name,
+    target_url,
+    final_provider,
+    error_summary,
+    result_preview
+  )
+  VALUES (
+    NEW.id,
+    COALESCE(NEW.tool_name, ''),
+    COALESCE(NEW.target_url, ''),
+    COALESCE(NEW.final_provider, ''),
+    COALESCE(NEW.error_summary, ''),
+    COALESCE(NEW.result_preview, '')
+  );
+END;
+
+CREATE TRIGGER IF NOT EXISTS request_logs_ad
+AFTER DELETE ON request_logs
+BEGIN
+  DELETE FROM request_logs_fts WHERE request_id = OLD.id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS request_logs_au
+AFTER UPDATE ON request_logs
+BEGIN
+  DELETE FROM request_logs_fts WHERE request_id = OLD.id;
+  INSERT INTO request_logs_fts(
+    request_id,
+    tool_name,
+    target_url,
+    final_provider,
+    error_summary,
+    result_preview
+  )
+  VALUES (
+    NEW.id,
+    COALESCE(NEW.tool_name, ''),
+    COALESCE(NEW.target_url, ''),
+    COALESCE(NEW.final_provider, ''),
+    COALESCE(NEW.error_summary, ''),
+    COALESCE(NEW.result_preview, '')
+  );
+END;
 `;

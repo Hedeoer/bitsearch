@@ -5,11 +5,8 @@ import { HttpRequestError } from "../lib/http.js";
 import { broadcastToolListChanged } from "../mcp/transport-router.js";
 import { getDashboardSummary } from "../repos/dashboard-repo.js";
 import {
-  getRequestActivity,
-  listRequestActivities,
   listRequestAttempts,
   listRequestLogs,
-  type ActivityFilters,
 } from "../repos/log-repo.js";
 import {
   deleteKeys,
@@ -43,6 +40,7 @@ import {
   getToolSurfaceSnapshot,
   hasToolSurfaceChanged,
 } from "../services/tool-surface-service.js";
+import { registerActivityRoutes } from "./activity-routes.js";
 import {
   csvEscape,
   parseAdminAccessPayload,
@@ -53,7 +51,6 @@ import {
   parseKeyPoolProvider,
   parseKeyStatus,
   parseLimit,
-  parsePage,
   parseOptionalKeyPoolProvider,
   parseProviderConfigPayload,
   parseRemoteProvider,
@@ -291,29 +288,7 @@ export function createAdminRouter(context: AppContext): Router {
   router.get("/logs", (req, res) => {
     res.json(listRequestLogs(context.db, parseLimit(req.query.limit, 100, 500)));
   });
-
-  router.get("/activity", (req, res) => {
-    const page = parsePage(req.query.page);
-    const pageSize = parseLimit(req.query.pageSize, 25, 100);
-    const filters: ActivityFilters = {
-      toolName: req.query.toolName ? String(req.query.toolName) : undefined,
-      status: req.query.status ? String(req.query.status) : undefined,
-      timePreset: req.query.timePreset ? String(req.query.timePreset) : undefined,
-      customStart: req.query.customStart ? String(req.query.customStart) : undefined,
-      customEnd: req.query.customEnd ? String(req.query.customEnd) : undefined,
-      query: req.query.q ? String(req.query.q) : undefined,
-    };
-    res.json(listRequestActivities(context.db, page, pageSize, filters));
-  });
-
-  router.get("/activity/:requestId", (req, res) => {
-    const activity = getRequestActivity(context.db, req.params.requestId);
-    if (!activity) {
-      res.status(404).json({ error: "activity_not_found" });
-      return;
-    }
-    res.json(activity);
-  });
+  registerActivityRoutes(router, context);
 
   router.get("/logs/attempts", (req, res) => {
     res.json(listRequestAttempts(context.db, parseLimit(req.query.limit, 200, 1000)));

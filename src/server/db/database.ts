@@ -151,6 +151,28 @@ function applyMigrations(db: DatabaseSync): void {
   );
 }
 
+function refreshRequestLogSearchIndex(db: DatabaseSync): void {
+  db.exec("DELETE FROM request_logs_fts");
+  db.exec(
+    `INSERT INTO request_logs_fts(
+       request_id,
+       tool_name,
+       target_url,
+       final_provider,
+       error_summary,
+       result_preview
+     )
+     SELECT
+       id,
+       COALESCE(tool_name, ''),
+       COALESCE(target_url, ''),
+       COALESCE(final_provider, ''),
+       COALESCE(error_summary, ''),
+       COALESCE(result_preview, '')
+     FROM request_logs`,
+  );
+}
+
 function seedSystemSettings(
   db: DatabaseSync,
   now: string,
@@ -186,6 +208,7 @@ export function createDatabase(config: BootstrapConfig): AppDatabase {
   const sqlite = new DatabaseSync(config.databasePath);
   sqlite.exec(SCHEMA_SQL);
   applyMigrations(sqlite);
+  refreshRequestLogSearchIndex(sqlite);
   assertEncryptionKeyCompatibility(sqlite, config);
   const now = new Date().toISOString();
   seedSystemSettings(sqlite, now, config.mcpBearerToken);

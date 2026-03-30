@@ -12,6 +12,7 @@
     "build:web": "vite build",
     "build:server": "tsc -p tsconfig.server.json",
     "check": "tsc --noEmit",
+    "test": "node --import tsx --test tests/**/*.test.ts",
     "seed:admin-demo": "tsx scripts/seed-admin-demo.ts",
     "start": "node dist/server/main.js"
   },

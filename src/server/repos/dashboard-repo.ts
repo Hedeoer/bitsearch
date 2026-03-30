@@ -9,7 +9,7 @@ import {
   getCachedDashboardSummary,
   setCachedDashboardSummary,
 } from "../services/dashboard-cache.js";
-import { mapRequestLog } from "./log-repo.js";
+import { mapRequestLog } from "./log-record-mappers.js";
 
 const MINUTES_PER_RPM_WINDOW = 10;
 const HOURS_PER_TREND_WINDOW = 24;
