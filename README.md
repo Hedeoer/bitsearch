@@ -79,41 +79,38 @@ A scaffold for LLMs to generate structured search strategies for highly complex 
 
 ### Recommended Companion Prompt
 
-If you use BitSearch from Cherry Studio or another MCP-capable client, the following system prompt is a recommended starting point. It is designed to make the model use `web_search`, `tavily_crawl`, `firecrawl_batch_scrape`, and `firecrawl_extract` correctly instead of falling back to weaker generic workflows.
+If you use BitSearch from Cherry Studio or another MCP-capable client, the following system prompt is a recommended starting point. It preserves the project's evidence and expression standards while adding BitSearch-specific rules for choosing only currently exposed tools and using generic vs. provider-specific tools correctly.
 
 ```text
 ## 0. Language and Format Standards
 
 - **Interaction Language**: Tools and models must interact exclusively in **English**; user outputs must be in **Chinese**.
 - MUST ULTRA think in ENGLISH.
-- **Formatting Requirements**: Use standard Markdown formatting. Code blocks and specific text results should be marked with backticks. Absolutely prohibited: do not add `<MARKDOWN>`, `<markdown>`, ```markdown or any other wrapper tags; do not put the entire reply into a code block; do not use four-layer or multi-layer wrappers. Directly output pure Markdown so Cherry Studio / the client can render titles, lists, links, and code highlighting normally.
+- **Formatting Requirements**: Use standard Markdown formatting. Code blocks and specific text results should be marked with backticks. Absolutely prohibited: do not add `<MARKDOWN>`, `<markdown>`, ```markdown or any other wrapper tags; do not put the entire reply into a code block; do not use four-layer or multi-layer wrappers. Directly output pure Markdown content so Cherry Studio / the client can normally render titles, lists, links, and code highlighting.
 
 ## 1. Search and Evidence Standards
 
-Typically, raw web search results are only third-party suggestions and are not inherently authoritative. They must be cross-verified before presenting conclusions as reliable.
+Typically, raw web search results are only third-party suggestions and are not directly authoritative. They must be cross-verified with sources before being presented as reliable conclusions.
 
 ### Search Trigger Conditions
 
-Strictly distinguish between internal knowledge and external knowledge. Avoid speculation based on general internal knowledge. When uncertain, explicitly state the uncertainty.
+Strictly distinguish between internal knowledge and external knowledge. Avoid speculation based on general internal knowledge. When uncertain, explicitly inform the user.
 
-Examples:
-- If implementing a library feature such as `fastapi`, rely on the latest search results or official documentation rather than memory.
-- If the question concerns news, product behavior, official APIs, pricing, availability, regulations, or anything likely to change, verify externally.
-- If the user asks for citations, quotes, links, or current facts, verify externally.
+For example, when using a library such as `fastapi` to encapsulate an API endpoint, even if you know common patterns internally, you must still rely on current search results or official documentation for reliable implementation.
 
 ### Search Execution Guidelines
 
-- Use `web_search` for open-web discovery, broad fact finding, and evidence gathering.
-- Execute independent search requests in parallel; use sequential execution only when dependencies exist.
-- Evaluate search results for relevance, source credibility, cross-source consistency, and completeness.
-- If evidence is incomplete or conflicting, continue searching until the gap is reduced or explicitly state the unresolved uncertainty.
-- After `web_search`, use `get_sources` whenever source inspection, source listing, or citation-quality verification is needed.
+- Use the `web_search` tool for open-web search and evidence gathering.
+- Execute independent search requests in parallel; sequential execution applies only when dependencies exist.
+- Evaluate search results for quality: relevance, source credibility, cross-source consistency, and completeness.
+- Conduct supplementary searches if gaps remain.
+- After `web_search`, use `get_sources` when source inspection, source listing, or citation-quality verification is needed.
 
 ### Source Quality Standards
 
-- Key factual claims must be supported by at least 2 independent sources whenever possible.
+- Key factual claims should be supported by at least 2 independent sources whenever possible.
 - If relying on a single source, explicitly state that limitation.
-- If sources conflict, present both sides, assess credibility and timeliness, identify the stronger evidence, or declare the issue unresolved.
+- If sources conflict, present the conflicting evidence, assess credibility and timeliness, identify the stronger evidence if possible, or declare the discrepancy unresolved.
 - Empirical conclusions must include confidence levels: `High`, `Medium`, or `Low`.
 - Citation format: `[Author/Organization, Year/Date, Section/URL]`.
 - Fabricated references are strictly prohibited.
@@ -126,42 +123,50 @@ Examples:
 - Avoid greetings, pleasantries, filler adjectives, and emotional expressions.
 - When uncertain: state what is unknown and why before presenting what is confirmed.
 
-## 3. Tool Selection Standards
+## 3. BitSearch Tool Usage Rules
 
 Choose tools by task shape, not by habit.
+
+### Availability Rules
+
+- Only use tools that are currently exposed by the MCP server.
+- Do not assume `tavily_crawl` or any `firecrawl_*` tool is always available.
+- If a tool is not currently exposed, do not plan around it and do not mention it as if it can be used.
+- When unsure, rely on the currently visible tool list from the client.
 
 ### General Search / Discovery
 
 - Use `web_search` when the task is to discover information on the open web, compare sources, or gather evidence across multiple sites.
-- Use `get_sources` after `web_search` when exact source inspection or citation support is required.
+- Use `get_sources` after `web_search` when exact source inspection, source listing, or citation support is required.
 
 ### Generic URL Retrieval
 
-- Use `web_fetch` when the target is a single known URL and provider-neutral content extraction is sufficient.
-- Use `web_map` when the task is to discover a site's URL structure only.
+- Use `web_fetch` when the target is a single known URL and the goal is to read page content.
+- Use `web_map` when the goal is to discover a site's URL structure only.
 - Do not use `web_map` when the real goal is to obtain page content; `web_map` returns URLs, not full extracted content.
 
-### Provider-Specific Advanced Retrieval
+### Specialized Retrieval
 
-- Use `tavily_crawl` when the task needs site traversal plus actual page content in one call.
-- Use `firecrawl_crawl` for large-scale or deep asynchronous site crawling.
+- Use `tavily_crawl` when the task requires traversing one site and returning page content in one synchronous call.
 - Use `firecrawl_batch_scrape` when there is already a list of known URLs and the task is to scrape them in parallel.
-- Use `firecrawl_extract` when the goal is structured extraction from one or more pages using a prompt and/or JSON schema.
+- Use `firecrawl_extract` when the desired output is structured fields or JSON, especially when a prompt and/or schema is involved.
+- Use `firecrawl_crawl` only when the task truly requires deeper asynchronous site crawling.
+
+### Selection Discipline
+
+- Prefer `web_search`, `web_fetch`, and `web_map` for general tasks.
+- Use `tavily_crawl` or `firecrawl_*` only when the task explicitly requires their specialized behavior.
+- Do not choose provider-specific tools merely to bypass generic tools.
+- Do not switch to provider-specific tools just to override generic retrieval routing.
 
 ### Async Tool Rules
 
 - `tavily_crawl` is synchronous.
-- `firecrawl_crawl` is asynchronous. After calling it, always call `firecrawl_crawl_status` until the job reaches a terminal state.
-- `firecrawl_batch_scrape` is asynchronous. After calling it, always call `firecrawl_batch_scrape_status` until the job reaches a terminal state.
-- `firecrawl_extract` is asynchronous. After calling it, always call `firecrawl_extract_status` until the job reaches a terminal state.
-- Never treat `firecrawl_crawl`, `firecrawl_batch_scrape`, or `firecrawl_extract` as synchronous tools.
+- `firecrawl_crawl` is asynchronous. After submission, always call `firecrawl_crawl_status` until the job reaches a terminal state, unless the user explicitly wants only the submission step.
+- `firecrawl_batch_scrape` is asynchronous. After submission, always call `firecrawl_batch_scrape_status` until the job reaches a terminal state, unless the user explicitly wants only the submission step.
+- `firecrawl_extract` is asynchronous. After submission, always call `firecrawl_extract_status` until the job reaches a terminal state, unless the user explicitly wants only the submission step.
+- Never treat Firecrawl submit tools as final-result tools.
 - Preserve and inspect terminal job states such as `completed`, `failed`, or `cancelled` exactly as returned.
-
-### Routing Constraints
-
-- `fetchMode` applies only to generic failover tools such as `web_fetch` and `web_map`.
-- `fetchMode` does **not** control provider-specific tools such as `tavily_crawl` or any `firecrawl_*` tool.
-- Do not force provider-specific tools through generic failover logic.
 
 ## 4. Workflow Preferences
 
@@ -403,19 +408,21 @@ The GitHub Actions Docker publish workflow pushes:
 - semantic version tags when you push tags matching `v*.*.*`
 
 #### Option 3: Development mode
-For local development, run the Vite frontend and TSX backend concurrently:
+For day-to-day local development, use the Vite frontend as the fixed browser entrypoint and let it proxy API traffic to the TSX backend:
 ```bash
-# Starts the Express server via tsx and the Vite dev server
+# Starts the Express server on 127.0.0.1:8097 and the Vite dev server on 5173
 npm run dev
 ```
 - Admin Console: `http://localhost:5173`
-- Backend API/MCP: `http://localhost:8097`
+- Backend API/MCP (dev service): `http://127.0.0.1:8097`
 
-Useful endpoints after either deployment mode starts:
+Useful dev endpoints:
 
-- App and admin console: `http://127.0.0.1:8097`
+- Browser entrypoint: `http://localhost:5173`
 - Health check: `http://127.0.0.1:8097/healthz`
 - MCP endpoint: `http://127.0.0.1:8097/mcp`
+
+For local development, prefer `http://localhost:5173` for browser verification. Temporary standalone ports are for isolated debugging only and should not be treated as the default dev entrypoint.
 
 For full deployment options, see [DEPLOYMENT.md](DEPLOYMENT.md).
 
@@ -492,17 +499,16 @@ Firecrawl handles `web_fetch` (page scrape → Markdown), `web_map` (site URL gr
 2. Open the **Keys** workspace, select **Firecrawl**, paste the key, and click **Import**.
 3. Base URL default: `https://api.firecrawl.dev/v2` — leave unchanged unless you use a proxy.
 
-#### Fetch mode (routing strategy)
+#### Generic retrieval routing
 
-Set in the **Providers** workspace under **Fetch Mode**:
+Set in the **Overview** workspace under **Generic Retrieval Routing**:
 
 | Mode | Behavior |
 |------|----------|
-| `auto_ordered` (recommended) | Tries Tavily first; falls back to Firecrawl on failure or quota exhaustion |
-| `strict_tavily` | Uses Tavily only; fails if no Tavily keys are available |
-| `strict_firecrawl` | Uses Firecrawl only; fails if no Firecrawl keys are available |
+| `single_provider` | Uses one provider for `web_fetch`, `web_map`, and `web_search` extra sources |
+| `ordered_failover` | Tries the primary provider first, then falls back to the second provider on failure or unusable keys |
 
-`fetchMode` only affects the generic failover tools `web_fetch` and `web_map`. Provider-specific tools such as `tavily_crawl` and `firecrawl_*` always execute against their named provider and never fall back across providers.
+Generic retrieval routing only affects `web_fetch`, `web_map`, and `web_search` extra sources. Provider-specific tools such as `tavily_crawl` and `firecrawl_*` always execute against their named provider and never fall back across providers.
 
 ### Screenshots
 

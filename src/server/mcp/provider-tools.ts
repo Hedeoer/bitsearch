@@ -1,11 +1,28 @@
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import {
+  McpServer,
+  type RegisteredTool,
+} from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { nanoid } from "nanoid";
-import type { KeyPoolProvider } from "../../shared/contracts.js";
+import type { KeyPoolProvider, ToolSurfaceSnapshot } from "../../shared/contracts.js";
 import type { AppContext } from "../app-context.js";
 import { HttpRequestError } from "../lib/http.js";
-import { insertAttemptLogs, insertRequestLog } from "../repos/log-repo.js";
-import { getCandidateKeys, getProviderConfig, markKeyUsage } from "../repos/provider-repo.js";
+import {
+  insertAttemptLogs,
+  insertRequestLog,
+  mergeRequestLogMetadata,
+} from "../repos/log-repo.js";
+import {
+  getCandidateKeys,
+  getProviderConfig,
+  getProviderKeyById,
+  markKeyUsage,
+} from "../repos/provider-repo.js";
+import {
+  getProviderAsyncJobBinding,
+  saveProviderAsyncJobBinding,
+  touchProviderAsyncJobBinding,
+} from "../repos/provider-async-job-repo.js";
 import {
   firecrawlBatchScrape,
   firecrawlBatchScrapeStatus,
@@ -25,6 +42,11 @@ type ProviderExecutor<TInput, TResult> = (
   input: TInput,
 ) => Promise<TResult>;
 
+const FIRECRAWL_BINDING_NOT_FOUND = "firecrawl_job_binding_not_found";
+const FIRECRAWL_BINDING_MISSING_KEY = "firecrawl_job_binding_missing_key";
+const FIRECRAWL_BINDING_TOOL_MISMATCH = "firecrawl_job_binding_tool_mismatch";
+const FIRECRAWL_PROVIDER_CONFIG_MISSING = "firecrawl_provider_config_missing";
+
 function toJsonText(value: unknown): string {
   return JSON.stringify(value, null, 2);
 }
@@ -34,6 +56,54 @@ function toolJsonResult(value: Record<string, unknown>) {
     content: [{ type: "text" as const, text: toJsonText(value) }],
     structuredContent: value,
   };
+}
+
+function createBoundStatusMetadata(
+  input: {
+    jobId: string;
+    expectedToolName: string;
+    bindingFound: boolean;
+    bindingErrorCode?: string;
+    boundKeyFingerprint?: string;
+    boundKeyEnabled?: boolean;
+  },
+): Record<string, unknown> {
+  return {
+    async: true,
+    jobId: input.jobId,
+    expectedToolName: input.expectedToolName,
+    bindingFound: input.bindingFound,
+    bindingErrorCode: input.bindingErrorCode ?? null,
+    boundKeyFingerprint: input.boundKeyFingerprint ?? null,
+    boundKeyEnabled: input.boundKeyEnabled ?? null,
+  };
+}
+
+function persistFirecrawlJobBinding(
+  context: AppContext,
+  input: {
+    toolName: string;
+    requestLogId: string;
+    jobId: string;
+    keyId: string;
+    keyFingerprint: string;
+  },
+): void {
+  saveProviderAsyncJobBinding(context.db, {
+    provider: "firecrawl",
+    toolName: input.toolName,
+    upstreamJobId: input.jobId,
+    providerKeyId: input.keyId,
+    providerKeyFingerprint: input.keyFingerprint,
+    requestLogId: input.requestLogId,
+  });
+  mergeRequestLogMetadata(context.db, input.requestLogId, {
+    async: true,
+    jobId: input.jobId,
+    boundKeyId: input.keyId,
+    boundKeyFingerprint: input.keyFingerprint,
+    bindingPersisted: true,
+  });
 }
 
 function previewResult(result: unknown): string | null {
@@ -126,7 +196,16 @@ async function runWithProviderKeys<TInput extends object, TResult>(
     metadata?: Record<string, unknown>;
     execute: ProviderExecutor<TInput, TResult>;
   },
-): Promise<{ ok: true; data: TResult } | { ok: false; error: string }> {
+): Promise<
+  | {
+      ok: true;
+      data: TResult;
+      keyId: string;
+      keyFingerprint: string;
+      requestLogId: string;
+    }
+  | { ok: false; error: string }
+> {
   const requestId = nanoid();
   const startedAt = Date.now();
   const providerConfig = getProviderConfig(context.db, options.provider);
@@ -219,7 +298,13 @@ async function runWithProviderKeys<TInput extends object, TResult>(
         metadata,
       });
       insertAttemptLogs(context.db, attemptLogs);
-      return { ok: true, data: result };
+      return {
+        ok: true,
+        data: result,
+        keyId: key.id,
+        keyFingerprint: key.fingerprint,
+        requestLogId: requestId,
+      };
     } catch (error) {
       const info = describeError(error);
       markKeyUsage(context.db, key.id, info.statusCode, info.message);
@@ -255,6 +340,208 @@ async function runWithProviderKeys<TInput extends object, TResult>(
   });
   insertAttemptLogs(context.db, attemptLogs);
   return { ok: false, error };
+}
+
+async function runFirecrawlStatusWithBoundKey<TResult>(
+  context: AppContext,
+  options: {
+    toolName: string;
+    expectedSubmitToolName: string;
+    jobId: string;
+    execute: ProviderExecutor<{ id: string }, TResult>;
+  },
+): Promise<{ ok: true; data: TResult } | { ok: false; error: string }> {
+  const requestId = nanoid();
+  const startedAt = Date.now();
+  const binding = getProviderAsyncJobBinding(context.db, "firecrawl", options.jobId);
+
+  if (!binding) {
+    const error = FIRECRAWL_BINDING_NOT_FOUND;
+    logProviderRequest(context, {
+      id: requestId,
+      provider: "firecrawl",
+      toolName: options.toolName,
+      targetUrl: null,
+      finalKeyFingerprint: null,
+      attempts: 0,
+      status: "failed",
+      startedAt,
+      errorSummary: error,
+      inputJson: { id: options.jobId },
+      metadata: createBoundStatusMetadata({
+        jobId: options.jobId,
+        expectedToolName: options.expectedSubmitToolName,
+        bindingFound: false,
+        bindingErrorCode: error,
+      }),
+    });
+    return { ok: false, error };
+  }
+
+  touchProviderAsyncJobBinding(context.db, "firecrawl", options.jobId);
+
+  if (binding.toolName !== options.expectedSubmitToolName) {
+    const error = FIRECRAWL_BINDING_TOOL_MISMATCH;
+    logProviderRequest(context, {
+      id: requestId,
+      provider: "firecrawl",
+      toolName: options.toolName,
+      targetUrl: null,
+      finalKeyFingerprint: null,
+      attempts: 0,
+      status: "failed",
+      startedAt,
+      errorSummary: error,
+      inputJson: { id: options.jobId },
+      metadata: createBoundStatusMetadata({
+        jobId: options.jobId,
+        expectedToolName: options.expectedSubmitToolName,
+        bindingFound: true,
+        bindingErrorCode: error,
+        boundKeyFingerprint: binding.providerKeyFingerprint,
+      }),
+    });
+    return { ok: false, error };
+  }
+
+  const boundKey = getProviderKeyById(
+    context.db,
+    binding.providerKeyId,
+    context.bootstrap.encryptionKey,
+  );
+  if (!boundKey) {
+    const error = FIRECRAWL_BINDING_MISSING_KEY;
+    logProviderRequest(context, {
+      id: requestId,
+      provider: "firecrawl",
+      toolName: options.toolName,
+      targetUrl: null,
+      finalKeyFingerprint: null,
+      attempts: 0,
+      status: "failed",
+      startedAt,
+      errorSummary: error,
+      inputJson: { id: options.jobId },
+      metadata: createBoundStatusMetadata({
+        jobId: options.jobId,
+        expectedToolName: options.expectedSubmitToolName,
+        bindingFound: true,
+        bindingErrorCode: error,
+        boundKeyFingerprint: binding.providerKeyFingerprint,
+      }),
+    });
+    return { ok: false, error };
+  }
+
+  const providerConfig = getProviderConfig(context.db, "firecrawl");
+  if (!providerConfig?.baseUrl) {
+    const error = FIRECRAWL_PROVIDER_CONFIG_MISSING;
+    logProviderRequest(context, {
+      id: requestId,
+      provider: "firecrawl",
+      toolName: options.toolName,
+      targetUrl: null,
+      finalKeyFingerprint: null,
+      attempts: 0,
+      status: "failed",
+      startedAt,
+      errorSummary: error,
+      inputJson: { id: options.jobId },
+      metadata: createBoundStatusMetadata({
+        jobId: options.jobId,
+        expectedToolName: options.expectedSubmitToolName,
+        bindingFound: true,
+        bindingErrorCode: error,
+        boundKeyFingerprint: boundKey.fingerprint,
+        boundKeyEnabled: boundKey.enabled,
+      }),
+    });
+    return { ok: false, error };
+  }
+
+  const attemptStarted = Date.now();
+  try {
+    const result = await options.execute(
+      {
+        apiKey: boundKey.secret,
+        baseUrl: providerConfig.baseUrl,
+        timeoutMs: providerConfig.timeoutMs,
+      },
+      { id: options.jobId },
+    );
+    markKeyUsage(context.db, boundKey.id, 200, null);
+    logProviderRequest(context, {
+      id: requestId,
+      provider: "firecrawl",
+      toolName: options.toolName,
+      targetUrl: null,
+      finalKeyFingerprint: boundKey.fingerprint,
+      attempts: 1,
+      status: "success",
+      startedAt,
+      inputJson: { id: options.jobId },
+      resultPreview: previewResult(result),
+      metadata: createBoundStatusMetadata({
+        jobId: options.jobId,
+        expectedToolName: options.expectedSubmitToolName,
+        bindingFound: true,
+        boundKeyFingerprint: boundKey.fingerprint,
+        boundKeyEnabled: boundKey.enabled,
+      }),
+    });
+    insertAttemptLogs(context.db, [
+      {
+        requestLogId: requestId,
+        provider: "firecrawl",
+        keyFingerprint: boundKey.fingerprint,
+        attemptNo: 1,
+        status: "success",
+        statusCode: 200,
+        durationMs: Date.now() - attemptStarted,
+        errorSummary: null,
+        errorType: null,
+        providerBaseUrl: providerConfig.baseUrl,
+      },
+    ]);
+    return { ok: true, data: result };
+  } catch (error) {
+    const info = describeError(error);
+    markKeyUsage(context.db, boundKey.id, info.statusCode, info.message);
+    logProviderRequest(context, {
+      id: requestId,
+      provider: "firecrawl",
+      toolName: options.toolName,
+      targetUrl: null,
+      finalKeyFingerprint: null,
+      attempts: 1,
+      status: "failed",
+      startedAt,
+      errorSummary: info.message,
+      inputJson: { id: options.jobId },
+      metadata: createBoundStatusMetadata({
+        jobId: options.jobId,
+        expectedToolName: options.expectedSubmitToolName,
+        bindingFound: true,
+        boundKeyFingerprint: boundKey.fingerprint,
+        boundKeyEnabled: boundKey.enabled,
+      }),
+    });
+    insertAttemptLogs(context.db, [
+      {
+        requestLogId: requestId,
+        provider: "firecrawl",
+        keyFingerprint: boundKey.fingerprint,
+        attemptNo: 1,
+        status: "failed",
+        statusCode: info.statusCode,
+        durationMs: Date.now() - attemptStarted,
+        errorSummary: info.message,
+        errorType: classifyErrorType(error),
+        providerBaseUrl: providerConfig.baseUrl,
+      },
+    ]);
+    return { ok: false, error: info.message };
+  }
 }
 
 function failureResult(provider: KeyPoolProvider, error: string) {
@@ -326,79 +613,92 @@ function firecrawlExtractStatusResult(
   });
 }
 
-export function registerProviderTools(server: McpServer, context: AppContext): void {
+export function registerProviderTools(
+  server: McpServer,
+  context: AppContext,
+  toolSurface: ToolSurfaceSnapshot,
+): Map<string, RegisteredTool> {
   const objectSchema = z.record(z.unknown());
   const stringArraySchema = z.array(z.string());
   const urlArraySchema = z.array(z.string().url()).min(1);
   const formatSchema = z.array(z.union([z.string(), objectSchema])).optional().default(["markdown"]);
+  const exposedTools = new Set(toolSurface.exposedTools);
+  const registry = new Map<string, RegisteredTool>();
 
-  server.registerTool(
-    "tavily_crawl",
-    {
-      description: "Synchronously crawl a site with Tavily and return extracted page content.",
-      inputSchema: z.object({
-        url: z.string().url(),
-        instructions: z.string().optional().default(""),
-        chunks_per_source: z.number().int().min(1).max(5).optional(),
-        max_depth: z.number().int().min(1).max(5).optional().default(1),
-        max_breadth: z.number().int().min(1).max(500).optional().default(20),
-        limit: z.number().int().min(1).optional().default(50),
-        select_paths: stringArraySchema.optional(),
-        select_domains: stringArraySchema.optional(),
-        exclude_paths: stringArraySchema.optional(),
-        exclude_domains: stringArraySchema.optional(),
-        allow_external: z.boolean().optional().default(false),
-        include_images: z.boolean().optional().default(false),
-        extract_depth: z.enum(["basic", "advanced"]).optional().default("basic"),
-        format: z.enum(["markdown", "text"]).optional().default("markdown"),
-        include_favicon: z.boolean().optional().default(false),
-        timeout: z.number().int().min(10).max(150).optional().default(150),
-        include_usage: z.boolean().optional().default(true),
-      }),
-    },
-    async (input) => {
-      const mapped: TavilyCrawlInput = {
-        url: input.url,
-        instructions: input.instructions,
-        chunksPerSource: input.chunks_per_source,
-        maxDepth: input.max_depth,
-        maxBreadth: input.max_breadth,
-        limit: input.limit,
-        selectPaths: input.select_paths,
-        selectDomains: input.select_domains,
-        excludePaths: input.exclude_paths,
-        excludeDomains: input.exclude_domains,
-        allowExternal: input.allow_external,
-        includeImages: input.include_images,
-        extractDepth: input.extract_depth,
-        format: input.format,
-        includeFavicon: input.include_favicon,
-        timeout: input.timeout,
-        includeUsage: input.include_usage,
-      };
-      const result = await runWithProviderKeys(context, {
-        provider: "tavily",
-        toolName: "tavily_crawl",
-        targetUrl: input.url,
-        input: mapped,
-        inputJson: input,
-        metadata: {
-          async: false,
-          hasInstructions: Boolean(input.instructions),
+  {
+    const tool = server.registerTool(
+      "tavily_crawl",
+      {
+        description: "Synchronously traverse one site with Tavily and return page content in a single call. Use this for content-rich site crawling, not for generic routed fetches.",
+        inputSchema: z.object({
+          url: z.string().url(),
+          instructions: z.string().optional().default(""),
+          chunks_per_source: z.number().int().min(1).max(5).optional(),
+          max_depth: z.number().int().min(1).max(5).optional().default(1),
+          max_breadth: z.number().int().min(1).max(500).optional().default(20),
+          limit: z.number().int().min(1).optional().default(50),
+          select_paths: stringArraySchema.optional(),
+          select_domains: stringArraySchema.optional(),
+          exclude_paths: stringArraySchema.optional(),
+          exclude_domains: stringArraySchema.optional(),
+          allow_external: z.boolean().optional().default(false),
+          include_images: z.boolean().optional().default(false),
+          extract_depth: z.enum(["basic", "advanced"]).optional().default("basic"),
+          format: z.enum(["markdown", "text"]).optional().default("markdown"),
+          include_favicon: z.boolean().optional().default(false),
+          timeout: z.number().int().min(10).max(150).optional().default(150),
+          include_usage: z.boolean().optional().default(true),
+        }),
+      },
+      async (input) => {
+        const mapped: TavilyCrawlInput = {
+          url: input.url,
+          instructions: input.instructions,
+          chunksPerSource: input.chunks_per_source,
+          maxDepth: input.max_depth,
+          maxBreadth: input.max_breadth,
+          limit: input.limit,
+          selectPaths: input.select_paths,
+          selectDomains: input.select_domains,
+          excludePaths: input.exclude_paths,
+          excludeDomains: input.exclude_domains,
+          allowExternal: input.allow_external,
+          includeImages: input.include_images,
+          extractDepth: input.extract_depth,
+          format: input.format,
+          includeFavicon: input.include_favicon,
+          timeout: input.timeout,
           includeUsage: input.include_usage,
-          selectPathsCount: input.select_paths?.length ?? 0,
-          selectDomainsCount: input.select_domains?.length ?? 0,
-        },
-        execute: tavilyCrawl,
-      });
-      return result.ok ? tavilyCrawlResult(result.data) : failureResult("tavily", result.error);
-    },
-  );
+        };
+        const result = await runWithProviderKeys(context, {
+          provider: "tavily",
+          toolName: "tavily_crawl",
+          targetUrl: input.url,
+          input: mapped,
+          inputJson: input,
+          metadata: {
+            async: false,
+            hasInstructions: Boolean(input.instructions),
+            includeUsage: input.include_usage,
+            selectPathsCount: input.select_paths?.length ?? 0,
+            selectDomainsCount: input.select_domains?.length ?? 0,
+          },
+          execute: tavilyCrawl,
+        });
+        return result.ok ? tavilyCrawlResult(result.data) : failureResult("tavily", result.error);
+      },
+    );
+    if (!exposedTools.has("tavily_crawl")) {
+      tool.disable();
+    }
+    registry.set("tavily_crawl", tool);
+  }
 
-  server.registerTool(
-    "firecrawl_crawl",
-    {
-      description: "Submit an asynchronous Firecrawl crawl job.",
+  {
+    const tool = server.registerTool(
+      "firecrawl_crawl",
+      {
+        description: "Submit an asynchronous Firecrawl crawl job for deep site traversal. Call firecrawl_crawl_status until the job reaches a terminal state.",
       inputSchema: z.object({
         url: z.string().url(),
         prompt: z.string().optional().default(""),
@@ -418,8 +718,8 @@ export function registerProviderTools(server: McpServer, context: AppContext): v
         scrape_options: objectSchema.optional(),
         zero_data_retention: z.boolean().optional().default(false),
       }),
-    },
-    async (input) => {
+      },
+      async (input) => {
       const mapped: FirecrawlCrawlInput = {
         url: input.url,
         prompt: input.prompt,
@@ -453,37 +753,55 @@ export function registerProviderTools(server: McpServer, context: AppContext): v
         },
         execute: firecrawlCrawl,
       });
-      return result.ok
-        ? firecrawlSubmitResult("crawl", result.data)
-        : failureResult("firecrawl", result.error);
-    },
-  );
-
-  server.registerTool(
-    "firecrawl_crawl_status",
-    {
-      description: "Get the status of a Firecrawl crawl job.",
-      inputSchema: z.object({ id: z.string() }),
-    },
-    async ({ id }) => {
-      const result = await runWithProviderKeys(context, {
-        provider: "firecrawl",
-        toolName: "firecrawl_crawl_status",
-        targetUrl: null,
-        input: { id },
-        metadata: { async: true, jobId: id },
-        execute: (config, value) => firecrawlCrawlStatus(config, value.id),
+      if (!result.ok) {
+        return failureResult("firecrawl", result.error);
+      }
+      persistFirecrawlJobBinding(context, {
+        toolName: "firecrawl_crawl",
+        requestLogId: result.requestLogId,
+        jobId: result.data.id,
+        keyId: result.keyId,
+        keyFingerprint: result.keyFingerprint,
       });
-      return result.ok
-        ? firecrawlStatusResult("crawl", id, result.data)
-        : failureResult("firecrawl", result.error);
-    },
-  );
+      return firecrawlSubmitResult("crawl", result.data);
+      },
+    );
+    if (!exposedTools.has("firecrawl_crawl")) {
+      tool.disable();
+    }
+    registry.set("firecrawl_crawl", tool);
+  }
 
-  server.registerTool(
-    "firecrawl_batch_scrape",
-    {
-      description: "Submit an asynchronous Firecrawl batch scrape job.",
+  {
+    const tool = server.registerTool(
+      "firecrawl_crawl_status",
+      {
+        description: "Poll the state of a previously submitted Firecrawl crawl job.",
+        inputSchema: z.object({ id: z.string() }),
+      },
+      async ({ id }) => {
+        const result = await runFirecrawlStatusWithBoundKey(context, {
+          toolName: "firecrawl_crawl_status",
+          expectedSubmitToolName: "firecrawl_crawl",
+          jobId: id,
+          execute: (config, value) => firecrawlCrawlStatus(config, value.id),
+        });
+        return result.ok
+          ? firecrawlStatusResult("crawl", id, result.data)
+          : failureResult("firecrawl", result.error);
+      },
+    );
+    if (!exposedTools.has("firecrawl_crawl_status")) {
+      tool.disable();
+    }
+    registry.set("firecrawl_crawl_status", tool);
+  }
+
+  {
+    const tool = server.registerTool(
+      "firecrawl_batch_scrape",
+      {
+        description: "Submit an asynchronous Firecrawl batch scrape job for multiple known URLs. Call firecrawl_batch_scrape_status for final results.",
       inputSchema: z.object({
         urls: urlArraySchema,
         webhook: objectSchema.optional(),
@@ -510,8 +828,8 @@ export function registerProviderTools(server: McpServer, context: AppContext): v
         profile: objectSchema.optional(),
         zero_data_retention: z.boolean().optional().default(false),
       }),
-    },
-    async (input) => {
+      },
+      async (input) => {
       const mapped: FirecrawlBatchScrapeInput = {
         urls: input.urls,
         webhook: input.webhook,
@@ -552,37 +870,55 @@ export function registerProviderTools(server: McpServer, context: AppContext): v
         },
         execute: firecrawlBatchScrape,
       });
-      return result.ok
-        ? firecrawlSubmitResult("batch_scrape", result.data)
-        : failureResult("firecrawl", result.error);
-    },
-  );
-
-  server.registerTool(
-    "firecrawl_batch_scrape_status",
-    {
-      description: "Get the status of a Firecrawl batch scrape job.",
-      inputSchema: z.object({ id: z.string() }),
-    },
-    async ({ id }) => {
-      const result = await runWithProviderKeys(context, {
-        provider: "firecrawl",
-        toolName: "firecrawl_batch_scrape_status",
-        targetUrl: null,
-        input: { id },
-        metadata: { async: true, jobId: id },
-        execute: (config, value) => firecrawlBatchScrapeStatus(config, value.id),
+      if (!result.ok) {
+        return failureResult("firecrawl", result.error);
+      }
+      persistFirecrawlJobBinding(context, {
+        toolName: "firecrawl_batch_scrape",
+        requestLogId: result.requestLogId,
+        jobId: result.data.id,
+        keyId: result.keyId,
+        keyFingerprint: result.keyFingerprint,
       });
-      return result.ok
-        ? firecrawlStatusResult("batch_scrape", id, result.data)
-        : failureResult("firecrawl", result.error);
-    },
-  );
+      return firecrawlSubmitResult("batch_scrape", result.data);
+      },
+    );
+    if (!exposedTools.has("firecrawl_batch_scrape")) {
+      tool.disable();
+    }
+    registry.set("firecrawl_batch_scrape", tool);
+  }
 
-  server.registerTool(
-    "firecrawl_extract",
-    {
-      description: "Submit an asynchronous Firecrawl extract job for structured data extraction.",
+  {
+    const tool = server.registerTool(
+      "firecrawl_batch_scrape_status",
+      {
+        description: "Poll the state of a Firecrawl batch scrape job.",
+        inputSchema: z.object({ id: z.string() }),
+      },
+      async ({ id }) => {
+        const result = await runFirecrawlStatusWithBoundKey(context, {
+          toolName: "firecrawl_batch_scrape_status",
+          expectedSubmitToolName: "firecrawl_batch_scrape",
+          jobId: id,
+          execute: (config, value) => firecrawlBatchScrapeStatus(config, value.id),
+        });
+        return result.ok
+          ? firecrawlStatusResult("batch_scrape", id, result.data)
+          : failureResult("firecrawl", result.error);
+      },
+    );
+    if (!exposedTools.has("firecrawl_batch_scrape_status")) {
+      tool.disable();
+    }
+    registry.set("firecrawl_batch_scrape_status", tool);
+  }
+
+  {
+    const tool = server.registerTool(
+      "firecrawl_extract",
+      {
+        description: "Submit an asynchronous Firecrawl structured extraction job. Use this when the desired output is typed fields or JSON, then poll firecrawl_extract_status.",
       inputSchema: z.object({
         urls: urlArraySchema,
         prompt: z.string().optional().default(""),
@@ -594,8 +930,8 @@ export function registerProviderTools(server: McpServer, context: AppContext): v
         scrape_options: objectSchema.optional(),
         ignore_invalid_urls: z.boolean().optional().default(true),
       }),
-    },
-    async (input) => {
+      },
+      async (input) => {
       const mapped: FirecrawlExtractInput = {
         urls: input.urls,
         prompt: input.prompt,
@@ -622,30 +958,49 @@ export function registerProviderTools(server: McpServer, context: AppContext): v
         },
         execute: firecrawlExtract,
       });
-      return result.ok
-        ? firecrawlSubmitResult("extract", result.data)
-        : failureResult("firecrawl", result.error);
-    },
-  );
-
-  server.registerTool(
-    "firecrawl_extract_status",
-    {
-      description: "Get the status of a Firecrawl extract job.",
-      inputSchema: z.object({ id: z.string() }),
-    },
-    async ({ id }) => {
-      const result = await runWithProviderKeys(context, {
-        provider: "firecrawl",
-        toolName: "firecrawl_extract_status",
-        targetUrl: null,
-        input: { id },
-        metadata: { async: true, jobId: id },
-        execute: (config, value) => firecrawlExtractStatus(config, value.id),
+      if (!result.ok) {
+        return failureResult("firecrawl", result.error);
+      }
+      persistFirecrawlJobBinding(context, {
+        toolName: "firecrawl_extract",
+        requestLogId: result.requestLogId,
+        jobId: result.data.id,
+        keyId: result.keyId,
+        keyFingerprint: result.keyFingerprint,
       });
-      return result.ok
-        ? firecrawlExtractStatusResult(id, result.data)
-        : failureResult("firecrawl", result.error);
-    },
-  );
+      return firecrawlSubmitResult("extract", result.data);
+      },
+    );
+    if (!exposedTools.has("firecrawl_extract")) {
+      tool.disable();
+    }
+    registry.set("firecrawl_extract", tool);
+  }
+
+  {
+    const tool = server.registerTool(
+      "firecrawl_extract_status",
+      {
+        description: "Poll the state of a previously submitted Firecrawl structured extraction job.",
+        inputSchema: z.object({ id: z.string() }),
+      },
+      async ({ id }) => {
+        const result = await runFirecrawlStatusWithBoundKey(context, {
+          toolName: "firecrawl_extract_status",
+          expectedSubmitToolName: "firecrawl_extract",
+          jobId: id,
+          execute: (config, value) => firecrawlExtractStatus(config, value.id),
+        });
+        return result.ok
+          ? firecrawlExtractStatusResult(id, result.data)
+          : failureResult("firecrawl", result.error);
+      },
+    );
+    if (!exposedTools.has("firecrawl_extract_status")) {
+      tool.disable();
+    }
+    registry.set("firecrawl_extract_status", tool);
+  }
+
+  return registry;
 }

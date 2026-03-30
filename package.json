@@ -6,7 +6,7 @@
   "license": "MIT",
   "scripts": {
     "dev": "concurrently -k \"npm:dev:server\" \"npm:dev:web\"",
-    "dev:server": "tsx watch src/server/main.ts",
+    "dev:server": "APP_HOST=127.0.0.1 APP_PORT=8097 tsx watch src/server/main.ts",
     "dev:web": "vite",
     "build": "npm run build:web && npm run build:server",
     "build:web": "vite build",

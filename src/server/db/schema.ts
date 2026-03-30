@@ -82,6 +82,19 @@ CREATE TABLE IF NOT EXISTS request_attempt_logs (
   FOREIGN KEY(request_log_id) REFERENCES request_logs(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS provider_async_jobs (
+  id TEXT PRIMARY KEY,
+  provider TEXT NOT NULL,
+  tool_name TEXT NOT NULL,
+  upstream_job_id TEXT NOT NULL,
+  provider_key_id TEXT NOT NULL,
+  provider_key_fingerprint TEXT NOT NULL,
+  request_log_id TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  UNIQUE(provider, upstream_job_id)
+);
+
 CREATE TABLE IF NOT EXISTS search_sessions (
   id TEXT PRIMARY KEY,
   content TEXT NOT NULL,
@@ -120,6 +133,15 @@ CREATE INDEX IF NOT EXISTS idx_request_attempt_logs_created_at
 
 CREATE INDEX IF NOT EXISTS idx_request_attempt_logs_request_log_id_attempt_no_created_at
   ON request_attempt_logs(request_log_id, attempt_no, created_at);
+
+CREATE INDEX IF NOT EXISTS idx_provider_async_jobs_provider_upstream_job_id
+  ON provider_async_jobs(provider, upstream_job_id);
+
+CREATE INDEX IF NOT EXISTS idx_provider_async_jobs_provider_key_id
+  ON provider_async_jobs(provider_key_id);
+
+CREATE INDEX IF NOT EXISTS idx_provider_async_jobs_updated_at
+  ON provider_async_jobs(updated_at);
 
 CREATE INDEX IF NOT EXISTS idx_provider_keys_provider_enabled_created_at
   ON provider_keys(provider, enabled, created_at);

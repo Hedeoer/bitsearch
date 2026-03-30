@@ -4,6 +4,7 @@ import type {
   ProviderConfigRecord,
   ProviderKeyRecord,
   SystemSettings,
+  ToolSurfaceSnapshot,
 } from "@shared/contracts";
 
 export type SessionState = {
@@ -32,5 +33,6 @@ export type AppDataBundle = {
   providers: ProviderConfigRecord[];
   keys: ProviderKeyRecord[];
   system: SystemSettings;
+  toolSurface: ToolSurfaceSnapshot;
   activity: ActivityPageResult | null;
 };

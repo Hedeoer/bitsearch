@@ -1,10 +1,15 @@
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import {
+  McpServer,
+  type RegisteredTool,
+} from "@modelcontextprotocol/sdk/server/mcp.js";
 import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import { nanoid } from "nanoid";
 import {
+  type GenericRoutingSnapshot,
   REMOTE_PROVIDERS,
   SEARCH_ENGINE_PROVIDER,
+  type ToolSurfaceSnapshot,
 } from "../../shared/contracts.js";
 import type { AppContext } from "../app-context.js";
 import {
@@ -41,7 +46,17 @@ import { processPlanningPhase } from "../services/planning-engine.js";
 import {
   requireSearchEngineConfig,
 } from "../services/search-engine-service.js";
+import {
+  getCurrentGenericRoutingSnapshot,
+  getToolSurfaceSnapshot,
+  shouldExposeTool,
+} from "../services/tool-surface-service.js";
 import { registerProviderTools } from "./provider-tools.js";
+
+export interface McpRuntime {
+  server: McpServer;
+  syncToolSurface(nextToolSurface: ToolSurfaceSnapshot): void;
+}
 
 function toJsonText(value: unknown): string {
   return JSON.stringify(value, null, 2);
@@ -56,6 +71,7 @@ function toolJsonResult(value: Record<string, unknown>) {
 
 function logSearchRequest(
   context: AppContext,
+  routing: GenericRoutingSnapshot,
   payload: {
     toolName: string;
     targetUrl?: string | null;
@@ -68,7 +84,6 @@ function logSearchRequest(
     metadata?: Record<string, unknown>;
   },
 ): void {
-  const settings = getSystemSettings(context.db);
   insertRequestLog(context.db, {
     id: nanoid(),
     toolName: payload.toolName,
@@ -83,17 +98,26 @@ function logSearchRequest(
     inputJson: payload.inputJson ?? null,
     resultPreview: payload.resultPreview ?? null,
     messages: payload.messages ?? null,
-    providerOrder: settings.providerPriority,
-    metadata: payload.metadata ?? {},
+    providerOrder: routing.effectiveProviderOrder,
+    metadata: {
+      genericRoutingMode: routing.mode,
+      requestedProviderOrder: routing.requestedProviderOrder,
+      effectiveProviderOrder: routing.effectiveProviderOrder,
+      ...(payload.metadata ?? {}),
+    },
   });
 }
 
-async function getExtraSources(context: AppContext, query: string, count: number) {
+async function getExtraSources(
+  context: AppContext,
+  routing: GenericRoutingSnapshot,
+  query: string,
+  count: number,
+) {
   if (count <= 0) {
     return [];
   }
-  const settings = getSystemSettings(context.db);
-  const providers = settings.providerPriority;
+  const providers = routing.effectiveProviderOrder;
   const results: Array<Record<string, unknown>> = [];
 
   for (const provider of providers) {
@@ -145,9 +169,14 @@ async function getExtraSources(context: AppContext, query: string, count: number
   return results.slice(0, count);
 }
 
-async function buildWebFetchResult(context: AppContext, url: string) {
+async function buildWebFetchResult(
+  context: AppContext,
+  url: string,
+) {
+  const routing = getCurrentGenericRoutingSnapshot(context);
   const result = await runWithKeyPool(
     context,
+    routing,
     "web_fetch",
     url,
     { url },
@@ -184,8 +213,10 @@ async function buildWebMapResult(
     timeout: number;
   },
 ) {
+  const routing = getCurrentGenericRoutingSnapshot(context);
   const result = await runWithKeyPool(
     context,
+    routing,
     "web_map",
     input.url,
     input,
@@ -210,11 +241,13 @@ async function buildWebMapResult(
   return result.ok ? result.data ?? "" : `映射失败: ${result.error}`;
 }
 
-export function createMcpServer(context: AppContext): McpServer {
+export function createMcpRuntime(context: AppContext): McpRuntime {
+  const toolSurface = getToolSurfaceSnapshot(context);
   const server = new McpServer({
     name: "bitsearch",
     version: "0.1.0",
   });
+  const conditionalTools = new Map<string, RegisteredTool>();
 
   server.registerTool(
     "web_search",
@@ -230,6 +263,7 @@ export function createMcpServer(context: AppContext): McpServer {
     async ({ query, platform = "", model = "", extra_sources = 0 }) => {
       const startedAt = Date.now();
       const sessionId = Math.random().toString(16).slice(2, 14);
+      const routing = getCurrentGenericRoutingSnapshot(context);
       try {
         const searchEngineConfig = requireSearchEngineConfig(context, model);
         if (model) {
@@ -241,7 +275,7 @@ export function createMcpServer(context: AppContext): McpServer {
               sources_count: 0,
             };
             saveSearchSession(context.db, sessionId, invalidResult.content, []);
-            logSearchRequest(context, {
+            logSearchRequest(context, routing, {
               toolName: "web_search",
               status: "failed",
               startedAt,
@@ -255,12 +289,12 @@ export function createMcpServer(context: AppContext): McpServer {
         const messages = buildSearchMessages(query, platform);
         const [answerText, extraSources] = await Promise.all([
           searchWithSearchEngine(searchEngineConfig, messages),
-          getExtraSources(context, query, extra_sources),
+          getExtraSources(context, routing, query, extra_sources),
         ]);
         const { answer, sources } = splitAnswerAndSources(answerText);
         const mergedSources = mergeSources(sources, extraSources);
         saveSearchSession(context.db, sessionId, answer, mergedSources);
-        logSearchRequest(context, {
+        logSearchRequest(context, routing, {
           toolName: "web_search",
           status: "success",
           startedAt,
@@ -280,7 +314,7 @@ export function createMcpServer(context: AppContext): McpServer {
       } catch (error) {
         const message = error instanceof Error ? error.message : "未知错误";
         saveSearchSession(context.db, sessionId, message, []);
-        logSearchRequest(context, {
+        logSearchRequest(context, routing, {
           toolName: "web_search",
           status: "failed",
           startedAt,
@@ -323,57 +357,72 @@ export function createMcpServer(context: AppContext): McpServer {
     },
   );
 
-  server.registerTool(
-    "web_fetch",
-    {
-      description: "Fetches and extracts complete content from a URL, returning it as Markdown.",
-      inputSchema: z.object({
-        url: z.string().url(),
+  {
+    const tool = server.registerTool(
+      "web_fetch",
+      {
+        description: "Fetch one known page and return extracted Markdown content. This tool follows generic routing and is not intended for structured extraction or deep crawling.",
+        inputSchema: z.object({
+          url: z.string().url(),
+        }),
+      },
+      async ({ url }) => ({
+        content: [{ type: "text" as const, text: await buildWebFetchResult(context, url) }],
       }),
-    },
-    async ({ url }) => ({
-      content: [{ type: "text" as const, text: await buildWebFetchResult(context, url) }],
-    }),
-  );
+    );
+    if (!shouldExposeTool(toolSurface, "web_fetch")) {
+      tool.disable();
+    }
+    conditionalTools.set("web_fetch", tool);
+  }
 
-  server.registerTool(
-    "web_map",
-    {
-      description: "Maps a website's structure and returns discovered URLs.",
-      inputSchema: z.object({
-        url: z.string().url(),
-        instructions: z.string().optional().default(""),
-        max_depth: z.number().int().min(1).max(5).optional().default(1),
-        max_breadth: z.number().int().min(1).max(500).optional().default(20),
-        limit: z.number().int().min(1).max(500).optional().default(50),
-        timeout: z.number().int().min(10).max(150).optional().default(150),
+  {
+    const tool = server.registerTool(
+      "web_map",
+      {
+        description: "Discover URLs on one website and return its structure. This tool follows generic routing and does not return full page content.",
+        inputSchema: z.object({
+          url: z.string().url(),
+          instructions: z.string().optional().default(""),
+          max_depth: z.number().int().min(1).max(5).optional().default(1),
+          max_breadth: z.number().int().min(1).max(500).optional().default(20),
+          limit: z.number().int().min(1).max(500).optional().default(50),
+          timeout: z.number().int().min(10).max(150).optional().default(150),
+        }),
+      },
+      async ({
+        url,
+        instructions = "",
+        max_depth = 1,
+        max_breadth = 20,
+        limit = 50,
+        timeout = 150,
+      }) => ({
+        content: [
+          {
+            type: "text" as const,
+            text: await buildWebMapResult(context, {
+              url,
+              instructions,
+              maxDepth: max_depth,
+              maxBreadth: max_breadth,
+              limit,
+              timeout,
+            }),
+          },
+        ],
       }),
-    },
-    async ({
-      url,
-      instructions = "",
-      max_depth = 1,
-      max_breadth = 20,
-      limit = 50,
-      timeout = 150,
-    }) => ({
-      content: [
-        {
-          type: "text" as const,
-          text: await buildWebMapResult(context, {
-            url,
-            instructions,
-            maxDepth: max_depth,
-            maxBreadth: max_breadth,
-            limit,
-            timeout,
-          }),
-        },
-      ],
-    }),
-  );
+    );
+    if (!shouldExposeTool(toolSurface, "web_map")) {
+      tool.disable();
+    }
+    conditionalTools.set("web_map", tool);
+  }
 
-  registerProviderTools(server, context);
+  const providerTools = registerProviderTools(server, context, toolSurface);
+  for (const [toolName, tool] of providerTools.entries()) {
+    conditionalTools.set(toolName, tool);
+  }
 
   server.registerTool(
     "get_config_info",
@@ -382,6 +431,7 @@ export function createMcpServer(context: AppContext): McpServer {
       inputSchema: z.object({}),
     },
     async () => {
+      const liveToolSurface = getToolSurfaceSnapshot(context);
       const providerConfigs = REMOTE_PROVIDERS.map((provider) =>
         getProviderConfig(context.db, provider),
       );
@@ -411,6 +461,18 @@ export function createMcpServer(context: AppContext): McpServer {
             type: "text" as const,
             text: toJsonText({
               settings,
+              generic_routing: liveToolSurface.genericRouting,
+              provider_capabilities: liveToolSurface.providerCapabilities,
+              tool_surface: {
+                generic_tools: liveToolSurface.genericTools,
+                provider_tools: liveToolSurface.providerTools,
+                exposed_tools: liveToolSurface.exposedTools,
+                hidden_tools: liveToolSurface.hiddenTools,
+                requires_reconnect: liveToolSurface.requiresReconnect,
+                behavior_changes_apply_immediately: liveToolSurface.behaviorChangesApplyImmediately,
+                last_refreshed_at: liveToolSurface.lastRefreshedAt,
+              },
+              tool_surface_notes: liveToolSurface.clientGuidance.systemBehavior,
               providers: providerConfigs,
               key_pool_status: providerConfigs
                 .filter((item) => item?.provider !== SEARCH_ENGINE_PROVIDER)
@@ -701,7 +763,23 @@ export function createMcpServer(context: AppContext): McpServer {
       ),
   );
 
-  return server;
+  return {
+    server,
+    syncToolSurface(nextToolSurface) {
+      const exposedTools = new Set(nextToolSurface.exposedTools);
+      for (const [toolName, tool] of conditionalTools.entries()) {
+        if (exposedTools.has(toolName)) {
+          tool.enable();
+        } else {
+          tool.disable();
+        }
+      }
+    },
+  };
+}
+
+export function createMcpServer(context: AppContext): McpServer {
+  return createMcpRuntime(context).server;
 }
 
 export { isInitializeRequest };

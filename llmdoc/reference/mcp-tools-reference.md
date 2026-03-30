@@ -60,7 +60,7 @@ Maps website structure, returns discovered URLs. Routes through key pool to Tavi
 
 ## 4. Provider-Specific Advanced Retrieval Tools
 
-These tools bypass `fetchMode` and always use their named provider.
+These tools bypass generic retrieval routing and always use their named provider.
 
 ### `tavily_crawl`
 Synchronously traverses a site and returns extracted page content from Tavily.

@@ -157,8 +157,8 @@ function seedSystemSettings(
   mcpBearerToken: string,
 ): void {
   const defaults = [
-    ["fetch_mode", JSON.stringify("auto_ordered")],
-    ["provider_priority", JSON.stringify(["tavily", "firecrawl"])],
+    ["generic_routing_mode", JSON.stringify("ordered_failover")],
+    ["generic_provider_order", JSON.stringify(["tavily", "firecrawl"])],
     ["default_search_model", JSON.stringify("grok-4-fast")],
     ["log_retention_days", JSON.stringify(7)],
     ["allowed_origins", JSON.stringify([])],

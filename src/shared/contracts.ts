@@ -1,11 +1,23 @@
+export {
+  GENERIC_LAYER_TOOLS,
+  GENERIC_ROUTING_MODES,
+  PROVIDER_LAYER_TOOLS,
+  TOOL_HIDDEN_REASONS,
+} from "./tool-surface.js";
+export type {
+  ClientGuidance,
+  GenericRoutingMode,
+  GenericRoutingSnapshot,
+  HiddenToolRecord,
+  ProviderCapabilitySnapshot,
+  SystemSettings,
+  ToolHiddenReason,
+  ToolSurfaceSnapshot,
+} from "./tool-surface.js";
+
 export const SEARCH_ENGINE_PROVIDER = "search_engine";
 export const REMOTE_PROVIDERS = [SEARCH_ENGINE_PROVIDER, "tavily", "firecrawl"] as const;
 export const KEY_POOL_PROVIDERS = ["tavily", "firecrawl"] as const;
-export const FETCH_MODES = [
-  "strict_firecrawl",
-  "strict_tavily",
-  "auto_ordered",
-] as const;
 export const REQUEST_STATUSES = ["success", "failed"] as const;
 export const KEY_HEALTH_STATUSES = ["unknown", "healthy", "unhealthy"] as const;
 export const KEY_LIST_STATUSES = [
@@ -19,7 +31,6 @@ export const KEY_LIST_STATUSES = [
 export type RemoteProvider = (typeof REMOTE_PROVIDERS)[number];
 export type SearchEngineProvider = typeof SEARCH_ENGINE_PROVIDER;
 export type KeyPoolProvider = (typeof KEY_POOL_PROVIDERS)[number];
-export type FetchMode = (typeof FETCH_MODES)[number];
 export type RequestStatus = (typeof REQUEST_STATUSES)[number];
 export type KeyHealthStatus = (typeof KEY_HEALTH_STATUSES)[number];
 export type KeyListStatus = (typeof KEY_LIST_STATUSES)[number];
@@ -204,14 +215,6 @@ export interface DashboardSummary {
   trend24h: DashboardTrendPoint[];
   providerErrors24h: ProviderErrorCount[];
   latestErrors: RequestLogRecord[];
-}
-
-export interface SystemSettings {
-  fetchMode: FetchMode;
-  providerPriority: KeyPoolProvider[];
-  defaultSearchModel: string;
-  logRetentionDays: number;
-  allowedOrigins: string[];
 }
 
 export interface SearchEngineModelsResponse {

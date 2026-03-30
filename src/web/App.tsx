@@ -6,6 +6,7 @@ import {
   type McpAccessInfo,
   type SearchEngineModelsResponse,
   type SystemSettings,
+  type ToolSurfaceSnapshot,
 } from "@shared/contracts";
 import { apiRequest, type ApiResult } from "./api";
 import { LoginView } from "./LoginView";
@@ -25,8 +26,8 @@ import { dismissToast, enqueueToast, useToastStore } from "./toast-store";
 const AUTO_REFRESH_INTERVAL_MS = 30_000;
 
 const EMPTY_SYSTEM: SystemSettings = {
-  fetchMode: "auto_ordered",
-  providerPriority: ["tavily", "firecrawl"],
+  genericRoutingMode: "ordered_failover",
+  genericProviderOrder: ["tavily", "firecrawl"],
   defaultSearchModel: "grok-4-fast",
   logRetentionDays: 7,
   allowedOrigins: [],
@@ -36,6 +37,27 @@ const EMPTY_MCP_ACCESS: McpAccessInfo = {
   authScheme: "Bearer",
   hasBearerToken: false,
   tokenPreview: null,
+};
+const EMPTY_TOOL_SURFACE: ToolSurfaceSnapshot = {
+  genericRouting: {
+    mode: "ordered_failover",
+    requestedProviderOrder: ["tavily", "firecrawl"],
+    effectiveProviderOrder: [],
+    affectedTools: ["web_fetch", "web_map", "web_search.extra_sources"],
+    unaffectedTools: [],
+  },
+  providerCapabilities: [],
+  genericTools: ["web_search", "get_sources"],
+  providerTools: [],
+  exposedTools: ["web_search", "get_sources"],
+  hiddenTools: [],
+  requiresReconnect: true,
+  behaviorChangesApplyImmediately: true,
+  lastRefreshedAt: "",
+  clientGuidance: {
+    systemBehavior: [],
+    recommendedPrompt: "",
+  },
 };
 const EMPTY_ADMIN_ACCESS: AdminAccessInfo = {
   hasAuthKey: false,
@@ -69,6 +91,7 @@ export function App() {
   const [providers, setProviders] = useState<AppDataBundle["providers"]>([]);
   const [providerDrafts, setProviderDrafts] = useState<ProviderDrafts>({});
   const [system, setSystem] = useState<SystemSettings>(EMPTY_SYSTEM);
+  const [toolSurface, setToolSurface] = useState<ToolSurfaceSnapshot>(EMPTY_TOOL_SURFACE);
   const [adminAccess, setAdminAccess] = useState<AdminAccessInfo>(EMPTY_ADMIN_ACCESS);
   const [mcpAccess, setMcpAccess] = useState<McpAccessInfo>(EMPTY_MCP_ACCESS);
   const [activity, setActivity] = useState<AppDataBundle["activity"]>(null);
@@ -104,10 +127,11 @@ export function App() {
 
   async function refreshAll() {
     await withRefresh(async () => {
-      const [dashRes, provRes, sysRes, adminRes, mcpRes] = await Promise.all([
+      const [dashRes, provRes, sysRes, toolSurfaceRes, adminRes, mcpRes] = await Promise.all([
         apiRequest<AppDataBundle["dashboard"]>("GET", "/admin/dashboard"),
         apiRequest<AppDataBundle["providers"]>("GET", "/admin/providers"),
         apiRequest<SystemSettings>("GET", "/admin/system"),
+        apiRequest<ToolSurfaceSnapshot>("GET", "/admin/tool-surface"),
         apiRequest<AdminAccessInfo>("GET", "/admin/admin-access"),
         apiRequest<McpAccessInfo>("GET", "/admin/mcp-access"),
       ]);
@@ -118,6 +142,7 @@ export function App() {
         setProviderDrafts(createProviderDrafts(provRes.data, nextSystem));
       }
       if (sysRes.ok) setSystem(sysRes.data);
+      if (toolSurfaceRes.ok) setToolSurface(toolSurfaceRes.data);
       if (adminRes.ok) setAdminAccess(adminRes.data);
       if (mcpRes.ok) setMcpAccess(mcpRes.data);
       setWorkspaceRefreshNonce((current) => current + 1);
@@ -181,6 +206,7 @@ export function App() {
     setDashboard(null);
     setProviders([]);
     setProviderDrafts({});
+    setToolSurface(EMPTY_TOOL_SURFACE);
     setAdminAccess(EMPTY_ADMIN_ACCESS);
     setMcpAccess(EMPTY_MCP_ACCESS);
     setActivity(null);
@@ -299,12 +325,13 @@ export function App() {
               loading={isRefreshing}
               adminAccess={adminAccess}
               onSaveAdminAccess={saveAdminAccess}
-              mcpAccess={mcpAccess}
-              onSaveMcpAccess={saveMcpAccess}
-              onSaveSystem={() => void saveSystem()}
-              onToast={(type, message) => enqueueToast(type, message)}
-              setSystem={setSystem}
+                mcpAccess={mcpAccess}
+                onSaveMcpAccess={saveMcpAccess}
+                onSaveSystem={() => void saveSystem()}
+                onToast={(type, message) => enqueueToast(type, message)}
+                setSystem={setSystem}
                 system={system}
+                toolSurface={toolSurface}
                 providers={providers}
               />
             }

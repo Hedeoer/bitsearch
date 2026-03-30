@@ -1,6 +1,6 @@
 # How to Configure Search Providers
 
-Step-by-step instructions for setting up `search_engine`, Tavily, and Firecrawl providers, configuring routing strategy, and managing API keys.
+Step-by-step instructions for setting up `search_engine`, Tavily, and Firecrawl providers, configuring generic retrieval routing, and managing API keys.
 
 ## Prerequisites
 
@@ -28,19 +28,18 @@ For each provider (`search_engine`, `tavily`, `firecrawl`), set:
 - Each key gets: name, provider tag, encrypted secret, enabled flag, and optional tags for grouping.
 - Keys are stored in the `provider_keys` table and rotated using LRU strategy via `getCandidateKeys()`.
 
-## 3. Set Routing Strategy
+## 3. Set Generic Retrieval Routing
 
-Configure via `system_settings` table (key: `fetch_mode`), managed by `src/server/repos/settings-repo.ts` (`saveSystemSettings`).
+Configure via `system_settings` table, managed by `src/server/repos/settings-repo.ts` (`saveSystemSettings`).
 
-Three modes available (defined in `src/shared/contracts.ts` as `FETCH_MODES`):
+Two modes are available:
 
 | Mode | Behavior |
 |------|----------|
-| `strict_tavily` | Only use Tavily. Fails if Tavily unavailable. |
-| `strict_firecrawl` | Only use Firecrawl. Fails if Firecrawl unavailable. |
-| `auto_ordered` | Try providers in `providerPriority` order (default: `["tavily", "firecrawl"]`). Failover to next provider on exhaustion. |
+| `single_provider` | Use exactly one provider for `web_fetch`, `web_map`, and `web_search` extra sources. |
+| `ordered_failover` | Try the primary provider first, then the fallback provider when the first one is unusable or fails with retryable errors. |
 
-To change provider priority order in `auto_ordered` mode, update the `provider_priority` setting (key: `provider_priority`). This is a JSON array of `KeyPoolProvider` values.
+The provider order is stored in `generic_provider_order`, and the mode is stored in `generic_routing_mode`.
 
 ## 4. Configure Search Model
 
@@ -62,5 +61,5 @@ The admin console can probe models from `/admin/providers/search_engine/models`,
 | "No enabled provider or usable key" | All providers disabled or no keys imported | Enable at least one provider and import keys |
 | All attempts show `rate_limit` errors | Key pool exhausted across all keys | Add more API keys or reduce request volume |
 | search_engine returns "未完整配置" error | Missing baseUrl or API key for search_engine | Set both via `saveProviderConfig()` |
-| Requests always use same provider | `fetchMode` set to strict mode | Switch to `auto_ordered` for failover |
+| Requests always use same provider | `genericRoutingMode` set to `single_provider` | Switch to `ordered_failover` if you want failover |
 | Keys not rotating evenly | Key `last_used_at` not updating | Verify `markKeyUsage()` is called (check `fetch-router.ts:125,161`) |

@@ -6,6 +6,7 @@ import type {
   McpAccessInfo,
   ProviderConfigRecord,
   SystemSettings,
+  ToolSurfaceSnapshot,
 } from "@shared/contracts";
 import { formatDateTime } from "../format";
 import { OverviewPulsePanel } from "../components/OverviewPulsePanel";
@@ -24,6 +25,7 @@ type OverviewWorkspaceProps = Readonly<{
   onToast: (type: ToastTone, message: string) => void;
   setSystem: Dispatch<SetStateAction<SystemSettings>>;
   system: SystemSettings;
+  toolSurface: ToolSurfaceSnapshot;
   providers: ProviderConfigRecord[];
 }>;
 
@@ -107,6 +109,7 @@ export function OverviewWorkspace(props: OverviewWorkspaceProps) {
           onToast={props.onToast}
           setSystem={props.setSystem}
           onSave={props.onSaveSystem}
+          toolSurface={props.toolSurface}
         />
       </div>
       <RequestTrendPanel

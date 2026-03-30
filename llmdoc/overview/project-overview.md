@@ -31,7 +31,7 @@ BitSearch is a split frontend/backend TypeScript monorepo. The **server** layer 
 
 ## 5. Key Capabilities
 
-- **Multi-provider search routing:** `search_engine` for AI-powered search; Tavily and Firecrawl for extraction, mapping, and supplemental search. Three fetch modes: `strict_tavily`, `strict_firecrawl`, `auto_ordered`.
+- **Two-layer retrieval model:** `search_engine` for AI-powered search; Tavily and Firecrawl for generic retrieval routing plus provider-native advanced tools. Generic routing uses `single_provider` or `ordered_failover`.
 - **API key pool management:** Bulk import, LRU rotation, health monitoring, quota synchronization, and per-key telemetry for Tavily and Firecrawl.
 - **Query planning engine:** Six-phase workflow (intent, complexity, sub-queries, search terms, tool mapping, execution order) with complexity-based phase gating.
 - **Activity tracking:** Two-level logging (request + attempt) with provider failover visibility, dashboard metrics, and configurable retention.

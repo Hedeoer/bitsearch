@@ -1,5 +1,5 @@
 import { nanoid } from "nanoid";
-import type { FetchMode, KeyPoolProvider } from "../../shared/contracts.js";
+import type { GenericRoutingSnapshot, KeyPoolProvider } from "../../shared/contracts.js";
 import type { AppContext } from "../app-context.js";
 import {
   insertAttemptLogs,
@@ -10,7 +10,6 @@ import {
   getProviderConfig,
   markKeyUsage,
 } from "../repos/provider-repo.js";
-import { getSystemSettings } from "../repos/settings-repo.js";
 import { HttpRequestError } from "../lib/http.js";
 
 type FetchExecutor<TInput, TResult> = (
@@ -56,16 +55,6 @@ function classifyErrorType(error: unknown): string {
   return "network_error";
 }
 
-function resolveProviders(mode: FetchMode, priority: KeyPoolProvider[]): KeyPoolProvider[] {
-  if (mode === "strict_firecrawl") {
-    return ["firecrawl"];
-  }
-  if (mode === "strict_tavily") {
-    return ["tavily"];
-  }
-  return priority;
-}
-
 function isFailoverError(error: unknown): { retryable: boolean; statusCode: number | null; message: string } {
   if (error instanceof HttpRequestError) {
     const retryable =
@@ -85,15 +74,14 @@ function isFailoverError(error: unknown): { retryable: boolean; statusCode: numb
 
 export async function runWithKeyPool<TInput, TResult>(
   context: AppContext,
+  routing: GenericRoutingSnapshot,
   toolName: string,
   targetUrl: string,
   input: TInput,
   executor: FetchExecutor<TInput, TResult>,
 ): Promise<RouterResult<TResult>> {
-  const settings = getSystemSettings(context.db);
   const requestId = nanoid();
   const startedAt = Date.now();
-  const providerOrder = resolveProviders(settings.fetchMode, settings.providerPriority);
   const attemptLogs: Array<{
     requestLogId: string;
     provider: KeyPoolProvider;
@@ -107,7 +95,7 @@ export async function runWithKeyPool<TInput, TResult>(
     providerBaseUrl: string | null;
   }> = [];
 
-  const providers = providerOrder;
+  const providers = routing.effectiveProviderOrder;
   let attemptNo = 0;
 
   for (const provider of providers) {
@@ -139,7 +127,7 @@ export async function runWithKeyPool<TInput, TResult>(
           id: requestId,
           toolName,
           targetUrl,
-          strategy: settings.fetchMode,
+          strategy: routing.mode,
           finalProvider: provider,
           finalKeyFingerprint: key.fingerprint,
           attempts: attemptNo,
@@ -149,9 +137,11 @@ export async function runWithKeyPool<TInput, TResult>(
           inputJson: input as Record<string, unknown>,
           resultPreview: previewResult(result),
           messages: null,
-          providerOrder,
+          providerOrder: routing.effectiveProviderOrder,
           metadata: {
-            fetchMode: settings.fetchMode,
+            genericRoutingMode: routing.mode,
+            requestedProviderOrder: routing.requestedProviderOrder,
+            effectiveProviderOrder: routing.effectiveProviderOrder,
           },
         });
         insertAttemptLogs(context.db, attemptLogs);
@@ -185,7 +175,7 @@ export async function runWithKeyPool<TInput, TResult>(
     id: requestId,
     toolName,
     targetUrl,
-    strategy: settings.fetchMode,
+    strategy: routing.mode,
     finalProvider: null,
     finalKeyFingerprint: null,
     attempts: attemptNo,
@@ -195,9 +185,11 @@ export async function runWithKeyPool<TInput, TResult>(
     inputJson: input as Record<string, unknown>,
     resultPreview: null,
     messages: null,
-    providerOrder,
+    providerOrder: routing.effectiveProviderOrder,
     metadata: {
-      fetchMode: settings.fetchMode,
+      genericRoutingMode: routing.mode,
+      requestedProviderOrder: routing.requestedProviderOrder,
+      effectiveProviderOrder: routing.effectiveProviderOrder,
     },
   });
   insertAttemptLogs(context.db, attemptLogs);

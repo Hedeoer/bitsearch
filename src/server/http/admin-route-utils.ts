@@ -1,16 +1,17 @@
 import { z } from "zod";
 import {
-  FETCH_MODES,
+  GENERIC_ROUTING_MODES,
   KEY_LIST_STATUSES,
   KEY_POOL_PROVIDERS,
   REMOTE_PROVIDERS,
-  type UpdateAdminAccessPayload,
-  type UpdateMcpAccessPayload,
   type KeyListStatus,
   type KeyPoolProvider,
   type RemoteProvider,
   type SystemSettings,
+  type UpdateAdminAccessPayload,
+  type UpdateMcpAccessPayload,
 } from "../../shared/contracts.js";
+import { normalizeGenericProviderOrder } from "../lib/generic-routing.js";
 import { AppHttpError } from "../lib/http.js";
 import { isLocalHostname, normalizeOrigin } from "./origin-utils.js";
 
@@ -27,7 +28,7 @@ const SPREADSHEET_FORMULA_PREFIX = /^[=+\-@]/;
 
 const keyListStatusSchema = z.enum(KEY_LIST_STATUSES);
 const keyPoolProviderSchema = z.enum(KEY_POOL_PROVIDERS);
-const providerPrioritySchema = z
+const genericProviderOrderSchema = z
   .array(keyPoolProviderSchema)
   .min(1)
   .max(KEY_POOL_PROVIDERS.length)
@@ -43,13 +44,24 @@ const providerConfigSchema = z.object({
   apiKey: z.string().optional(),
 });
 
-const systemSettingsSchema = z.object({
-  fetchMode: z.enum(FETCH_MODES),
-  providerPriority: providerPrioritySchema,
-  defaultSearchModel: z.string().trim().min(1).max(MAX_MODEL_NAME_LENGTH),
-  logRetentionDays: z.coerce.number().int().min(1).max(MAX_RETENTION_DAYS),
-  allowedOrigins: z.array(z.string().trim().min(1)).max(MAX_ALLOWED_ORIGINS),
-});
+const systemSettingsSchema = z
+  .object({
+    genericRoutingMode: z.enum(GENERIC_ROUTING_MODES),
+    genericProviderOrder: genericProviderOrderSchema,
+    defaultSearchModel: z.string().trim().min(1).max(MAX_MODEL_NAME_LENGTH),
+    logRetentionDays: z.coerce.number().int().min(1).max(MAX_RETENTION_DAYS),
+    allowedOrigins: z.array(z.string().trim().min(1)).max(MAX_ALLOWED_ORIGINS),
+  })
+  .superRefine((value, context) => {
+    const expectedLength = value.genericRoutingMode === "single_provider" ? 1 : KEY_POOL_PROVIDERS.length;
+    if (value.genericProviderOrder.length !== expectedLength) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "invalid_generic_provider_order_length",
+        path: ["genericProviderOrder"],
+      });
+    }
+  });
 const adminAccessSchema = z.object({
   authKey: z.string().trim().min(1).max(MAX_ADMIN_AUTH_KEY_LENGTH),
 });
@@ -204,6 +216,10 @@ export function parseSystemSettingsPayload(
 
   return {
     ...parsed,
+    genericProviderOrder: normalizeGenericProviderOrder(
+      parsed.genericRoutingMode,
+      parsed.genericProviderOrder,
+    ),
     allowedOrigins,
   };
 }

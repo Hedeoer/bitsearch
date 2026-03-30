@@ -1,13 +1,17 @@
 import type { Request, Response } from "express";
 import { randomUUID } from "node:crypto";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { AppContext } from "../app-context.js";
-import { createMcpServer, isInitializeRequest } from "./register-tools.js";
+import { createMcpRuntime, isInitializeRequest } from "./register-tools.js";
+import { getToolSurfaceSnapshot } from "../services/tool-surface-service.js";
 
 const MCP_SESSION_TTL_MS = 30 * 60 * 1000;
 const MCP_SESSION_SWEEP_INTERVAL_MS = 5 * 60 * 1000;
 
 interface TransportSession {
+  server: McpServer;
+  syncToolSurface: (nextToolSurface: ReturnType<typeof getToolSurfaceSnapshot>) => void;
   transport: StreamableHTTPServerTransport;
   lastSeenAt: number;
 }
@@ -49,10 +53,17 @@ function getExistingTransport(sessionId: string | undefined) {
 }
 
 async function createTransport(context: AppContext) {
+  let server: McpServer;
+  let syncToolSurface: TransportSession["syncToolSurface"] = () => {};
   const transport = new StreamableHTTPServerTransport({
     sessionIdGenerator: () => randomUUID(),
     onsessioninitialized: (sessionId) => {
-      transports.set(sessionId, { transport, lastSeenAt: Date.now() });
+      transports.set(sessionId, {
+        server,
+        syncToolSurface,
+        transport,
+        lastSeenAt: Date.now(),
+      });
     },
   });
   transport.onclose = () => {
@@ -61,9 +72,23 @@ async function createTransport(context: AppContext) {
       transports.delete(sessionId);
     }
   };
-  const server = createMcpServer(context);
+  const runtime = createMcpRuntime(context);
+  server = runtime.server;
+  syncToolSurface = runtime.syncToolSurface;
   await server.connect(transport);
   return transport;
+}
+
+export function broadcastToolListChanged(context: AppContext): void {
+  const latestToolSurface = getToolSurfaceSnapshot(context);
+  for (const [sessionId, session] of transports.entries()) {
+    try {
+      session.syncToolSurface(latestToolSurface);
+      session.server.sendToolListChanged();
+    } catch (error) {
+      console.error(`Failed to broadcast tool list change for session ${sessionId}`, error);
+    }
+  }
 }
 
 function sendJsonRpcError(

@@ -521,3 +521,41 @@
   color: var(--text-muted);
   font-size: 0.73rem;
 }
+
+.section-grid,
+.capability-grid {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.section-grid {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.capability-grid {
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.support-card {
+  display: grid;
+  gap: 0.4rem;
+  padding: 0.9rem 1rem;
+  border-radius: 14px;
+  background: rgba(223, 226, 235, 0.03);
+  border: 1px solid rgba(59, 73, 76, 0.32);
+}
+
+.support-card strong {
+  font-size: 0.9rem;
+}
+
+.support-list {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0;
+  padding-left: 1rem;
+}
+
+.capability-card .workspace-feed-top {
+  align-items: center;
+}

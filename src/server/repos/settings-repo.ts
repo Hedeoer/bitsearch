@@ -1,7 +1,14 @@
 import type { AppDatabase } from "../db/database.js";
-import type { FetchMode, KeyPoolProvider, SystemSettings } from "../../shared/contracts.js";
+import type { KeyPoolProvider, SystemSettings } from "../../shared/contracts.js";
+import {
+  createDefaultSystemSettings,
+  mapLegacyRoutingSettings,
+  normalizeGenericProviderOrder,
+} from "../lib/generic-routing.js";
 
 const DEFAULT_SEARCH_MODEL_KEY = "default_search_model";
+const GENERIC_PROVIDER_ORDER_KEY = "generic_provider_order";
+const GENERIC_ROUTING_MODE_KEY = "generic_routing_mode";
 const MCP_BEARER_TOKEN_KEY = "mcp_bearer_token";
 
 interface SettingRow {
@@ -32,16 +39,43 @@ export function getSystemSettings(db: AppDatabase): SystemSettings {
     .all() as unknown as SettingRow[];
 
   const map = new Map(rows.map((row) => [row.key, row.value]));
+  const defaults = createDefaultSystemSettings();
+  const genericRoutingMode = getStoredSetting<SystemSettings["genericRoutingMode"]>(
+    db,
+    GENERIC_ROUTING_MODE_KEY,
+  );
+  const genericProviderOrder = getStoredSetting<KeyPoolProvider[]>(
+    db,
+    GENERIC_PROVIDER_ORDER_KEY,
+  );
+  const routingSettings =
+    genericRoutingMode && genericProviderOrder
+      ? {
+          genericRoutingMode,
+          genericProviderOrder: normalizeGenericProviderOrder(
+            genericRoutingMode,
+            genericProviderOrder,
+          ),
+        }
+      : mapLegacyRoutingSettings(
+          getStoredSetting<"strict_firecrawl" | "strict_tavily" | "auto_ordered">(
+            db,
+            "fetch_mode",
+          ),
+          getStoredSetting<KeyPoolProvider[]>(db, "provider_priority"),
+        );
+
   return {
-    fetchMode: parseJson<FetchMode>(map.get("fetch_mode") ?? "\"auto_ordered\""),
-    providerPriority: parseJson<KeyPoolProvider[]>(
-      map.get("provider_priority") ?? "[\"tavily\",\"firecrawl\"]",
-    ),
+    ...routingSettings,
     defaultSearchModel: parseJson<string>(
-      map.get(DEFAULT_SEARCH_MODEL_KEY) ?? "\"grok-4-fast\"",
+      map.get(DEFAULT_SEARCH_MODEL_KEY) ?? JSON.stringify(defaults.defaultSearchModel),
     ),
-    logRetentionDays: parseJson<number>(map.get("log_retention_days") ?? "7"),
-    allowedOrigins: parseJson<string[]>(map.get("allowed_origins") ?? "[]"),
+    logRetentionDays: parseJson<number>(
+      map.get("log_retention_days") ?? JSON.stringify(defaults.logRetentionDays),
+    ),
+    allowedOrigins: parseJson<string[]>(
+      map.get("allowed_origins") ?? JSON.stringify(defaults.allowedOrigins),
+    ),
   };
 }
 
@@ -56,11 +90,16 @@ export function saveSystemSetting(db: AppDatabase, key: string, value: unknown):
 }
 
 export function saveSystemSettings(db: AppDatabase, settings: Partial<SystemSettings>): void {
-  if (settings.fetchMode) {
-    saveSystemSetting(db, "fetch_mode", settings.fetchMode);
+  if (settings.genericRoutingMode) {
+    saveSystemSetting(db, GENERIC_ROUTING_MODE_KEY, settings.genericRoutingMode);
   }
-  if (settings.providerPriority) {
-    saveSystemSetting(db, "provider_priority", settings.providerPriority);
+  if (settings.genericProviderOrder) {
+    const mode = settings.genericRoutingMode ?? getSystemSettings(db).genericRoutingMode;
+    saveSystemSetting(
+      db,
+      GENERIC_PROVIDER_ORDER_KEY,
+      normalizeGenericProviderOrder(mode, settings.genericProviderOrder),
+    );
   }
   if (settings.defaultSearchModel) {
     saveSystemSetting(db, DEFAULT_SEARCH_MODEL_KEY, settings.defaultSearchModel);

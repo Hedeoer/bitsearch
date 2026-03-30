@@ -27,7 +27,7 @@
 
 ### 3b. Runtime Key Selection (LRU Rotation)
 
-- **1. Provider resolution:** `src/server/providers/fetch-router.ts:59-67` (`resolveProviders`) determines provider order from fetch mode (strict or auto_ordered).
+- **1. Provider resolution:** Generic retrieval tools receive a routing snapshot with either `single_provider` or `ordered_failover`, plus the effective provider order filtered by currently usable providers.
 - **2. Candidate retrieval:** `src/server/repos/provider-repo.ts:243-260` (`getCandidateKeys`) queries enabled keys sorted by `COALESCE(last_used_at, created_at) ASC` -- least recently used first.
 - **3. Attempt execution:** `src/server/providers/fetch-router.ts:113-178` iterates keys sequentially, calling the executor function with each decrypted secret.
 - **4. Usage marking:** On success or failure, `src/server/repos/provider-repo.ts:262-275` (`markKeyUsage`) updates `last_used_at`, `last_status_code`, and `last_error`, pushing the key to the end of the LRU queue.

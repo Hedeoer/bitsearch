@@ -2,6 +2,7 @@ import { Router } from "express";
 import { SEARCH_ENGINE_PROVIDER } from "../../shared/contracts.js";
 import type { AppContext } from "../app-context.js";
 import { HttpRequestError } from "../lib/http.js";
+import { broadcastToolListChanged } from "../mcp/transport-router.js";
 import { getDashboardSummary } from "../repos/dashboard-repo.js";
 import {
   getRequestActivity,
@@ -39,6 +40,10 @@ import { syncKeyQuotas, testKeys } from "../services/key-pool-service.js";
 import { getMcpAccessInfo } from "../services/mcp-access-service.js";
 import { listAvailableSearchEngineModels } from "../services/search-engine-service.js";
 import {
+  getToolSurfaceSnapshot,
+  hasToolSurfaceChanged,
+} from "../services/tool-surface-service.js";
+import {
   csvEscape,
   parseAdminAccessPayload,
   parseCsvKeys,
@@ -61,6 +66,16 @@ export function createAdminRouter(context: AppContext): Router {
   const router = Router();
   const allowHttpLocal = process.env.NODE_ENV !== "production";
 
+  function runWithToolSurfaceBroadcast<T>(mutation: () => T): T {
+    const before = getToolSurfaceSnapshot(context);
+    const result = mutation();
+    const after = getToolSurfaceSnapshot(context);
+    if (hasToolSurfaceChanged(before, after)) {
+      broadcastToolListChanged(context);
+    }
+    return result;
+  }
+
   router.get("/dashboard", (_req, res) => {
     res.json(getDashboardSummary(context.db));
   });
@@ -72,6 +87,10 @@ export function createAdminRouter(context: AppContext): Router {
   router.put("/system", (req, res) => {
     saveSystemSettings(context.db, parseSystemSettingsPayload(req.body ?? {}, allowHttpLocal));
     res.json(getSystemSettings(context.db));
+  });
+
+  router.get("/tool-surface", (_req, res) => {
+    res.json(getToolSurfaceSnapshot(context));
   });
 
   router.get("/mcp-access", (req, res) => {
@@ -116,9 +135,11 @@ export function createAdminRouter(context: AppContext): Router {
   router.put("/providers/:provider", (req, res) => {
     const provider = parseRemoteProvider(req.params.provider);
     const payload = parseProviderConfigPayload(req.body ?? {}, allowHttpLocal);
-    saveProviderConfig(context.db, provider, {
-      ...payload,
-      encryptionKey: context.bootstrap.encryptionKey,
+    runWithToolSurfaceBroadcast(() => {
+      saveProviderConfig(context.db, provider, {
+        ...payload,
+        encryptionKey: context.bootstrap.encryptionKey,
+      });
     });
     res.json(listProviderConfigs(context.db));
   });
@@ -172,14 +193,22 @@ export function createAdminRouter(context: AppContext): Router {
     const provider = parseKeyPoolProvider(req.body?.provider);
     const raw = String(req.body?.rawKeys ?? "");
     const tags = parseTags(req.body?.tags);
-    res.json(importKeys(context.db, provider, parseKeyLines(raw), tags, context.bootstrap.encryptionKey));
+    res.json(
+      runWithToolSurfaceBroadcast(() =>
+        importKeys(context.db, provider, parseKeyLines(raw), tags, context.bootstrap.encryptionKey),
+      ),
+    );
   });
 
   router.post("/keys/import-csv", (req, res) => {
     const provider = parseKeyPoolProvider(req.body?.provider);
     const csv = String(req.body?.csv ?? "");
     const tags = parseTags(req.body?.tags);
-    res.json(importKeys(context.db, provider, parseCsvKeys(csv), tags, context.bootstrap.encryptionKey));
+    res.json(
+      runWithToolSurfaceBroadcast(() =>
+        importKeys(context.db, provider, parseCsvKeys(csv), tags, context.bootstrap.encryptionKey),
+      ),
+    );
   });
 
   router.patch("/keys/meta", (req, res) => {
@@ -191,7 +220,10 @@ export function createAdminRouter(context: AppContext): Router {
   router.patch("/keys/bulk", (req, res) => {
     const ids = parseIds(req.body?.ids);
     const enabled = Boolean(req.body?.enabled);
-    res.json({ changed: setKeysEnabled(context.db, ids, enabled) });
+    const changed = runWithToolSurfaceBroadcast(() =>
+      setKeysEnabled(context.db, ids, enabled),
+    );
+    res.json({ changed });
   });
 
   router.post("/keys/test", (req, res, next) => {
@@ -220,7 +252,10 @@ export function createAdminRouter(context: AppContext): Router {
 
   router.delete("/keys", (req, res) => {
     const ids = parseIds(req.body?.ids);
-    res.json({ changed: deleteKeys(context.db, ids) });
+    const changed = runWithToolSurfaceBroadcast(() =>
+      deleteKeys(context.db, ids),
+    );
+    res.json({ changed });
   });
 
   router.get("/keys/export.csv", (req, res) => {

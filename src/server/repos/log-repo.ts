@@ -123,6 +123,28 @@ export function insertRequestLog(db: AppDatabase, payload: RequestInsert): void 
   invalidateDashboardSummaryCache();
 }
 
+export function mergeRequestLogMetadata(
+  db: AppDatabase,
+  requestId: string,
+  metadata: Record<string, unknown>,
+): void {
+  const row = db.sqlite
+    .prepare("SELECT metadata_json FROM request_logs WHERE id = ?")
+    .get(requestId) as { metadata_json: string | null } | undefined;
+  if (!row) {
+    return;
+  }
+  const current = parseJsonObject(row.metadata_json);
+  db.sqlite
+    .prepare(
+      `UPDATE request_logs
+       SET metadata_json = ?
+       WHERE id = ?`,
+    )
+    .run(JSON.stringify({ ...current, ...metadata }), requestId);
+  invalidateDashboardSummaryCache();
+}
+
 export function insertAttemptLogs(db: AppDatabase, attempts: AttemptInsert[]): void {
   const stmt = db.sqlite.prepare(
     `INSERT INTO request_attempt_logs

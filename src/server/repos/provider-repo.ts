@@ -269,6 +269,23 @@ export function getCandidateKeys(
   }));
 }
 
+export function getProviderKeyById(
+  db: AppDatabase,
+  id: string,
+  encryptionKey: string,
+): (ProviderKeyRecord & { secret: string }) | null {
+  const row = db.sqlite
+    .prepare("SELECT * FROM provider_keys WHERE id = ?")
+    .get(id) as ProviderKeyRow | undefined;
+  if (!row) {
+    return null;
+  }
+  return {
+    ...mapProviderKey(row),
+    secret: decryptSecret(row.encrypted_key, encryptionKey),
+  };
+}
+
 export function markKeyUsage(
   db: AppDatabase,
   id: string,
