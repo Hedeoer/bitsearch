@@ -13,7 +13,7 @@ import { mapRequestLog } from "./log-repo.js";
 
 const MINUTES_PER_RPM_WINDOW = 10;
 const HOURS_PER_TREND_WINDOW = 24;
-const LATEST_ERROR_LIMIT = 10;
+const LATEST_ERROR_LIMIT = 24;
 const MILLISECONDS_PER_MINUTE = 60_000;
 const MILLISECONDS_PER_HOUR = 3_600_000;
 

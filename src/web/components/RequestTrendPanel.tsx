@@ -1,5 +1,5 @@
 import type { DashboardTrendPoint } from "@shared/contracts";
-import { Activity, CheckCircle, XCircle } from "lucide-react";
+import { Activity, CheckCircle2, XCircle } from "lucide-react";
 import {
   CartesianGrid,
   Line,
@@ -9,6 +9,14 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { formatNumber } from "../format";
 import { LoadingOverlay } from "./Feedback";
 
@@ -53,17 +61,26 @@ function CustomTooltip(props: Readonly<{
   payload?: Array<{ name: string; value: number; color: string }>;
   label?: string;
 }>) {
-  if (!props.active || !props.payload?.length) return null;
+  if (!props.active || !props.payload?.length) {
+    return null;
+  }
   return (
-    <div className="trend-tooltip">
-      <span className="trend-tooltip-label">{props.label}</span>
-      {props.payload.map((entry) => (
-        <div key={entry.name} className="trend-tooltip-row">
-          <span className="trend-tooltip-dot" style={{ background: entry.color }} />
-          <span>{entry.name === "success" ? "Successful" : "Failed"}:</span>
-          <strong>{formatNumber(entry.value)}</strong>
-        </div>
-      ))}
+    <div className="rounded-2xl border border-white/10 bg-[rgba(10,14,20,0.96)] px-4 py-3 text-xs shadow-[0_12px_28px_rgba(0,0,0,0.22)] backdrop-blur-xl">
+      <div className="font-['IBM_Plex_Mono'] text-[11px] text-[color:var(--text-dim)]">
+        {props.label}
+      </div>
+      <div className="mt-2 grid gap-2">
+        {props.payload.map((entry) => (
+          <div key={entry.name} className="flex items-center gap-2 text-[color:var(--text)]">
+            <span
+              className="size-2 rounded-full"
+              style={{ background: entry.color }}
+            />
+            <span>{entry.name === "success" ? "Successful" : "Failed"}:</span>
+            <strong>{formatNumber(entry.value)}</strong>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -71,9 +88,11 @@ function CustomTooltip(props: Readonly<{
 function TrendChart(props: Readonly<{ trend: DashboardTrendPoint[] }>) {
   if (props.trend.length === 0) {
     return (
-      <div className="trend-chart-empty">
-        <Activity size={28} />
-        <span>No data in the last 24 hours</span>
+      <div className="grid min-h-[280px] place-items-center text-center text-[color:var(--text-soft)]">
+        <div className="grid gap-3">
+          <Activity className="mx-auto size-8" />
+          <span>No traffic has been recorded in the last 24 hours.</span>
+        </div>
       </div>
     );
   }
@@ -81,42 +100,42 @@ function TrendChart(props: Readonly<{ trend: DashboardTrendPoint[] }>) {
   const data = toChartData(props.trend);
 
   return (
-    <ResponsiveContainer width="100%" height={280}>
+    <ResponsiveContainer width="100%" height={300}>
       <LineChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
         <CartesianGrid stroke={GRID_COLOR} strokeDasharray="" vertical={false} />
         <XAxis
+          axisLine={false}
           dataKey="label"
+          interval={3}
           tick={{ fill: AXIS_COLOR, fontSize: 12, fontFamily: "IBM Plex Mono, monospace" }}
           tickLine={false}
-          axisLine={false}
-          interval={3}
         />
         <YAxis
-          tick={{ fill: AXIS_COLOR, fontSize: 12, fontFamily: "IBM Plex Mono, monospace" }}
-          tickLine={false}
-          axisLine={false}
-          tickFormatter={(v: number) => formatNumber(v)}
-          width={40}
           allowDecimals={false}
+          axisLine={false}
+          tick={{ fill: AXIS_COLOR, fontSize: 12, fontFamily: "IBM Plex Mono, monospace" }}
+          tickFormatter={(value: number) => formatNumber(value)}
+          tickLine={false}
+          width={40}
         />
         <Tooltip content={<CustomTooltip />} cursor={{ stroke: GRID_COLOR, strokeWidth: 1 }} />
         <Line
-          type="linear"
+          activeDot={{ r: 5 }}
           dataKey="success"
+          dot={{ r: 3.5, fill: SUCCESS_COLOR, stroke: "rgba(10,14,20,0.94)", strokeWidth: 2 }}
+          isAnimationActive={false}
           stroke={SUCCESS_COLOR}
           strokeWidth={2.5}
-          dot={{ r: 3.5, fill: SUCCESS_COLOR, stroke: "rgba(10,14,20,0.94)", strokeWidth: 2 }}
-          activeDot={{ r: 5 }}
-          isAnimationActive={false}
+          type="linear"
         />
         <Line
-          type="linear"
+          activeDot={{ r: 5 }}
           dataKey="failed"
+          dot={{ r: 3.5, fill: DANGER_COLOR, stroke: "rgba(10,14,20,0.94)", strokeWidth: 2 }}
+          isAnimationActive={false}
           stroke={DANGER_COLOR}
           strokeWidth={2.5}
-          dot={{ r: 3.5, fill: DANGER_COLOR, stroke: "rgba(10,14,20,0.94)", strokeWidth: 2 }}
-          activeDot={{ r: 5 }}
-          isAnimationActive={false}
+          type="linear"
         />
       </LineChart>
     </ResponsiveContainer>
@@ -125,31 +144,38 @@ function TrendChart(props: Readonly<{ trend: DashboardTrendPoint[] }>) {
 
 export function RequestTrendPanel(props: RequestTrendPanelProps) {
   return (
-    <article className="surface-card page-panel">
+    <Card className="relative min-w-0">
       {props.loading ? <LoadingOverlay label="Refreshing request trend" /> : null}
-      <div className="page-panel-header">
-        <div>
-          <div className="eyebrow">Traffic</div>
-          <h3>24h Request Trend</h3>
+      <CardHeader className="pb-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div className="eyebrow">Traffic</div>
+            <CardTitle className="mt-2">24h request trend</CardTitle>
+            <CardDescription className="mt-2">
+              Hourly buckets keep the chart readable while still surfacing drift and failure bursts.
+            </CardDescription>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Badge variant="neutral">
+              <Activity className="size-3.5" />
+              hourly
+            </Badge>
+            <Badge variant="success">
+              <CheckCircle2 className="size-3.5" />
+              success
+            </Badge>
+            <Badge variant="danger">
+              <XCircle className="size-3.5" />
+              failed
+            </Badge>
+          </div>
         </div>
-        <div className="trend-legend">
-          <span className="chip neutral-chip">
-            <Activity size={12} />
-            Hourly buckets
-          </span>
-          <span className="chip success-chip">
-            <CheckCircle size={12} />
-            Successful
-          </span>
-          <span className="chip danger">
-            <XCircle size={12} />
-            Failed
-          </span>
+      </CardHeader>
+      <CardContent>
+        <div className="rounded-[22px] border border-white/8 bg-[color:var(--ui-card-soft)] p-4">
+          <TrendChart trend={props.trend} />
         </div>
-      </div>
-      <div className="trend-chart-shell">
-        <TrendChart trend={props.trend} />
-      </div>
-    </article>
+      </CardContent>
+    </Card>
   );
 }

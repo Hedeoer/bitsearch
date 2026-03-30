@@ -30,6 +30,8 @@
   --input-bg: rgba(10, 14, 20, 0.82);
   --sidebar-w: 260px;
   --topbar-h: 56px;
+  --console-frame-w: 1760px;
+  --console-nav-w: 620px;
 }
 
 * { box-sizing: border-box; }

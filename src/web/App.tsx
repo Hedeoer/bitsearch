@@ -100,6 +100,7 @@ export function App() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [workspaceRefreshNonce, setWorkspaceRefreshNonce] = useState(0);
   const refreshInFlightRef = useRef(false);
+  const dashboardRefreshInFlightRef = useRef(false);
   const toasts = useToastStore();
 
   async function withRefresh(task: () => Promise<void>) {
@@ -117,12 +118,18 @@ export function App() {
   }
 
   async function refreshDashboard() {
-    await withRefresh(async () => {
+    if (refreshInFlightRef.current || dashboardRefreshInFlightRef.current) {
+      return;
+    }
+    dashboardRefreshInFlightRef.current = true;
+    try {
       const dashRes = await apiRequest<AppDataBundle["dashboard"]>("GET", "/admin/dashboard");
       if (dashRes.ok) {
         setDashboard(dashRes.data);
       }
-    });
+    } finally {
+      dashboardRefreshInFlightRef.current = false;
+    }
   }
 
   async function refreshAll() {

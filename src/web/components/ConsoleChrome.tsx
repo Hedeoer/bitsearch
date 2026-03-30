@@ -70,16 +70,21 @@ function getActiveRoute(pathname: string): NavItem {
   return NAV_ITEMS.find((item) => pathname.startsWith(item.href)) ?? NAV_ITEMS[0];
 }
 
-
-function SidebarNav(props: Readonly<{ onNavigate: () => void }>) {
+function PrimaryNav(
+  props: Readonly<{
+    className: string;
+    linkClassName: string;
+    onNavigate: () => void;
+  }>,
+) {
   return (
-    <nav className="sidebar-nav" aria-label="Console navigation">
+    <nav className={props.className} aria-label="Console navigation">
       {NAV_ITEMS.map((item) => (
         <NavLink
           key={item.href}
           to={item.href}
           className={({ isActive }) =>
-            `sidebar-nav-link${isActive ? " sidebar-nav-link-active" : ""}`
+            `${props.linkClassName}${isActive ? ` ${props.linkClassName}-active` : ""}`
           }
           onClick={props.onNavigate}
         >
@@ -127,54 +132,68 @@ export function ConsoleLayout(props: ConsoleLayoutProps) {
             <X size={16} />
           </button>
         </div>
-        <SidebarNav onNavigate={() => setMobileOpen(false)} />
+        <PrimaryNav
+          className="sidebar-nav"
+          linkClassName="sidebar-nav-link"
+          onNavigate={() => setMobileOpen(false)}
+        />
       </aside>
 
       <div className="console-workspace">
-        <header className="console-topbar">
-          <div className="console-topbar-copy">
-            <button
-              type="button"
-              className="sidebar-mobile-toggle"
-              aria-label="Open navigation"
-              onClick={() => setMobileOpen(true)}
-            >
-              <Menu size={18} />
-            </button>
-            <div>
-              <div className="eyebrow">{activeRoute.label}</div>
-              <h1>{activeRoute.title}</h1>
-              <p className="supporting">{activeRoute.description}</p>
+        <header className="console-header">
+          <div className="console-header-row">
+            <div className="console-topbar-copy">
+              <button
+                type="button"
+                className="sidebar-mobile-toggle"
+                aria-label="Open navigation"
+                onClick={() => setMobileOpen(true)}
+              >
+                <Menu size={18} />
+              </button>
+              <div className="console-topbar-mark" aria-hidden="true">
+                <Search size={16} />
+              </div>
+              <div className="console-topbar-text">
+                <div className="eyebrow">{activeRoute.label}</div>
+                <h1>{activeRoute.title}</h1>
+                <p className="supporting">{activeRoute.description}</p>
+              </div>
             </div>
-          </div>
-          <div className="console-topbar-actions">
-            <span className="header-status">
-              {props.isRefreshing ? (
-                <InlineSpinner label="Refreshing" />
-              ) : (
-                <>
-                  <span className="status-dot" aria-hidden="true" />
-                  {isOverviewRoute ? "Live · 30s" : "Ready"}
-                </>
-              )}
-            </span>
-            <button
-              type="button"
-              className="icon-button"
-              title="Refresh"
-              disabled={props.isRefreshing}
-              onClick={props.onRefresh}
-            >
-              <RefreshCw size={15} />
-            </button>
-            <button
-              type="button"
-              className="icon-button"
-              title="Sign out"
-              onClick={props.onLogout}
-            >
-              <LogOut size={15} />
-            </button>
+            <PrimaryNav
+              className="top-nav"
+              linkClassName="top-nav-link"
+              onNavigate={() => setMobileOpen(false)}
+            />
+            <div className="console-topbar-actions">
+              <span className="header-status">
+                {props.isRefreshing ? (
+                  <InlineSpinner label="Refreshing" />
+                ) : (
+                  <>
+                    <span className="status-dot" aria-hidden="true" />
+                    {isOverviewRoute ? "Live · 30s" : "Ready"}
+                  </>
+                )}
+              </span>
+              <button
+                type="button"
+                className="icon-button"
+                title="Refresh"
+                disabled={props.isRefreshing}
+                onClick={props.onRefresh}
+              >
+                <RefreshCw size={15} />
+              </button>
+              <button
+                type="button"
+                className="icon-button"
+                title="Sign out"
+                onClick={props.onLogout}
+              >
+                <LogOut size={15} />
+              </button>
+            </div>
           </div>
         </header>
         <main className="console-main">

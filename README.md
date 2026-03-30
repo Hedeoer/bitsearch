@@ -524,6 +524,8 @@ Generic retrieval routing only affects `web_fetch`, `web_map`, and `web_search` 
 
 - **Q: MCP connection times out / fails?**
   A: Ensure `TRUST_PROXY=true` in your `.env` if exposing behind an NGinX/Caddy reverse proxy, and make sure `MCP_BEARER_TOKEN` matches your client config.
+- **Q: MCP tools start failing after I changed provider/tool settings in BitSearch?**
+  A: BitSearch may change the exposed MCP tool surface when routing or provider configuration changes. If your MCP client does not support MCP tool-change notifications, reload the MCP server configuration in the client, or start a fresh conversation/context so the client re-reads the current tool list.
 - **Q: What happens when Tavily keys run out of quota?**
   A: The Failover Router will mark the exhausted key as invalid for a timeout period and rotate to the next active Tavily key. If no Tavily keys remain, it gracefully downgrades to Firecrawl.
 - **Q: I lost my `APP_ENCRYPTION_KEY`. Can I recover my API keys?**

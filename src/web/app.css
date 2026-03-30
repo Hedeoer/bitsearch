@@ -1,0 +1,46 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@layer base {
+  :root {
+    --ui-card: rgba(18, 22, 30, 0.92);
+    --ui-card-strong: rgba(22, 28, 38, 0.96);
+    --ui-card-soft: rgba(12, 18, 26, 0.78);
+    --ui-ring: rgba(0, 229, 255, 0.24);
+    --ui-shadow: 0 24px 64px rgba(0, 0, 0, 0.24);
+    --ui-shadow-soft: 0 14px 40px rgba(0, 0, 0, 0.18);
+  }
+
+  * {
+    border-color: var(--border);
+  }
+
+  body {
+    background-color: var(--bg);
+    color: var(--text);
+  }
+}
+
+@layer components {
+  .overview-glow {
+    background:
+      radial-gradient(circle at top right, rgba(0, 229, 255, 0.12), transparent 28%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 44%);
+  }
+
+  .overview-shell-card {
+    box-shadow: var(--ui-shadow);
+  }
+
+  .overview-subtle-card {
+    box-shadow: var(--ui-shadow-soft);
+  }
+
+  .overview-grid-line {
+    background-image:
+      linear-gradient(rgba(132, 147, 150, 0.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(132, 147, 150, 0.08) 1px, transparent 1px);
+    background-size: 24px 24px;
+    mask-image: linear-gradient(180deg, black, transparent 90%);
+  }
+}
