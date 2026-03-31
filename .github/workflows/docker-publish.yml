@@ -31,6 +31,22 @@ jobs:
           if [ -z "$image" ]; then
             image="local/bitsearch"
           fi
+          if [[ "$image" == *"://"* ]]; then
+            echo "DOCKERHUB_IMAGE must be a Docker image name, not a URL. Expected namespace/repository or docker.io/namespace/repository." >&2
+            exit 1
+          fi
+          if [[ "$image" == docker.io/* ]]; then
+            image="${image#docker.io/}"
+          fi
+          first_segment="${image%%/*}"
+          if [[ "$first_segment" == *.* || "$first_segment" == *:* || "$first_segment" == "localhost" ]]; then
+            echo "DOCKERHUB_IMAGE resolves to registry host '$first_segment', but this workflow only logs in to Docker Hub. Use namespace/repository or docker.io/namespace/repository." >&2
+            exit 1
+          fi
+          if [[ "$image" != */* || "$image" == */*/* ]]; then
+            echo "DOCKERHUB_IMAGE must be namespace/repository or docker.io/namespace/repository." >&2
+            exit 1
+          fi
           echo "name=$image" >> "$GITHUB_OUTPUT"
 
       - name: Validate Docker Hub configuration

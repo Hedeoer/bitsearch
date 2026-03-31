@@ -331,6 +331,19 @@ For Docker:
 docker exec -it bitsearch cat /app/data/runtime-secrets.json
 ```
 
+If you only need the generated admin console login key, read the `adminAuthKey`
+field directly:
+
+```bash
+node -e "console.log(JSON.parse(require('fs').readFileSync('data/runtime-secrets.json','utf8')).secrets.adminAuthKey)"
+```
+
+For Docker:
+
+```bash
+docker exec -it bitsearch node -e "console.log(JSON.parse(require('fs').readFileSync('/app/data/runtime-secrets.json','utf8')).secrets.adminAuthKey)"
+```
+
 > Docker Compose reads `.env` automatically. npm deployment does not; export the variables from `.env` into your shell before starting the server.
 
 ### Quick Start
@@ -450,6 +463,9 @@ server {
 
     ssl_certificate     /etc/letsencrypt/live/bitsearch.example.com/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/bitsearch.example.com/privkey.pem;
+
+    access_log /var/log/nginx/bitsearch_access.log;
+    error_log  /var/log/nginx/bitsearch_error.log warn;
 
     location = /mcp {
         proxy_pass http://bitsearch_backend;
@@ -571,7 +587,7 @@ bearer_token_env_var = "BITSEARCH_MCP_TOKEN"
 
 1. Start the app with one of the deployment modes above.
 2. Open `http://127.0.0.1:8097`.
-3. Sign in with `ADMIN_AUTH_KEY` (from `.env`, or from `data/runtime-secrets.json` if auto-generated).
+3. Sign in with `ADMIN_AUTH_KEY` (from `.env`, or from `data/runtime-secrets.json` if auto-generated; the exact JSON field is `secrets.adminAuthKey`).
 4. Configure provider base URLs, import Tavily / Firecrawl keys, and review the Admin/MCP access panels.
 5. Use the Overview, Providers, Keys, and Activity workspaces to monitor routing behavior and failures.
 

@@ -221,7 +221,7 @@ Before enabling image publishing, configure the following in your GitHub reposit
 | Type | Name | Value |
 |------|------|-------|
 | Variable | `DOCKERHUB_USERNAME` | Your Docker Hub login username |
-| Variable | `DOCKERHUB_IMAGE` | Full image name, for example `your-namespace/bitsearch` |
+| Variable | `DOCKERHUB_IMAGE` | Full image name, for example `your-namespace/bitsearch` or `docker.io/your-namespace/bitsearch` (not a web URL) |
 | Secret | `DOCKERHUB_TOKEN` | Docker Hub personal access token with push permissions |
 
 Workflow behavior:

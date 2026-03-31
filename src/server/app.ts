@@ -8,7 +8,6 @@ import { createAdminRouter } from "./http/admin-routes.js";
 import {
   requireAdminAuth,
   requireAdminWriteOrigin,
-  requireAllowedOrigin,
   requireMcpAuth,
 } from "./http/middleware.js";
 import { AppHttpError } from "./lib/http.js";
@@ -62,13 +61,13 @@ export function createApp(context: AppContext) {
     createAdminRouter(context),
   );
 
-  app.post("/mcp", requireMcpAuth(context), requireAllowedOrigin(context), (req, res, next) => {
+  app.post("/mcp", requireMcpAuth(context), (req, res, next) => {
     handleMcpPost(context, req, res).catch(next);
   });
-  app.get("/mcp", requireMcpAuth(context), requireAllowedOrigin(context), (req, res, next) => {
+  app.get("/mcp", requireMcpAuth(context), (req, res, next) => {
     handleMcpGet(req, res).catch(next);
   });
-  app.delete("/mcp", requireMcpAuth(context), requireAllowedOrigin(context), (req, res, next) => {
+  app.delete("/mcp", requireMcpAuth(context), (req, res, next) => {
     handleMcpDelete(req, res).catch(next);
   });
 
