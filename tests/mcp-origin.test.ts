@@ -79,3 +79,150 @@ test("MCP initialize accepts desktop client Origin headers when bearer token is 
   assert.equal(response.headers.get("content-type"), "text/event-stream");
   assert.ok(response.headers.get("mcp-session-id"));
 });
+
+test("MCP desktop clients can send notifications without session or protocol headers after initialize", async (t) => {
+  const tempRoot = mkdtempSync(join(tmpdir(), "bitsearch-mcp-compat-"));
+  t.after(() => {
+    rmSync(tempRoot, { recursive: true, force: true });
+  });
+
+  const bootstrap = createTestBootstrap(tempRoot);
+  const db = createDatabase(bootstrap);
+  const app = createApp({
+    bootstrap,
+    db,
+    adminSessions: createAdminSessionStore(bootstrap.sessionSecret),
+  });
+
+  const server = await new Promise<import("node:http").Server>((resolve) => {
+    const instance = app.listen(0, "127.0.0.1", () => resolve(instance));
+  });
+  t.after(async () => {
+    await new Promise<void>((resolve, reject) => {
+      server.close((error) => (error ? reject(error) : resolve()));
+    });
+    db.sqlite.close();
+  });
+
+  const address = server.address();
+  assert.ok(address && typeof address === "object");
+  const baseUrl = `http://127.0.0.1:${address.port}/mcp`;
+
+  const initializeResponse = await fetch(baseUrl, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${bootstrap.mcpBearerToken}`,
+      Accept: "application/json, text/event-stream",
+      "Content-Type": "application/json",
+      Origin: "null",
+      "User-Agent": "CherryStudio/1.8.4",
+    },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "initialize",
+      params: {
+        protocolVersion: "2025-03-26",
+        capabilities: {},
+        clientInfo: {
+          name: "Cherry Studio",
+          version: "1.8.4",
+        },
+      },
+    }),
+  });
+
+  assert.equal(initializeResponse.status, 200);
+  assert.ok(initializeResponse.headers.get("mcp-session-id"));
+
+  const notificationResponse = await fetch(baseUrl, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${bootstrap.mcpBearerToken}`,
+      Accept: "application/json, text/event-stream",
+      "Content-Type": "application/json",
+      Origin: "null",
+      "User-Agent": "CherryStudio/1.8.4",
+    },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      method: "notifications/initialized",
+      params: {},
+    }),
+  });
+
+  assert.equal(notificationResponse.status, 202);
+});
+
+test("MCP desktop clients can list tools without session or protocol headers after initialize", async (t) => {
+  const tempRoot = mkdtempSync(join(tmpdir(), "bitsearch-mcp-compat-"));
+  t.after(() => {
+    rmSync(tempRoot, { recursive: true, force: true });
+  });
+
+  const bootstrap = createTestBootstrap(tempRoot);
+  const db = createDatabase(bootstrap);
+  const app = createApp({
+    bootstrap,
+    db,
+    adminSessions: createAdminSessionStore(bootstrap.sessionSecret),
+  });
+
+  const server = await new Promise<import("node:http").Server>((resolve) => {
+    const instance = app.listen(0, "127.0.0.1", () => resolve(instance));
+  });
+  t.after(async () => {
+    await new Promise<void>((resolve, reject) => {
+      server.close((error) => (error ? reject(error) : resolve()));
+    });
+    db.sqlite.close();
+  });
+
+  const address = server.address();
+  assert.ok(address && typeof address === "object");
+  const baseUrl = `http://127.0.0.1:${address.port}/mcp`;
+  const baseHeaders = {
+    Authorization: `Bearer ${bootstrap.mcpBearerToken}`,
+    Accept: "application/json, text/event-stream",
+    "Content-Type": "application/json",
+    Origin: "null",
+    "User-Agent": "CherryStudio/1.8.4",
+  };
+
+  const initializeResponse = await fetch(baseUrl, {
+    method: "POST",
+    headers: baseHeaders,
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "initialize",
+      params: {
+        protocolVersion: "2025-03-26",
+        capabilities: {},
+        clientInfo: {
+          name: "Cherry Studio",
+          version: "1.8.4",
+        },
+      },
+    }),
+  });
+
+  assert.equal(initializeResponse.status, 200);
+  assert.ok(initializeResponse.headers.get("mcp-session-id"));
+
+  const toolsListResponse = await fetch(baseUrl, {
+    method: "POST",
+    headers: baseHeaders,
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: 2,
+      method: "tools/list",
+      params: {},
+    }),
+  });
+
+  assert.equal(toolsListResponse.status, 200);
+  assert.equal(toolsListResponse.headers.get("content-type"), "text/event-stream");
+  const body = await toolsListResponse.text();
+  assert.match(body, /"name":"web_search"/);
+});
