@@ -1,9 +1,8 @@
 services:
   bitsearch:
-    build: .
-    image: bitsearch:latest
+    image: ${BITSEARCH_IMAGE:-docker.io/hedeoerwang/bitsearch:latest}
     container_name: bitsearch
-    restart: unless-stopped
+    restart: always
     ports:
       - "${APP_PORT:-8097}:${APP_PORT:-8097}"
     environment:
@@ -19,11 +18,16 @@ services:
     volumes:
       - bitsearch_data:/app/data
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:${APP_PORT:-8097}/healthz"]
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:${APP_PORT:-8097}/healthz"]
       interval: 30s
       timeout: 5s
       start_period: 10s
       retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
 
 volumes:
   bitsearch_data:

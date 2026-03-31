@@ -39,7 +39,7 @@ RUN chmod +x ./scripts/docker-entrypoint.sh \
 EXPOSE 8097
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD wget -qO- http://localhost:${APP_PORT:-8097}/healthz || exit 1
+  CMD wget -qO- http://127.0.0.1:${APP_PORT:-8097}/healthz || exit 1
 
 ENTRYPOINT ["./scripts/docker-entrypoint.sh"]
 CMD ["node", "dist/server/main.js"]

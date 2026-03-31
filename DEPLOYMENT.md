@@ -59,11 +59,37 @@ Generate a random session secret (only needed if you manage secrets externally):
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
-If you deploy from a published image instead of building from source, set the optional compose variable below:
+If you let BitSearch auto-generate secrets, start the service once and then read
+the persisted runtime secrets file:
+
+```bash
+cat data/runtime-secrets.json
+```
+
+For Docker:
+
+```bash
+docker exec -it bitsearch cat /app/data/runtime-secrets.json
+```
+
+If you only need the generated admin console login key, read the
+`secrets.adminAuthKey` field directly:
+
+```bash
+node -e "console.log(JSON.parse(require('fs').readFileSync('data/runtime-secrets.json','utf8')).secrets.adminAuthKey)"
+```
+
+For Docker:
+
+```bash
+docker exec -it bitsearch node -e "console.log(JSON.parse(require('fs').readFileSync('/app/data/runtime-secrets.json','utf8')).secrets.adminAuthKey)"
+```
+
+If you deploy with Docker Compose, set the optional image override below when you want a different published tag or registry mirror:
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `BITSEARCH_IMAGE` | For prebuilt-image compose only | `docker.io/hedeoerwang/bitsearch:latest` | Full image reference to pull |
+| `BITSEARCH_IMAGE` | No | `docker.io/hedeoerwang/bitsearch:latest` | Full image reference that `docker-compose.yml` pulls |
 
 ---
 
@@ -129,27 +155,35 @@ sudo systemctl restart bitsearch
 
 ## Mode 2: Docker
 
-### Quick start (single container)
+### Quick start (single container, optional low-level path)
+
+This path is useful if you prefer raw `docker run` over Compose. The
+recommended deployment path remains `docker compose up -d`.
 
 ```bash
-# Build the image
-docker build -t bitsearch:latest .
+# Pull the published image
+docker pull docker.io/hedeoerwang/bitsearch:latest
 
 # Run with environment variables from .env
 docker run -d \
   --name bitsearch \
-  --restart unless-stopped \
+  --restart always \
   -p 8097:8097 \
   --env-file .env \
   -v bitsearch_data:/app/data \
-  bitsearch:latest
+  docker.io/hedeoerwang/bitsearch:latest
 ```
 
 ### Docker Compose (recommended)
 
+`docker-compose.yml` is the single supported Compose entrypoint. It pulls the published image by default, mounts the persistent data volume, enables log rotation, and configures restart/healthcheck behavior.
+
 ```bash
 # Copy and edit environment file
 cp .env.example .env
+
+# Optional: pin a different image tag
+# BITSEARCH_IMAGE=docker.io/hedeoerwang/bitsearch:latest
 
 # Start
 docker compose up -d
@@ -164,52 +198,94 @@ docker compose logs -f
 docker compose down
 ```
 
-### Docker Compose (pull a published image)
-
-Use this mode when you want to run a prebuilt image from Docker Hub instead of building from local source.
-
-```bash
-# Copy and edit environment file
-cp .env.example .env
-
-# Point to the published image you want to run
-# Example:
-# BITSEARCH_IMAGE=docker.io/hedeoerwang/bitsearch:latest
-
-# Start
-docker compose -f docker-compose.image.yml up -d
-
-# Pull a newer image later
-docker compose -f docker-compose.image.yml pull
-docker compose -f docker-compose.image.yml up -d
-```
-
-### Docker Compose — production hardening
-
-Apply the production overrides (resource limits, `restart: always`, structured logging):
-
-```bash
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
-```
-
-For published images:
-
-```bash
-docker compose -f docker-compose.image.yml -f docker-compose.prod.yml up -d
-```
-
 ### Upgrading (Docker Compose)
 
 ```bash
-docker compose build --no-cache
+docker compose pull
 docker compose up -d
 ```
 
-Upgrading with a published image:
+### Reverse proxy (Nginx)
 
-```bash
-docker compose -f docker-compose.image.yml pull
-docker compose -f docker-compose.image.yml up -d
+If BitSearch is exposed behind Nginx, set `TRUST_PROXY=true` in `.env` so the
+Admin Console and MCP access panel use the externally visible protocol and host.
+
+It is recommended to expose BitSearch at the site root of a dedicated domain
+such as `https://bitsearch.example.com`, because the frontend router and
+backend endpoints use root-based paths like `/`, `/api/admin`, and `/mcp`.
+
+Example Nginx configuration:
+
+```nginx
+upstream bitsearch_backend {
+    server 127.0.0.1:8097;
+    keepalive 32;
+}
+
+log_format bitsearch_mcp '$remote_addr - $remote_user [$time_local] '
+                         '"$request" $status $body_bytes_sent '
+                         'upstream_status="$upstream_status" '
+                         'upstream_response_time="$upstream_response_time" '
+                         'sid="$http_mcp_session_id" '
+                         'proto="$http_mcp_protocol_version" '
+                         'origin="$http_origin" '
+                         'accept="$http_accept" '
+                         'ua="$http_user_agent"';
+
+server {
+    listen 80;
+    server_name bitsearch.example.com;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name bitsearch.example.com;
+
+    ssl_certificate     /etc/letsencrypt/live/bitsearch.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/bitsearch.example.com/privkey.pem;
+
+    access_log /var/log/nginx/bitsearch_access.log;
+    error_log  /var/log/nginx/bitsearch_error.log warn;
+
+    location = /mcp {
+        access_log /var/log/nginx/bitsearch_mcp_access.log bitsearch_mcp;
+
+        proxy_pass http://bitsearch_backend;
+        proxy_http_version 1.1;
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header Connection "";
+
+        proxy_request_buffering off;
+        proxy_buffering off;
+        proxy_intercept_errors off;
+        proxy_pass_request_headers on;
+
+        proxy_pass_header Mcp-Session-Id;
+        proxy_pass_header Content-Type;
+        proxy_pass_header Cache-Control;
+
+        chunked_transfer_encoding off;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+    }
+
+    location / {
+        proxy_pass http://bitsearch_backend;
+        proxy_http_version 1.1;
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+    }
+}
 ```
 
 ### GitHub Actions → Docker Hub publishing
@@ -245,6 +321,12 @@ Both deployment modes expose a health endpoint:
 GET /healthz  →  { "ok": true }
 ```
 
+Container deployments in this repository intentionally probe
+`http://127.0.0.1:${APP_PORT}/healthz` instead of `localhost`. In Alpine-based
+containers, `localhost` may resolve to `::1` first, while the BitSearch process
+listens on IPv4 `0.0.0.0:${APP_PORT}` by default. Using `127.0.0.1` avoids
+false `unhealthy` container states caused by IPv6 loopback resolution.
+
 ---
 
 ## File Layout (after build)
@@ -262,8 +344,6 @@ GET /healthz  →  { "ok": true }
 │   └── bitsearch.service  # systemd unit template
 ├── Dockerfile
 ├── docker-compose.yml
-├── docker-compose.image.yml
-├── docker-compose.prod.yml
 ├── .github/
 │   └── workflows/
 │       └── docker-publish.yml
