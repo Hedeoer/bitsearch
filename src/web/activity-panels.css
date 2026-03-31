@@ -15,6 +15,12 @@
   color: inherit;
   text-align: left;
   cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .activity-feed-card-selected {
@@ -35,8 +41,17 @@
   flex-wrap: wrap;
 }
 
+.activity-feed-card-meta span svg,
+.activity-attempt-meta span svg,
+.activity-feed-card-provider svg,
+.activity-feed-card-error-type svg {
+  flex-shrink: 0;
+}
+
 .activity-feed-card-top {
   justify-content: space-between;
+  width: 100%;
+  min-width: 0;
 }
 
 .activity-feed-card-title,
@@ -47,7 +62,6 @@
   flex-wrap: wrap;
 }
 
-.activity-feed-card-meta,
 .activity-attempt-meta {
   margin-top: 0.75rem;
 }
@@ -67,21 +81,26 @@
   background: rgba(255, 255, 255, 0.04);
 }
 
-.activity-feed-card-provider-row,
-.activity-feed-card-preview {
-  margin-top: 0.75rem;
+.activity-feed-card-provider-row {
+  width: 100%;
+  min-width: 0;
 }
 
 .activity-feed-card-url {
-  display: flex;
-  gap: 0.45rem;
-  align-items: center;
-  margin: 0.75rem 0 0;
+  display: block;
   color: var(--text-dim);
   font-size: 0.82rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  width: 100%;
+}
+
+.activity-feed-card-url svg {
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 0.35rem;
+  margin-top: -0.1rem;
 }
 
 .activity-feed-card-preview {
@@ -91,7 +110,10 @@
   display: -webkit-box;
   overflow: hidden;
   -webkit-line-clamp: 3;
+  line-clamp: 3;
   -webkit-box-orient: vertical;
+  word-break: break-word;
+  width: 100%;
 }
 
 .activity-inspector-stack,
@@ -128,6 +150,50 @@
   font-size: 1rem;
   line-height: 1.45;
   word-break: break-word;
+}
+
+.activity-code-shell {
+  position: relative;
+  margin: 0.6rem 0 0;
+}
+
+.activity-code-shell .activity-code-block {
+  margin: 0;
+  padding-right: 3rem;
+}
+
+.activity-copy-code {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  width: 32px;
+  height: 32px;
+  min-height: 32px;
+  padding: 0;
+  border-radius: 8px;
+  opacity: 0;
+  transform: translateY(2px);
+  transition: all 160ms ease;
+}
+
+.activity-code-shell:hover .activity-copy-code {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.activity-payload-empty {
+  margin-top: 0.6rem;
+  padding: 2.5rem 1rem;
+  text-align: center;
+  border-radius: 12px;
+  border: 1px dashed var(--border-strong);
+  background: rgba(223, 226, 235, 0.02);
+}
+
+.activity-payload-empty p {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: 0.82rem;
 }
 
 .activity-code-block {

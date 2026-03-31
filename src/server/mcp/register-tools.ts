@@ -199,7 +199,7 @@ async function buildWebFetchResult(
       );
     },
   );
-  return result.ok ? result.data ?? "" : `提取失败: ${result.error}`;
+  return result.ok ? result.data ?? "" : `Extraction failed: ${result.error}`;
 }
 
 async function buildWebMapResult(
@@ -238,7 +238,7 @@ async function buildWebMapResult(
       );
     },
   );
-  return result.ok ? result.data ?? "" : `映射失败: ${result.error}`;
+  return result.ok ? result.data ?? "" : `Mapping failed: ${result.error}`;
 }
 
 export function createMcpRuntime(context: AppContext): McpRuntime {
@@ -265,13 +265,13 @@ export function createMcpRuntime(context: AppContext): McpRuntime {
       const sessionId = Math.random().toString(16).slice(2, 14);
       const routing = getCurrentGenericRoutingSnapshot(context);
       try {
-        const searchEngineConfig = requireSearchEngineConfig(context, model);
+        const searchEngineConfig = requireSearchEngineConfig(context, { model });
         if (model) {
           const models = await listSearchEngineModels(searchEngineConfig);
           if (models.length > 0 && !models.includes(model)) {
             const invalidResult = {
               session_id: sessionId,
-              content: `无效模型: ${model}`,
+              content: `Invalid model: ${model}`,
               sources_count: 0,
             };
             saveSearchSession(context.db, sessionId, invalidResult.content, []);
@@ -312,7 +312,7 @@ export function createMcpRuntime(context: AppContext): McpRuntime {
           sources_count: mergedSources.length,
         });
       } catch (error) {
-        const message = error instanceof Error ? error.message : "未知错误";
+        const message = error instanceof Error ? error.message : "Unknown error";
         saveSearchSession(context.db, sessionId, message, []);
         logSearchRequest(context, routing, {
           toolName: "web_search",
@@ -324,7 +324,7 @@ export function createMcpRuntime(context: AppContext): McpRuntime {
         });
         return toolJsonResult({
           session_id: sessionId,
-          content: `配置错误: ${message}`,
+          content: `Configuration error: ${message}`,
           sources_count: 0,
         });
       }
@@ -437,21 +437,21 @@ export function createMcpRuntime(context: AppContext): McpRuntime {
       );
       const settings = getSystemSettings(context.db);
       let connectionTest: Record<string, unknown> = {
-        status: "未测试",
-        message: "请先配置 search_engine",
+        status: "Not tested",
+        message: "Configure search_engine first",
       };
 
       try {
         const models = await listSearchEngineModels(requireSearchEngineConfig(context));
         connectionTest = {
-          status: "✅ 连接成功",
-          message: `成功获取模型列表，共 ${models.length} 个模型`,
+          status: "Connected",
+          message: `Retrieved ${models.length} models successfully`,
           available_models: models,
         };
       } catch (error) {
         connectionTest = {
-          status: "❌ 连接失败",
-          message: error instanceof Error ? error.message : "未知错误",
+          status: "Connection failed",
+          message: error instanceof Error ? error.message : "Unknown error",
         };
       }
 
@@ -505,10 +505,10 @@ export function createMcpRuntime(context: AppContext): McpRuntime {
           {
             type: "text" as const,
             text: toJsonText({
-              status: "✅ 成功",
+              status: "Success",
               previous_model: previous,
               current_model: model,
-              message: `模型已从 ${previous} 切换到 ${model}`,
+              message: `Model switched from ${previous} to ${model}`,
             }),
           },
         ],
@@ -532,7 +532,7 @@ export function createMcpRuntime(context: AppContext): McpRuntime {
             blocked: false,
             action,
             error: "unsupported_in_remote_deployment",
-            message: "远程 HTTP MCP 服务无法修改客户端本地 .claude/settings.json",
+            message: "The remote HTTP MCP service cannot modify the client's local .claude/settings.json",
           }),
         },
       ],

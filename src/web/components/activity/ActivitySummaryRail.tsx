@@ -1,4 +1,4 @@
-import { Activity, AlertTriangle, Gauge, GitBranch, ServerCrash, Timer } from "lucide-react";
+import { Activity, AlertTriangle, CheckCircle, Gauge, GitBranch, ServerCrash, Timer } from "lucide-react";
 import type { ActivitySummary } from "@shared/contracts";
 import { formatDecimal, formatDuration, formatNumber, formatPercentage } from "../../format";
 
@@ -11,7 +11,7 @@ function SummaryCard(
   props: Readonly<{
     icon: typeof Activity;
     label: string;
-    tone?: "primary" | "danger" | "warning";
+    tone?: "primary" | "danger" | "warning" | "success";
     value: string;
     supporting: string;
   }>,
@@ -42,9 +42,9 @@ export function ActivitySummaryRail(props: ActivitySummaryRailProps) {
         supporting={props.loading ? "Refreshing current slice…" : "Filtered request count"}
       />
       <SummaryCard
-        icon={AlertTriangle}
+        icon={summary?.failureRate === 0 ? CheckCircle : AlertTriangle}
         label="Failure Rate"
-        tone="danger"
+        tone={summary?.failureRate === 0 ? "success" as any : "danger"}
         value={formatPercentage(summary?.failureRate ?? 0)}
         supporting={`${formatNumber(summary?.failedRequests ?? 0)} failed requests`}
       />

@@ -424,6 +424,62 @@ Useful dev endpoints:
 
 For local development, prefer `http://localhost:5173` for browser verification. Temporary standalone ports are for isolated debugging only and should not be treated as the default dev entrypoint.
 
+### Reverse Proxy Example (Nginx)
+
+For production deployments behind Nginx, set `TRUST_PROXY=true` in `.env` so BitSearch can derive the correct external protocol and host for the Admin Console and MCP access panel.
+
+It is recommended to expose BitSearch at the site root of a dedicated domain such as `https://bitsearch.example.com`, because the frontend router and backend endpoints use root-based paths like `/`, `/api/admin`, and `/mcp`.
+
+Example Nginx configuration:
+
+```nginx
+upstream bitsearch_backend {
+    server 127.0.0.1:8097;
+    keepalive 32;
+}
+
+server {
+    listen 80;
+    server_name bitsearch.example.com;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name bitsearch.example.com;
+
+    ssl_certificate     /etc/letsencrypt/live/bitsearch.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/bitsearch.example.com/privkey.pem;
+
+    location = /mcp {
+        proxy_pass http://bitsearch_backend;
+        proxy_http_version 1.1;
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+
+        # Required for long-lived SSE responses used by streamable HTTP MCP.
+        proxy_buffering off;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+    }
+
+    location / {
+        proxy_pass http://bitsearch_backend;
+        proxy_http_version 1.1;
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+    }
+}
+```
+
 For full deployment options, see [DEPLOYMENT.md](DEPLOYMENT.md).
 
 ## Usage
@@ -458,6 +514,59 @@ Example streamable HTTP client configuration. The exact field names vary by clie
 }
 ```
 
+If BitSearch is deployed behind a reverse proxy, replace the local URL with the public MCP endpoint, for example `https://bitsearch.example.com/mcp`.
+
+#### Claude Code
+
+Claude Code should connect to BitSearch as a remote HTTP MCP server:
+
+```bash
+claude mcp add --scope user --transport http bitsearch https://bitsearch.example.com/mcp \
+  --header "Authorization: Bearer <MCP_BEARER_TOKEN>"
+```
+
+If you prefer a project-local config, you can also place a matching entry in `.mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "bitsearch": {
+      "type": "http",
+      "url": "https://bitsearch.example.com/mcp",
+      "headers": {
+        "Authorization": "Bearer ${BITSEARCH_MCP_TOKEN}"
+      }
+    }
+  }
+}
+```
+
+Export the token in the shell before launching Claude Code:
+
+```bash
+export BITSEARCH_MCP_TOKEN="<MCP_BEARER_TOKEN>"
+```
+
+#### Codex
+
+Codex should connect to BitSearch as a remote streamable HTTP MCP server:
+
+```bash
+export BITSEARCH_MCP_TOKEN="<MCP_BEARER_TOKEN>"
+
+codex mcp add bitsearch \
+  --url https://bitsearch.example.com/mcp \
+  --bearer-token-env-var BITSEARCH_MCP_TOKEN
+```
+
+Equivalent `~/.codex/config.toml` entry:
+
+```toml
+[mcp_servers.bitsearch]
+url = "https://bitsearch.example.com/mcp"
+bearer_token_env_var = "BITSEARCH_MCP_TOKEN"
+```
+
 ### 3. Operate the admin console
 
 1. Start the app with one of the deployment modes above.
@@ -481,6 +590,8 @@ In the **Providers** workspace, set:
 - **API Key** — the API key for the service (stored encrypted, never logged)
 - **Model** — the model ID to use for search; can also be switched at runtime via the `switch_model` MCP tool
 - **Timeout** — set to ≥ 120 000 ms; search completions take longer than regular chat requests
+- **Probe models** — checks the staged `/models` endpoint response without saving changes
+- **Run live test** — sends a real staged `chat/completions` request without saving changes so you can verify Base URL, API key, timeout, and model together
 
 #### Tavily (key pool)
 

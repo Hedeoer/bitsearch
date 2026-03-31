@@ -1,28 +1,37 @@
-import type { Dispatch, SetStateAction } from "react";
-import type { ProviderConfigRecord, SearchEngineModelsResponse } from "@shared/contracts";
-import type { ApiResult } from "../api";
-import type { ProviderDrafts } from "../types";
-import { ProviderGrid } from "../components/OverviewPanels";
+import type {
+  ProviderConfigRecord,
+  RemoteProvider,
+  SystemSettings,
+} from "@shared/contracts";
+import { ProviderCards } from "../components/providers/ProviderCards";
+import type { ProviderSaveErrors } from "../provider-actions";
+import type { ProviderDraft, ProviderDrafts } from "../types";
 
 type ProvidersWorkspaceProps = Readonly<{
+  dirtyProviders: RemoteProvider[];
   drafts: ProviderDrafts;
   loading: boolean;
-  onSave: (provider: string) => void;
-  onProbeSearchModels: () => Promise<ApiResult<SearchEngineModelsResponse>>;
+  onDraftChange: (provider: RemoteProvider, patch: Partial<ProviderDraft>) => void;
+  onSaveAll: () => void;
   providers: ProviderConfigRecord[];
-  setDrafts: Dispatch<SetStateAction<ProviderDrafts>>;
+  saveErrors: ProviderSaveErrors;
+  saving: boolean;
+  system: SystemSettings;
 }>;
 
 export function ProvidersWorkspace(props: ProvidersWorkspaceProps) {
   return (
     <div className="workspace-stack">
-      <ProviderGrid
+      <ProviderCards
+        dirtyProviders={props.dirtyProviders}
         loading={props.loading}
-        providers={props.providers}
         drafts={props.drafts}
-        setDrafts={props.setDrafts}
-        onSave={props.onSave}
-        onProbeSearchModels={props.onProbeSearchModels}
+        onDraftChange={props.onDraftChange}
+        onSaveAll={props.onSaveAll}
+        providers={props.providers}
+        saveErrors={props.saveErrors}
+        saving={props.saving}
+        system={props.system}
       />
     </div>
   );

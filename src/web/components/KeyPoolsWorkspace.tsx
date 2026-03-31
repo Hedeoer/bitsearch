@@ -1,4 +1,4 @@
-import { Upload, Download, Key, Database, Trash2, RefreshCw, FlaskConical, Power, CheckSquare, Square, ChevronDown, ChevronRight, Heart, Activity, CheckCircle, AlertTriangle, Search, XSquare } from "lucide-react";
+import { Upload, Download, Key, Database, Trash2, RefreshCw, FlaskConical, Power, CheckSquare, Square, ChevronDown, ChevronRight, Heart, Activity, CheckCircle, AlertTriangle, Search, XSquare, X } from "lucide-react";
 import { useState, useEffect } from "react";
 
 const PAGE_SIZE = 16;
@@ -7,7 +7,8 @@ import { ConfirmDialog, InlineSpinner, LoadingOverlay, EmptyState } from "./Feed
 import { formatNumber, formatDateTime } from "../format";
 import type { KeySortMode } from "../types";
 import { KeyInventoryCard, renderFirecrawlQuota } from "./KeyInventoryCard";
-import type { KeyListStatus, KeyPoolSummary } from "@shared/contracts";
+import type { KeyListStatus, KeyPoolSummary, KeyPoolProvider } from "@shared/contracts";
+import { KeyPoolProviderPicker } from "./KeyPoolProviderPicker";
 import { useKeyWorkspace } from "./useKeyWorkspace";
 
 function renderSummaryQuota(summary: KeyPoolSummary | null): string {
@@ -48,9 +49,18 @@ function QuotaBar({ percentage }: { percentage: number | null }) {
   const p = Math.max(0, Math.min(100, percentage * 100)); // clamp to 0-100
   const isDanger = p >= 85;
   const isWarning = p >= 70 && p < 85;
+
+  const barColor = isDanger ? 'var(--danger)' : isWarning ? 'var(--warning)' : '#00e5ff';
+
   return (
-    <div style={{ height: '3px', background: 'var(--bg-primary)', borderRadius: '4px', overflow: 'hidden', marginTop: '0.45rem', width: '100%', opacity: 0.8 }}>
-      <div style={{ height: '100%', width: `${p}%`, background: isDanger ? 'var(--danger)' : isWarning ? 'var(--warning)' : 'var(--primary-strong)' }} />
+    <div style={{ height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden', marginTop: '0.6rem', width: '100%', border: '1px solid rgba(255,255,255,0.05)' }}>
+      <div style={{
+        height: '100%',
+        width: `${p}%`,
+        background: barColor,
+        boxShadow: `0 0 10px ${barColor}44`,
+        transition: 'width 0.4s ease-out'
+      }} />
     </div>
   );
 }
@@ -58,41 +68,72 @@ function QuotaBar({ percentage }: { percentage: number | null }) {
 function SummaryCards(props: { summary: KeyPoolSummary | null; loading: boolean }) {
   const s = props.summary;
   const loading = props.loading;
+  const [isAlertClosed, setIsAlertClosed] = useState(false);
   
-  const iconStyle = { position: 'absolute' as const, right: '-8px', bottom: '-8px', opacity: 0.04, color: 'var(--primary-strong)' };
+  const issues = (s?.totalKeys ?? 0) - (s?.healthyKeys ?? 0);
+  const quotaPercent = computeQuotaPercentage(s);
   
   return (
     <div className="key-summary-grid">
-      <div className="key-summary-card" style={{ display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
-        <Key size={48} style={iconStyle} />
-        <span>Keys</span>
-        <strong>{loading ? "..." : formatNumber(s?.totalKeys ?? 0)}</strong>
+      {/* 1. Consolidated Keys Card */}
+      <div className="key-summary-card">
+        <div className="stat-icon-tile" style={{ color: '#00e5ff' }}>
+          <Key size={20} />
+        </div>
+        <div className="stat-content">
+          <span>Total Keys</span>
+          <strong>{loading ? "..." : formatNumber(s?.totalKeys ?? 0)}</strong>
+          {!loading && (
+            <div className="stat-subtext">
+              <span className="highlight">{formatNumber(s?.healthyKeys ?? 0)} Healthy</span>
+              <span className={issues > 0 ? "danger" : ""}>{formatNumber(issues)} Issues</span>
+            </div>
+          )}
+        </div>
       </div>
-      <div className="key-summary-card" style={{ display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
-        <Heart size={48} style={iconStyle} />
-        <span>Healthy</span>
-        <strong>{loading ? "..." : formatNumber(s?.healthyKeys ?? 0)}</strong>
+
+      {/* 2. Req / Fail Card */}
+      <div className="key-summary-card">
+        <div className="stat-icon-tile" style={{ color: '#ffcc00' }}>
+          <Activity size={20} />
+        </div>
+        <div className="stat-content">
+          <span>Req / Fail</span>
+          <strong>{loading ? "..." : `${formatNumber(s?.totalRequests ?? 0)} / ${formatNumber(s?.totalFailures ?? 0)}`}</strong>
+          {!loading && s?.totalRequests ? (
+            <div className="stat-subtext">
+              Success Rate: <span className="highlight">{((1 - (s.totalFailures / s.totalRequests)) * 100).toFixed(1)}%</span>
+            </div>
+          ) : null}
+        </div>
       </div>
-      <div className="key-summary-card" style={{ display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
-        <CheckCircle size={48} style={iconStyle} />
-        <span>Enabled</span>
-        <strong>{loading ? "..." : formatNumber(s?.enabledKeys ?? 0)}</strong>
+
+      {/* 3. Quota Card */}
+      <div className="key-summary-card">
+        <div className="stat-icon-tile" style={{ color: '#a855f7' }}>
+          <Database size={20} />
+        </div>
+        <div className="stat-content">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+            <span>Quota</span>
+            {quotaPercent !== null && !loading && (
+              <span style={{ fontSize: '0.7rem', color: '#a855f7', fontWeight: 700 }}>
+                {(quotaPercent * 100).toFixed(1)}% Used
+              </span>
+            )}
+          </div>
+          <strong style={{ fontSize: '0.85rem' }}>{loading ? "..." : renderSummaryQuota(s)}</strong>
+          {!loading && <QuotaBar percentage={quotaPercent} />}
+        </div>
       </div>
-      <div className="key-summary-card" style={{ display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
-        <Activity size={48} style={iconStyle} />
-        <span>Req / Fail</span>
-        <strong>{loading ? "..." : `${formatNumber(s?.totalRequests ?? 0)} / ${formatNumber(s?.totalFailures ?? 0)}`}</strong>
-      </div>
-      <div className="key-summary-card" style={{ display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden', justifyContent: 'center' }}>
-        <Database size={48} style={iconStyle} />
-        <span>Quota</span>
-        <strong style={{ position: 'relative', zIndex: 1 }}>{loading ? "..." : renderSummaryQuota(s)}</strong>
-        {!loading && <QuotaBar percentage={computeQuotaPercentage(s)} />}
-      </div>
-      {s?.quotaNote ? (
-        <div className="key-summary-note" style={{ display: 'flex', gap: '0.65rem', alignItems: 'center', background: 'rgba(216, 87, 87, 0.08)', border: '1px solid rgba(216, 87, 87, 0.2)', borderLeft: '4px solid rgba(216, 87, 87, 0.6)', padding: '0.75rem 1rem', borderRadius: '8px', color: 'var(--warning-text)', gridColumn: '1 / -1', marginTop: '0.2rem' }}>
-          <AlertTriangle size={18} style={{ color: 'rgba(216, 87, 87, 0.8)' }} />
-          <p style={{ margin: 0, fontSize: '0.85rem', color: 'rgba(255,255,255,0.85)' }}>{s.quotaNote}</p>
+
+      {s?.quotaNote && !isAlertClosed ? (
+        <div className="key-summary-note info-alert">
+          <AlertTriangle size={16} style={{ color: 'var(--primary-strong)' }} />
+          <p style={{ margin: 0, paddingRight: '1.5rem' }}>{s.quotaNote}</p>
+          <button className="alert-close" onClick={() => setIsAlertClosed(true)} title="Close">
+            <X size={14} />
+          </button>
         </div>
       ) : null}
     </div>
@@ -124,12 +165,25 @@ export function KeyPoolsWorkspace(props: KeyPoolsWorkspaceProps) {
           {workspace.loading ? <LoadingOverlay label="Refreshing workspace" /> : null}
 
           {/* 1. Combined Header & Overview */}
-          <div className="section-heading" style={{ marginBottom: '1rem' }}>
-            <div>
-              <div className="eyebrow">Key Pools</div>
-              <h3>{workspace.provider} Workspace</h3>
+          <div className="section-heading" style={{ marginBottom: '1rem', alignItems: 'flex-start' }}>
+            <div style={{ display: 'flex', gap: '0.85rem', alignItems: 'center' }}>
+              <div>
+                <div className="eyebrow">Key Pools</div>
+                <h3>{workspace.provider} Workspace</h3>
+              </div>
+              <div className="key-pool-provider-inline-picker">
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)', fontWeight: 500 }}>Provider:</span>
+                <KeyPoolProviderPicker
+                  value={workspace.provider as KeyPoolProvider}
+                  onChange={(provider) => workspace.setProvider(provider)}
+                />
+                {/*
+                  Native select menus render with browser/system colors. Use a themed picker
+                  here so the options menu matches the rest of the console.
+                */}
+              </div>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
               <button 
                 className={workspace.summary?.totalKeys === 0 ? "primary-button pulse" : "secondary-button"}
                 onClick={() => setIsImportOpen(!isImportOpen)}
@@ -138,18 +192,6 @@ export function KeyPoolsWorkspace(props: KeyPoolsWorkspaceProps) {
                 {isImportOpen ? <ChevronDown size={14} style={{ marginRight: '4px' }} /> : <ChevronRight size={14} style={{ marginRight: '4px' }} />}
                 Manage & Import
               </button>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', margin: 0 }}>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginBottom: 0 }}>Provider:</span>
-                <select
-                  value={workspace.provider}
-                  onChange={(event) => workspace.setProvider(event.target.value as any)}
-                  style={{ padding: '0.2rem 1.5rem 0.2rem 0.6rem', minHeight: '30px' }}
-                >
-                  <option value="tavily">Tavily</option>
-                  <option value="firecrawl">Firecrawl</option>
-                </select>
-              </div>
             </div>
           </div>
           
@@ -216,7 +258,7 @@ export function KeyPoolsWorkspace(props: KeyPoolsWorkspaceProps) {
                 <CheckSquare size={16} />
               </button>
               
-              <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", flex: "1 1 200px", background: "rgba(0,0,0,0.2)", borderRadius: "6px", padding: "0 0.5rem" }}>
+              <div className="search-container">
                  <Search size={14} color="var(--text-dim)" />
                  <input
                     value={workspace.query}

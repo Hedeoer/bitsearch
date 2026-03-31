@@ -202,7 +202,18 @@ export function ActivityInspector(props: ActivityInspectorProps) {
                 <button type="button" className={`activity-tab${activeTab === "metadata" ? " activity-tab-active" : ""}`} onClick={() => setActiveTab("metadata")}>Metadata</button>
                 <button type="button" className={`activity-tab${activeTab === "messages" ? " activity-tab-active" : ""}`} onClick={() => setActiveTab("messages")}>Messages</button>
               </div>
-              <pre className="activity-code-block">{payloadMap?.[activeTab] ?? "-"}</pre>
+              {payloadMap?.[activeTab] === "-" ? (
+                <div className="activity-payload-empty">
+                  <p>No content captured for {activeTab}</p>
+                </div>
+              ) : (
+                <div className="activity-code-shell">
+                  <button className="icon-button activity-copy-code" type="button" onClick={() => copyValue(activeTab, payloadMap?.[activeTab] ?? null)} title="Copy payload">
+                    <ClipboardCopy size={13} />
+                  </button>
+                  <pre className="activity-code-block">{payloadMap?.[activeTab]}</pre>
+                </div>
+              )}
             </article>
           </div>
         ) : null}

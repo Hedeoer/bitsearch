@@ -51,7 +51,8 @@ The admin API consists of **28 endpoints** split across two routers: a public au
 |--------|------|-------------|---------------|-------------|
 | GET | `/providers` | -- | `ProviderConfigRecord[]` | List all provider configs |
 | PUT | `/providers/:provider` | `{enabled, baseUrl, timeoutMs, apiKey?}` | `ProviderConfigRecord[]` | Update provider config |
-| GET | `/providers/:provider/models` | -- | `{provider, models[]}` | Probe models from `/models` for `search_engine` |
+| POST | `/providers/:provider/models` | `{baseUrl, timeoutMs, apiKey, useSavedApiKey}` | `{provider, models[]}` | Probe models from `/models` for `search_engine` using staged settings without saving |
+| POST | `/providers/:provider/request-test` | `{baseUrl, timeoutMs, apiKey, useSavedApiKey, model}` | `SearchEngineRequestTestResponse` | Run a real staged `chat/completions` request for `search_engine` without saving |
 
 ### Key Pool Management (session required)
 

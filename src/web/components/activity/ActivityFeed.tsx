@@ -1,4 +1,4 @@
-import { AlertTriangle, ArrowDownUp, Globe, Server, Timer } from "lucide-react";
+import { AlertTriangle, ArrowDownUp, Calendar, Globe, Server, Timer } from "lucide-react";
 import type { ActivityListItem, ActivityListPageResult } from "@shared/contracts";
 import { EmptyState, LoadingOverlay } from "../Feedback";
 import { formatDateTime, formatDuration, formatNumber, statusTone } from "../../format";
@@ -50,9 +50,12 @@ function FeedCard(
         </span>
         <span>
           <ArrowDownUp size={11} />
-          {formatNumber(props.item.attempts)} attempts
+          {formatNumber(props.item.attempts)} attempt{props.item.attempts === 1 ? "" : "s"}
         </span>
-        <span>{formatDateTime(props.item.createdAt)}</span>
+        <span>
+          <Calendar size={11} />
+          {formatDateTime(props.item.createdAt)}
+        </span>
       </div>
 
       <div className="activity-feed-card-provider-row">

@@ -7,6 +7,7 @@ import "./styles.css";
 import "./feedback.css";
 import "./activity.css";
 import "./key-pools.css";
+import "./providers.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

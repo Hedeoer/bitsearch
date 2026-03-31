@@ -118,7 +118,6 @@
 .sidebar-stat-grid,
 .workspace-grid-two,
 .login-grid,
-.provider-cards,
 .workspace-grid {
   display: grid;
   gap: 1rem;
@@ -312,25 +311,9 @@
   gap: 1rem;
 }
 
-.provider-cards {
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-}
-
-.provider-card,
 .workspace-feed-item {
   position: relative;
   z-index: 1;
-}
-
-.provider-card {
-  overflow: visible;
-}
-
-.provider-meta {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  flex-wrap: wrap;
 }
 
 .workspace-feed-item {
@@ -579,8 +562,7 @@
 }
 
 @media (max-width: 640px) {
-  .workspace-hero-metrics,
-  .provider-cards {
+  .workspace-hero-metrics {
     grid-template-columns: 1fr;
   }
 

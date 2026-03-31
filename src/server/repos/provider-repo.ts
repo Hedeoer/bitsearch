@@ -46,6 +46,7 @@ function mapProviderConfig(row: ProviderConfigRow): ProviderConfigRecord {
     enabled: Boolean(row.enabled),
     baseUrl: row.base_url,
     hasApiKey: Boolean(row.api_key_encrypted),
+    apiKeyPreview: null,
     keyCount: Number(countRow.key_count ?? 0),
     timeoutMs: row.timeout_ms,
     updatedAt: row.updated_at,

@@ -16,6 +16,8 @@ export type ProviderDraft = {
   baseUrl: string;
   timeoutMs: number;
   apiKey: string;
+  apiKeyPreview: string;
+  revealedApiKey: string;
   searchModel: string;
 };
 

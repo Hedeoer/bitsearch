@@ -35,6 +35,57 @@ function buildHeaders(headers?: Record<string, string>): Headers {
   return result;
 }
 
+function extractCompletionText(payload: unknown): string {
+  const parsed = payload as {
+    choices?: Array<{ delta?: { content?: string }; message?: { content?: string } }>;
+  };
+  const choice = parsed.choices?.[0];
+  return choice?.delta?.content ?? choice?.message?.content ?? "";
+}
+
+async function readJsonCompletion(response: Response): Promise<string> {
+  const payload = await response.json();
+  const content = extractCompletionText(payload);
+  return content || JSON.stringify(payload);
+}
+
+async function readEventStream(response: Response): Promise<string> {
+  if (!response.body) {
+    return "";
+  }
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let content = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) {
+      break;
+    }
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? "";
+    for (const rawLine of lines) {
+      const line = rawLine.trim();
+      if (!line.startsWith("data:")) {
+        continue;
+      }
+      const payload = line.slice(5).trim();
+      if (!payload || payload === "[DONE]") {
+        continue;
+      }
+      try {
+        content += extractCompletionText(JSON.parse(payload));
+      } catch {
+        continue;
+      }
+    }
+  }
+
+  return content || buffer.trim();
+}
+
 export async function requestJson<T>(
   url: string,
   options: JsonRequestOptions = {},
@@ -67,44 +118,9 @@ export async function requestTextStream(
   if (!response.ok) {
     throw new HttpRequestError(await response.text(), response.status);
   }
-  if (!response.body) {
-    return "";
+  const contentType = response.headers.get("content-type") ?? "";
+  if (contentType.includes("application/json")) {
+    return readJsonCompletion(response);
   }
-
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-  let content = "";
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) {
-      break;
-    }
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split("\n");
-    buffer = lines.pop() ?? "";
-
-    for (const rawLine of lines) {
-      const line = rawLine.trim();
-      if (!line.startsWith("data:")) {
-        continue;
-      }
-      const payload = line.slice(5).trim();
-      if (!payload || payload === "[DONE]") {
-        continue;
-      }
-      try {
-        const parsed = JSON.parse(payload) as {
-          choices?: Array<{ delta?: { content?: string }; message?: { content?: string } }>;
-        };
-        const choice = parsed.choices?.[0];
-        content += choice?.delta?.content ?? choice?.message?.content ?? "";
-      } catch {
-        continue;
-      }
-    }
-  }
-
-  return content || buffer.trim();
+  return readEventStream(response);
 }

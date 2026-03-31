@@ -43,6 +43,15 @@ const providerConfigSchema = z.object({
   timeoutMs: z.coerce.number().int().min(MIN_PROVIDER_TIMEOUT_MS).max(MAX_PROVIDER_TIMEOUT_MS),
   apiKey: z.string().optional(),
 });
+const searchEngineDraftProbeSchema = z.object({
+  baseUrl: z.string().trim().min(1),
+  timeoutMs: z.coerce.number().int().min(MIN_PROVIDER_TIMEOUT_MS).max(MAX_PROVIDER_TIMEOUT_MS),
+  apiKey: z.string(),
+  useSavedApiKey: z.boolean(),
+});
+const searchEngineRequestTestSchema = searchEngineDraftProbeSchema.extend({
+  model: z.string().trim().min(1).max(MAX_MODEL_NAME_LENGTH),
+});
 
 const systemSettingsSchema = z
   .object({
@@ -188,6 +197,52 @@ export function parseProviderConfigPayload(
     ...parsed,
     baseUrl: normalizeProviderBaseUrl(parsed.baseUrl, allowHttpLocal),
     apiKey,
+  };
+}
+
+export function parseSearchEngineProbePayload(
+  raw: unknown,
+  allowHttpLocal: boolean,
+): {
+  baseUrl: string;
+  timeoutMs: number;
+  apiKey: string;
+  useSavedApiKey: boolean;
+} {
+  const parsed = parseSchema(
+    searchEngineDraftProbeSchema,
+    raw,
+    "invalid_search_engine_probe",
+  );
+  return {
+    baseUrl: normalizeProviderBaseUrl(parsed.baseUrl, allowHttpLocal),
+    timeoutMs: parsed.timeoutMs,
+    apiKey: parsed.apiKey.trim(),
+    useSavedApiKey: parsed.useSavedApiKey,
+  };
+}
+
+export function parseSearchEngineRequestTestPayload(
+  raw: unknown,
+  allowHttpLocal: boolean,
+): {
+  baseUrl: string;
+  timeoutMs: number;
+  apiKey: string;
+  useSavedApiKey: boolean;
+  model: string;
+} {
+  const parsed = parseSchema(
+    searchEngineRequestTestSchema,
+    raw,
+    "invalid_search_engine_request_test",
+  );
+  return {
+    baseUrl: normalizeProviderBaseUrl(parsed.baseUrl, allowHttpLocal),
+    timeoutMs: parsed.timeoutMs,
+    apiKey: parsed.apiKey.trim(),
+    useSavedApiKey: parsed.useSavedApiKey,
+    model: parsed.model,
   };
 }
 

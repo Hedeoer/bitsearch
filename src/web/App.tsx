@@ -1,86 +1,26 @@
 import { useEffect, useEffectEvent, useRef, useState } from "react";
-import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import {
-  SEARCH_ENGINE_PROVIDER,
   type AdminAccessInfo,
   type McpAccessInfo,
-  type SearchEngineModelsResponse,
   type SystemSettings,
   type ToolSurfaceSnapshot,
 } from "@shared/contracts";
-import { apiRequest, type ApiResult } from "./api";
+import { apiRequest } from "./api";
+import { AppShell } from "./AppShell";
 import { LoginView } from "./LoginView";
-import { ConsoleLayout } from "./components/ConsoleChrome";
 import { ToastViewport } from "./components/Feedback";
-import { ActivityWorkspace } from "./pages/ActivityWorkspace";
-import { KeysWorkspace } from "./pages/KeysWorkspace";
-import { OverviewWorkspace } from "./pages/OverviewWorkspace";
-import { ProvidersWorkspace } from "./pages/ProvidersWorkspace";
-import type {
-  AppDataBundle,
-  ProviderDrafts,
-  SessionState,
-} from "./types";
+import {
+  EMPTY_ADMIN_ACCESS,
+  EMPTY_MCP_ACCESS,
+  EMPTY_SYSTEM,
+  EMPTY_TOOL_SURFACE,
+} from "./app-defaults";
+import type { AppDataBundle, SessionState } from "./types";
 import { dismissToast, enqueueToast, useToastStore } from "./toast-store";
+import { useProviderWorkspaceState } from "./use-provider-workspace-state";
 
 const AUTO_REFRESH_INTERVAL_MS = 30_000;
-
-const EMPTY_SYSTEM: SystemSettings = {
-  genericRoutingMode: "ordered_failover",
-  genericProviderOrder: ["tavily", "firecrawl"],
-  defaultSearchModel: "grok-4-fast",
-  logRetentionDays: 7,
-  allowedOrigins: [],
-};
-const EMPTY_MCP_ACCESS: McpAccessInfo = {
-  streamHttpUrl: "",
-  authScheme: "Bearer",
-  hasBearerToken: false,
-  tokenPreview: null,
-};
-const EMPTY_TOOL_SURFACE: ToolSurfaceSnapshot = {
-  genericRouting: {
-    mode: "ordered_failover",
-    requestedProviderOrder: ["tavily", "firecrawl"],
-    effectiveProviderOrder: [],
-    affectedTools: ["web_fetch", "web_map", "web_search.extra_sources"],
-    unaffectedTools: [],
-  },
-  providerCapabilities: [],
-  genericTools: ["web_search", "get_sources"],
-  providerTools: [],
-  exposedTools: ["web_search", "get_sources"],
-  hiddenTools: [],
-  requiresReconnect: true,
-  behaviorChangesApplyImmediately: true,
-  lastRefreshedAt: "",
-  clientGuidance: {
-    systemBehavior: [],
-    recommendedPrompt: "",
-  },
-};
-const EMPTY_ADMIN_ACCESS: AdminAccessInfo = {
-  hasAuthKey: false,
-  authKeyPreview: null,
-};
-
-function createProviderDrafts(
-  providers: AppDataBundle["providers"],
-  system: SystemSettings,
-): ProviderDrafts {
-  return Object.fromEntries(
-    providers.map((item) => [
-      item.provider,
-      {
-        enabled: item.enabled,
-        baseUrl: item.baseUrl,
-        timeoutMs: item.timeoutMs,
-        apiKey: "",
-        searchModel: item.provider === SEARCH_ENGINE_PROVIDER ? system.defaultSearchModel : "",
-      },
-    ]),
-  );
-}
 
 export function App() {
   const location = useLocation();
@@ -89,7 +29,6 @@ export function App() {
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [dashboard, setDashboard] = useState<AppDataBundle["dashboard"]>(null);
   const [providers, setProviders] = useState<AppDataBundle["providers"]>([]);
-  const [providerDrafts, setProviderDrafts] = useState<ProviderDrafts>({});
   const [system, setSystem] = useState<SystemSettings>(EMPTY_SYSTEM);
   const [toolSurface, setToolSurface] = useState<ToolSurfaceSnapshot>(EMPTY_TOOL_SURFACE);
   const [adminAccess, setAdminAccess] = useState<AdminAccessInfo>(EMPTY_ADMIN_ACCESS);
@@ -102,6 +41,14 @@ export function App() {
   const refreshInFlightRef = useRef(false);
   const dashboardRefreshInFlightRef = useRef(false);
   const toasts = useToastStore();
+  const providerWorkspace = useProviderWorkspaceState({
+    onToast: enqueueToast,
+    providers,
+    setProviders,
+    setSystem,
+    setToolSurface,
+    system,
+  });
 
   async function withRefresh(task: () => Promise<void>) {
     if (refreshInFlightRef.current) {
@@ -146,7 +93,7 @@ export function App() {
       if (dashRes.ok) setDashboard(dashRes.data);
       if (provRes.ok) {
         setProviders(provRes.data);
-        setProviderDrafts(createProviderDrafts(provRes.data, nextSystem));
+        providerWorkspace.syncSnapshot(provRes.data, nextSystem);
       }
       if (sysRes.ok) setSystem(sysRes.data);
       if (toolSurfaceRes.ok) setToolSurface(toolSurfaceRes.data);
@@ -212,7 +159,7 @@ export function App() {
     setSession(null);
     setDashboard(null);
     setProviders([]);
-    setProviderDrafts({});
+    providerWorkspace.reset();
     setToolSurface(EMPTY_TOOL_SURFACE);
     setAdminAccess(EMPTY_ADMIN_ACCESS);
     setMcpAccess(EMPTY_MCP_ACCESS);
@@ -228,38 +175,6 @@ export function App() {
     } else {
       enqueueToast("error", res.message);
     }
-  }
-
-  async function saveProvider(provider: string) {
-    const draft = providerDrafts[provider];
-    if (!draft) return;
-    const providerRes = await apiRequest("PUT", `/admin/providers/${provider}`, {
-      enabled: draft.enabled,
-      baseUrl: draft.baseUrl,
-      timeoutMs: draft.timeoutMs,
-      apiKey: draft.apiKey,
-    });
-    if (!providerRes.ok) {
-      enqueueToast("error", providerRes.message);
-      return;
-    }
-    if (provider !== SEARCH_ENGINE_PROVIDER) {
-      enqueueToast("success", `${provider} provider saved.`);
-      void refreshAll();
-      return;
-    }
-    const systemRes = await apiRequest<SystemSettings>("PUT", "/admin/system", {
-      ...system,
-      defaultSearchModel: draft.searchModel,
-    });
-    if (!systemRes.ok) {
-      enqueueToast("warning", "search_engine saved, but the default search model could not be updated.");
-      enqueueToast("error", systemRes.message);
-      return;
-    }
-    enqueueToast("success", "search_engine settings saved.");
-    setSystem(systemRes.data);
-    void refreshAll();
   }
 
   async function saveMcpAccess(bearerToken: string): Promise<boolean> {
@@ -288,13 +203,6 @@ export function App() {
     return true;
   }
 
-  function probeSearchModels(): Promise<ApiResult<SearchEngineModelsResponse>> {
-    return apiRequest<SearchEngineModelsResponse>(
-      "GET",
-      `/admin/providers/${SEARCH_ENGINE_PROVIDER}/models`,
-    );
-  }
-
   if (!session) {
     return (
       <LoginView
@@ -307,73 +215,35 @@ export function App() {
     );
   }
 
+  const isConsoleBusy = isRefreshing || providerWorkspace.isSaving;
+
   return (
     <>
       <ToastViewport items={toasts} onDismiss={dismissToast} />
-      <Routes>
-        <Route
-          element={
-            <ConsoleLayout
-              dashboard={dashboard}
-              providers={providers}
-              system={system}
-              isRefreshing={isRefreshing}
-              onRefresh={() => void refreshAll()}
-              onLogout={() => void logout()}
-            />
-          }
-        >
-          <Route index element={<Navigate replace to="/overview" />} />
-          <Route
-            path="/overview"
-            element={
-            <OverviewWorkspace
-              dashboard={dashboard}
-              loading={isRefreshing}
-              adminAccess={adminAccess}
-              onSaveAdminAccess={saveAdminAccess}
-                mcpAccess={mcpAccess}
-                onSaveMcpAccess={saveMcpAccess}
-                onSaveSystem={() => void saveSystem()}
-                onToast={(type, message) => enqueueToast(type, message)}
-                setSystem={setSystem}
-                system={system}
-                toolSurface={toolSurface}
-                providers={providers}
-              />
-            }
-          />
-          <Route
-            path="/providers"
-            element={
-              <ProvidersWorkspace
-                drafts={providerDrafts}
-                loading={isRefreshing}
-                onSave={(provider) => void saveProvider(provider)}
-                onProbeSearchModels={probeSearchModels}
-                providers={providers}
-                setDrafts={setProviderDrafts}
-              />
-            }
-          />
-          <Route
-            path="/keys"
-            element={
-              <KeysWorkspace
-                onToast={(type, message) => enqueueToast(type, message)}
-                refreshNonce={workspaceRefreshNonce}
-              />
-            }
-          />
-          <Route
-            path="/activity"
-            element={
-              <ActivityWorkspace />
-            }
-          />
-          <Route path="*" element={<Navigate replace to="/overview" />} />
-        </Route>
-      </Routes>
+      <AppShell
+        adminAccess={adminAccess}
+        dashboard={dashboard}
+        dirtyProviders={providerWorkspace.dirtyProviders}
+        isConsoleBusy={isConsoleBusy}
+        isRefreshing={isRefreshing}
+        mcpAccess={mcpAccess}
+        onDraftChange={providerWorkspace.updateDraft}
+        onLogout={() => void logout()}
+        onRefresh={() => void refreshAll()}
+        onSaveAdminAccess={saveAdminAccess}
+        onSaveAllProviderChanges={() => void providerWorkspace.saveAllChanges()}
+        onSaveMcpAccess={saveMcpAccess}
+        onSaveSystem={() => void saveSystem()}
+        onToast={(type, message) => enqueueToast(type, message)}
+        providerDrafts={providerWorkspace.drafts}
+        providerSaveErrors={providerWorkspace.saveErrors}
+        providers={providers}
+        savingProviders={providerWorkspace.isSaving}
+        setSystem={setSystem}
+        system={system}
+        toolSurface={toolSurface}
+        workspaceRefreshNonce={workspaceRefreshNonce}
+      />
     </>
   );
 }

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { SEARCH_ENGINE_PROVIDER } from "../../shared/contracts.js";
+import { SEARCH_ENGINE_PROVIDER, type ProviderConfigRecord } from "../../shared/contracts.js";
 import type { AppContext } from "../app-context.js";
 import { HttpRequestError } from "../lib/http.js";
 import { broadcastToolListChanged } from "../mcp/transport-router.js";
@@ -10,6 +10,7 @@ import {
 } from "../repos/log-repo.js";
 import {
   deleteKeys,
+  getProviderApiKey,
   importKeys,
   listProviderConfigs,
   listProviderKeys,
@@ -36,6 +37,7 @@ import {
 import { syncKeyQuotas, testKeys } from "../services/key-pool-service.js";
 import { getMcpAccessInfo } from "../services/mcp-access-service.js";
 import { listAvailableSearchEngineModels } from "../services/search-engine-service.js";
+import { runSearchEngineRequestTest } from "../services/search-engine-service.js";
 import {
   getToolSurfaceSnapshot,
   hasToolSurfaceChanged,
@@ -55,6 +57,8 @@ import {
   parseProviderConfigPayload,
   parseRemoteProvider,
   parseRequiredId,
+  parseSearchEngineProbePayload,
+  parseSearchEngineRequestTestPayload,
   parseSystemSettingsPayload,
   parseTags,
 } from "./admin-route-utils.js";
@@ -62,6 +66,30 @@ import {
 export function createAdminRouter(context: AppContext): Router {
   const router = Router();
   const allowHttpLocal = process.env.NODE_ENV !== "production";
+  const API_KEY_PREVIEW_MASK = "********";
+  const API_KEY_PREVIEW_SUFFIX_LENGTH = 4;
+
+  function createApiKeyPreview(apiKey: string): string {
+    return `${API_KEY_PREVIEW_MASK}${apiKey.slice(-API_KEY_PREVIEW_SUFFIX_LENGTH)}`;
+  }
+
+  function serializeProviderConfig(config: ProviderConfigRecord): ProviderConfigRecord {
+    if (!config.hasApiKey || config.provider !== SEARCH_ENGINE_PROVIDER) {
+      return {
+        ...config,
+        apiKeyPreview: null,
+      };
+    }
+    const apiKey = getProviderApiKey(context.db, config.provider, context.bootstrap.encryptionKey);
+    return {
+      ...config,
+      apiKeyPreview: apiKey ? createApiKeyPreview(apiKey) : null,
+    };
+  }
+
+  function listProviderConfigsResponse(): ProviderConfigRecord[] {
+    return listProviderConfigs(context.db).map(serializeProviderConfig);
+  }
 
   function runWithToolSurfaceBroadcast<T>(mutation: () => T): T {
     const before = getToolSurfaceSnapshot(context);
@@ -126,7 +154,7 @@ export function createAdminRouter(context: AppContext): Router {
   });
 
   router.get("/providers", (_req, res) => {
-    res.json(listProviderConfigs(context.db));
+    res.json(listProviderConfigsResponse());
   });
 
   router.put("/providers/:provider", (req, res) => {
@@ -138,21 +166,33 @@ export function createAdminRouter(context: AppContext): Router {
         encryptionKey: context.bootstrap.encryptionKey,
       });
     });
-    res.json(listProviderConfigs(context.db));
+    res.json(listProviderConfigsResponse());
   });
 
-  router.get("/providers/:provider/models", (req, res) => {
+  router.post("/providers/:provider/reveal-key", (req, res) => {
+    const provider = parseRemoteProvider(req.params.provider);
+    if (provider !== SEARCH_ENGINE_PROVIDER) {
+      res.status(400).json({ error: "reveal_not_supported" });
+      return;
+    }
+    const apiKey = getProviderApiKey(context.db, provider, context.bootstrap.encryptionKey);
+    res.json({ apiKey: apiKey ?? "" });
+  });
+
+  router.post("/providers/:provider/models", (req, res) => {
     const provider = parseRemoteProvider(req.params.provider);
     if (provider !== SEARCH_ENGINE_PROVIDER) {
       res.status(400).json({ error: "provider_model_listing_not_supported" });
       return;
     }
-    listAvailableSearchEngineModels(context)
+    const payload = parseSearchEngineProbePayload(req.body ?? {}, allowHttpLocal);
+    listAvailableSearchEngineModels(context, {
+      baseUrl: payload.baseUrl,
+      timeoutMs: payload.timeoutMs,
+      ...(payload.useSavedApiKey ? {} : { apiKey: payload.apiKey }),
+    })
       .then((models) => {
-        res.json({
-          provider,
-          models,
-        });
+        res.json({ provider, models });
       })
       .catch((error) => {
         if (error instanceof HttpRequestError) {
@@ -163,6 +203,20 @@ export function createAdminRouter(context: AppContext): Router {
           message: error instanceof Error ? error.message : "search_engine_models_unavailable",
         });
       });
+  });
+
+  router.post("/providers/:provider/request-test", (req, res, next) => {
+    const provider = parseRemoteProvider(req.params.provider);
+    if (provider !== SEARCH_ENGINE_PROVIDER) {
+      res.status(400).json({ error: "provider_request_test_not_supported" });
+      return;
+    }
+    const payload = parseSearchEngineRequestTestPayload(req.body ?? {}, allowHttpLocal);
+    runSearchEngineRequestTest(context, payload)
+      .then((result) => {
+        res.json(result);
+      })
+      .catch(next);
   });
 
   router.get("/keys", (req, res) => {

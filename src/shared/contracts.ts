@@ -154,6 +154,7 @@ export interface ProviderConfigRecord {
   baseUrl: string;
   timeoutMs: number;
   hasApiKey: boolean;
+  apiKeyPreview: string | null;
   keyCount: number;
   updatedAt: string;
 }
@@ -236,6 +237,24 @@ export interface DashboardSummary {
 export interface SearchEngineModelsResponse {
   provider: SearchEngineProvider;
   models: string[];
+}
+
+export interface SearchEngineModelProbeResult {
+  status: RequestStatus;
+  modelsCount: number | null;
+  modelListed: boolean | null;
+  message: string | null;
+}
+
+export interface SearchEngineRequestTestResponse {
+  provider: SearchEngineProvider;
+  status: RequestStatus;
+  model: string;
+  durationMs: number;
+  responsePreview: string | null;
+  statusCode: number | null;
+  error: string | null;
+  modelProbe: SearchEngineModelProbeResult;
 }
 
 export interface McpAccessInfo {
