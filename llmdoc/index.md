@@ -19,6 +19,11 @@
 - [Configuring Search Providers](guides/configuring-search-providers.md) -- Set up providers, routing strategy, API keys, and search model selection.
 - [Managing API Keys](guides/managing-api-keys.md) -- Import, monitor, sync quotas, disable, and delete keys in the pool.
 - [Admin Console Development](guides/admin-console-development.md) -- Add panels, wire state, connect backend APIs, and follow CSS architecture.
+- [Using BitSearch with Agent Skills](guides/using-bitsearch-with-agent-skills.md) -- Replace the long BitSearch companion prompt with one standard `bitsearch-research` skill template.
+
+## External References
+
+- [Agent Skills Reference Snapshot](external/agentskills/INDEX.md) -- BitSearch-maintained summaries of the first-party `agentskills.io` pages used to redesign the skill template.
 
 ## Reference
 

@@ -1,0 +1,46 @@
+[
+  {
+    "query": "Can you verify whether the official Tavily pricing page still lists 1000 free monthly API calls and cite the sources?",
+    "should_trigger": true
+  },
+  {
+    "query": "Read this exact docs page and summarize the relevant API limits: https://example.com/docs/limits",
+    "should_trigger": true
+  },
+  {
+    "query": "I have a list of product URLs and need title, price, and availability as JSON.",
+    "should_trigger": true
+  },
+  {
+    "query": "Check the latest release notes on the vendor site and confirm whether feature X shipped.",
+    "should_trigger": true
+  },
+  {
+    "query": "Can you verify whether this claim is still true and tell me how confident you are, with sources?",
+    "should_trigger": true
+  },
+  {
+    "query": "Break this question into sub-queries, plan the search strategy, and then verify whether the claim is true across multiple official and third-party sources.",
+    "should_trigger": true
+  },
+  {
+    "query": "I need a structured research plan for comparing three vendors across pricing, uptime history, and recent release changes before you gather the evidence.",
+    "should_trigger": true
+  },
+  {
+    "query": "Write a Fibonacci function in TypeScript.",
+    "should_trigger": false
+  },
+  {
+    "query": "Refactor this React component to reduce re-renders.",
+    "should_trigger": false
+  },
+  {
+    "query": "Explain what a binary search tree is.",
+    "should_trigger": false
+  },
+  {
+    "query": "Summarize the text I pasted below without using the web.",
+    "should_trigger": false
+  }
+]

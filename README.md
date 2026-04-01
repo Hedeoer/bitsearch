@@ -435,6 +435,73 @@ url = "https://bitsearch.example.com/mcp"
 bearer_token_env_var = "BITSEARCH_MCP_TOKEN"
 ```
 
+#### Agent Skills-Compatible Clients
+
+If your client supports the open Agent Skills standard, prefer `skill + mcp` over copying the long BitSearch companion prompt into every session.
+
+This repository ships one standard BitSearch skill template in `skills/bitsearch-research/`. It merges routing rules, evidence rules, retrieval workflow, and Planning Engine escalation into one coherent skill that can be reused across Agent Skills-compatible clients.
+
+Recommended installation:
+
+```bash
+mkdir -p .agents/skills
+cp -R skills/bitsearch-research .agents/skills/
+```
+
+User-wide install:
+
+```bash
+mkdir -p ~/.agents/skills
+cp -R skills/bitsearch-research ~/.agents/skills/
+```
+
+If your client does not scan `.agents/skills/`, copy the same folder into its native skills directory instead, such as `.claude/skills/`, `~/.claude/skills/`, or `~/.codex/skills/`.
+
+See [skills/README.md](skills/README.md) and [llmdoc/guides/using-bitsearch-with-agent-skills.md](llmdoc/guides/using-bitsearch-with-agent-skills.md) for the standard template structure, compatibility notes, and the local snapshot of the Agent Skills specification.
+
+#### Disable Native Web Tools When Using BitSearch
+
+Some clients ship with built-in web tools such as `WebSearch` or `WebFetch`. Even if BitSearch MCP and the `bitsearch-research` skill are installed, the client may still prefer its own native web tools unless you disable them locally. If that happens, BitSearch cannot enforce its routing, evidence, or Planning Engine behavior.
+
+Important constraints:
+
+- Disable native web tools in the client itself. BitSearch cannot do this remotely.
+- The `toggle_builtin_tools` MCP tool is only a stub for remote deployments and always returns an error instead of changing local client settings.
+
+##### Claude Code
+
+For a one-off session, deny the built-in web tools on the command line:
+
+```bash
+claude --disallowedTools WebSearch WebFetch
+```
+
+For persistent configuration, add a deny rule in Claude Code settings. You can place this in `~/.claude/settings.json`, `.claude/settings.json`, or `.claude/settings.local.json`:
+
+```json
+{
+  "permissions": {
+    "deny": ["WebSearch", "WebFetch"]
+  }
+}
+```
+
+##### Codex
+
+Current Codex CLI help documents native live web search via the `--search` flag. When using BitSearch, do not launch Codex with `--search`, and remove that flag from any shell alias, wrapper script, launcher, or profile that adds it automatically.
+
+Minimal BitSearch-oriented launch examples:
+
+```bash
+codex
+```
+
+```bash
+codex -C /path/to/project
+```
+
+If you previously enabled native search in a wrapper or shortcut, remove `--search` there. In the current Codex CLI help, no separate documented native `WebFetch` toggle is exposed; the practical safeguard is to keep native search disabled so BitSearch remains the only web-capable path.
+
 ### 3. Operate the admin console
 
 1. Start the app with one of the deployment modes above.
@@ -547,9 +614,9 @@ A scaffold for LLMs to generate structured search strategies for highly complex 
 
 </details>
 
-### Recommended Companion Prompt
+### Fallback Companion Prompt (for clients without Agent Skills)
 
-If you use BitSearch from Cherry Studio or another MCP-capable client, the following system prompt is a recommended starting point. It preserves the project's evidence and expression standards while adding BitSearch-specific rules for choosing only currently exposed tools and using generic vs. provider-specific tools correctly.
+If your MCP client does not support Agent Skills, the following companion prompt is a recommended fallback. It preserves the project's evidence and expression standards while adding BitSearch-specific rules for choosing only currently exposed tools and using generic vs. provider-specific tools correctly.
 
 <details>
 <summary>Expand the full recommended companion prompt</summary>
