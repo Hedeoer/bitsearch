@@ -459,6 +459,8 @@ If your client does not scan `.agents/skills/`, copy the same folder into its na
 
 See [skills/README.md](skills/README.md) and [llmdoc/guides/using-bitsearch-with-agent-skills.md](llmdoc/guides/using-bitsearch-with-agent-skills.md) for the standard template structure, compatibility notes, and the local snapshot of the Agent Skills specification.
 
+If you want a realistic end-to-end validation flow after connecting a client, see [llmdoc/guides/testing-bitsearch-with-natural-chat-prompts.md](llmdoc/guides/testing-bitsearch-with-natural-chat-prompts.md). It provides a single-session natural chat script that exercises source-backed search, source follow-up, fetch, map, crawl, batch scrape, extract, and optional Planning Engine behavior.
+
 #### Disable Native Web Tools When Using BitSearch
 
 Some clients ship with built-in web tools such as `WebSearch` or `WebFetch`. Even if BitSearch MCP and the `bitsearch-research` skill are installed, the client may still prefer its own native web tools unless you disable them locally. If that happens, BitSearch cannot enforce its routing, evidence, or Planning Engine behavior.
