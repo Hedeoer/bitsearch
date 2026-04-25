@@ -19,6 +19,19 @@ import {
 
 const DEFAULT_TIMEOUT_MS = 30_000;
 
+function getSearchModelDescription(apiFormat: ProviderDraft["apiFormat"]): string {
+  if (apiFormat === "anthropic_messages") {
+    return "Probe checks the Anthropic models endpoint. Live test sends a real Anthropic Messages request with the staged Base URL, API key, timeout, and model without saving.";
+  }
+  if (apiFormat === "google_gemini") {
+    return "Probe checks the Gemini models endpoint. Live test sends a real Google Gemini request with the staged Base URL, API key, timeout, and model without saving.";
+  }
+  if (apiFormat === "openai_responses") {
+    return "Probe checks `/models`. Live test sends a real OpenAI Responses request with the staged Base URL, API key, timeout, and model without saving.";
+  }
+  return "Probe checks `/models`. Live test sends a real chat completion with the current staged Base URL, API key, timeout, and model without saving.";
+}
+
 type SearchEngineProviderPanelProps = PanelProps &
   Readonly<{
     apiKeyBusy: boolean;
@@ -100,6 +113,24 @@ export function SearchEngineProviderPanel(props: SearchEngineProviderPanelProps)
           </FieldShell>
         </div>
         <FieldShell
+          title="API Format"
+          description="Choose the upstream protocol for this search_engine endpoint."
+        >
+          <select
+            className="font-['IBM_Plex_Mono']"
+            disabled={props.busy}
+            value={props.draft.apiFormat}
+            onChange={(event) =>
+              props.onDraftChange({ apiFormat: event.target.value as ProviderDraft["apiFormat"] })
+            }
+          >
+            <option value="openai_chat_completions">OpenAI Chat Completions</option>
+            <option value="openai_responses">OpenAI Responses</option>
+            <option value="anthropic_messages">Anthropic Messages</option>
+            <option value="google_gemini">Google Gemini API</option>
+          </select>
+        </FieldShell>
+        <FieldShell
           title="API Key"
           description={
             props.provider.hasApiKey
@@ -134,7 +165,7 @@ export function SearchEngineProviderPanel(props: SearchEngineProviderPanelProps)
         </FieldShell>
         <FieldShell
           title="Search Model"
-          description="Probe checks `/models`. Live test sends a real chat completion with the current staged Base URL, API key, timeout, and model without saving."
+          description={getSearchModelDescription(props.draft.apiFormat)}
         >
           <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto_auto]">
             <input

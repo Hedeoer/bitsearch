@@ -27,8 +27,8 @@ export function ProbeModelsDialog(props: ProbeModelsDialogProps) {
         <div className="eyebrow">search_engine</div>
         <h3 id="provider-probe-title">Detected models</h3>
         <p className="supporting">
-          Probe checks the current staged Base URL, timeout, and API key settings, then lists the
-          returned `/models` entries without saving changes.
+          Probe checks the current staged Base URL, timeout, API format, and API key settings, then
+          lists detected models without saving changes.
         </p>
         <div className="mt-4 grid gap-3">
           {props.loading ? (

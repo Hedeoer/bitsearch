@@ -21,11 +21,14 @@ function renderModelProbe(result: SearchEngineRequestTestResponse) {
   return (
     <div className="grid gap-2 rounded-[18px] border border-white/8 bg-[color:var(--ui-card-soft)] p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <strong>/models diagnostics</strong>
+        <strong>Model probe diagnostics</strong>
         <span className="supporting compact">
           {statusLabel} · {listedLabel}
         </span>
       </div>
+      <p className="supporting compact">
+        Probe mode: {result.modelProbe.probeMode}
+      </p>
       <p className="supporting compact">
         Returned models: {result.modelProbe.modelsCount ?? "unknown"}
       </p>
@@ -51,8 +54,8 @@ export function SearchEngineRequestTestDialog(props: SearchEngineRequestTestDial
         <div className="eyebrow">search_engine</div>
         <h3 id="search-engine-request-test-title">Live request test</h3>
         <p className="supporting">
-          Sends a real `chat/completions` request with the current staged Base URL, API key,
-          timeout, and model. No settings are saved.
+          Sends a real request with the current staged Base URL, API key, timeout, model, and API
+          format. No settings are saved.
         </p>
         <div className="mt-4 grid gap-3">
           {props.loading ? (
@@ -68,7 +71,7 @@ export function SearchEngineRequestTestDialog(props: SearchEngineRequestTestDial
                     {props.result.status === "success" ? "Request succeeded" : "Request failed"}
                   </strong>
                   <span className="supporting compact">
-                    {props.result.model} · {props.result.durationMs} ms
+                    {props.result.model} · {props.result.apiFormat} · {props.result.durationMs} ms
                   </span>
                 </div>
                 {props.result.error ? <div className="warning-banner">{props.result.error}</div> : null}

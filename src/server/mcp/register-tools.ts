@@ -264,8 +264,10 @@ export function createMcpRuntime(context: AppContext): McpRuntime {
       const startedAt = Date.now();
       const sessionId = Math.random().toString(16).slice(2, 14);
       const routing = getCurrentGenericRoutingSnapshot(context);
+      let searchEngineApiFormat: string | null = null;
       try {
         const searchEngineConfig = requireSearchEngineConfig(context, { model });
+        searchEngineApiFormat = searchEngineConfig.apiFormat;
         if (model) {
           const models = await listSearchEngineModels(searchEngineConfig);
           if (models.length > 0 && !models.includes(model)) {
@@ -302,6 +304,7 @@ export function createMcpRuntime(context: AppContext): McpRuntime {
           resultPreview: answer.slice(0, 280),
           messages,
           metadata: {
+            searchEngineApiFormat: searchEngineConfig.apiFormat,
             sourcesCount: mergedSources.length,
             extraSourcesRequested: extra_sources,
           },
@@ -321,6 +324,7 @@ export function createMcpRuntime(context: AppContext): McpRuntime {
           errorSummary: message,
           inputJson: { query, platform, model, extra_sources },
           messages: buildSearchMessages(query, platform),
+          metadata: searchEngineApiFormat ? { searchEngineApiFormat } : undefined,
         });
         return toolJsonResult({
           session_id: sessionId,

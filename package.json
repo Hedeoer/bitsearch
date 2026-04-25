@@ -17,6 +17,9 @@
     "start": "node dist/server/main.js"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^2.0.77",
+    "@ai-sdk/google": "^2.0.70",
+    "@ai-sdk/openai": "^2.0.57",
     "@modelcontextprotocol/sdk": "^1.17.5",
     "@radix-ui/react-scroll-area": "^1.2.10",
     "@radix-ui/react-separator": "^1.1.8",
@@ -26,6 +29,7 @@
     "clsx": "^2.1.1",
     "express": "^5.1.0",
     "helmet": "^8.1.0",
+    "ai": "^5.0.84",
     "lucide-react": "^1.7.0",
     "nanoid": "^5.1.5",
     "react": "^19.1.1",

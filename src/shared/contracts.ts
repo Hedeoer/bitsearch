@@ -16,6 +16,12 @@ export type {
 } from "./tool-surface.js";
 
 export const SEARCH_ENGINE_PROVIDER = "search_engine";
+export const SEARCH_ENGINE_API_FORMATS = [
+  "openai_chat_completions",
+  "openai_responses",
+  "anthropic_messages",
+  "google_gemini",
+] as const;
 export const REMOTE_PROVIDERS = [SEARCH_ENGINE_PROVIDER, "tavily", "firecrawl"] as const;
 export const KEY_POOL_PROVIDERS = ["tavily", "firecrawl"] as const;
 export const REQUEST_STATUSES = ["success", "failed"] as const;
@@ -43,6 +49,7 @@ export const KEY_LIST_STATUSES = [
 
 export type RemoteProvider = (typeof REMOTE_PROVIDERS)[number];
 export type SearchEngineProvider = typeof SEARCH_ENGINE_PROVIDER;
+export type SearchEngineApiFormat = (typeof SEARCH_ENGINE_API_FORMATS)[number];
 export type KeyPoolProvider = (typeof KEY_POOL_PROVIDERS)[number];
 export type RequestStatus = (typeof REQUEST_STATUSES)[number];
 export type ActivityTimePreset = (typeof ACTIVITY_TIME_PRESETS)[number];
@@ -153,6 +160,7 @@ export interface ProviderConfigRecord {
   enabled: boolean;
   baseUrl: string;
   timeoutMs: number;
+  apiFormat: SearchEngineApiFormat | null;
   hasApiKey: boolean;
   apiKeyPreview: string | null;
   keyCount: number;
@@ -236,11 +244,14 @@ export interface DashboardSummary {
 
 export interface SearchEngineModelsResponse {
   provider: SearchEngineProvider;
+  apiFormat: SearchEngineApiFormat;
+  probeMode: "models_endpoint";
   models: string[];
 }
 
 export interface SearchEngineModelProbeResult {
   status: RequestStatus;
+  probeMode: "models_endpoint";
   modelsCount: number | null;
   modelListed: boolean | null;
   message: string | null;
@@ -248,6 +259,7 @@ export interface SearchEngineModelProbeResult {
 
 export interface SearchEngineRequestTestResponse {
   provider: SearchEngineProvider;
+  apiFormat: SearchEngineApiFormat;
   status: RequestStatus;
   model: string;
   durationMs: number;

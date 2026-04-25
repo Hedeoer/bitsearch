@@ -1,6 +1,6 @@
 # BitSearch Documentation
 
-> Remote MCP server aggregating `search_engine`, Tavily, and Firecrawl behind a unified HTTP/SSE interface with key pool management, automatic failover, and an admin operations console.
+> Remote MCP server aggregating `search_engine`, Tavily, and Firecrawl behind a unified HTTP/SSE interface with key pool management, automatic failover, and an admin operations console. `search_engine` supports OpenAI, Anthropic, and Gemini-style upstream formats.
 
 ## Overview
 

@@ -15,7 +15,7 @@ The bitsearch MCP server exposes 20 tools across four categories: search (4), pr
 ## 3. Search Tools
 
 ### `web_search`
-Deep web search via `search_engine`. Optionally fetches extra sources from Tavily/Firecrawl.
+Deep web search via `search_engine`. The search layer can target OpenAI chat, OpenAI responses, Anthropic messages, or Google Gemini upstream formats. Optionally fetches extra sources from Tavily/Firecrawl.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|

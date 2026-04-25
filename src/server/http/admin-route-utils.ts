@@ -1,12 +1,16 @@
+import { isIP } from "node:net";
 import { z } from "zod";
 import {
   GENERIC_ROUTING_MODES,
   KEY_LIST_STATUSES,
   KEY_POOL_PROVIDERS,
   REMOTE_PROVIDERS,
+  SEARCH_ENGINE_API_FORMATS,
+  SEARCH_ENGINE_PROVIDER,
   type KeyListStatus,
   type KeyPoolProvider,
   type RemoteProvider,
+  type SearchEngineApiFormat,
   type SystemSettings,
   type UpdateAdminAccessPayload,
   type UpdateMcpAccessPayload,
@@ -36,16 +40,19 @@ const genericProviderOrderSchema = z
     message: "duplicates_not_allowed",
   });
 const remoteProviderSchema = z.enum(REMOTE_PROVIDERS);
+const searchEngineApiFormatSchema = z.enum(SEARCH_ENGINE_API_FORMATS);
 
 const providerConfigSchema = z.object({
   enabled: z.boolean(),
   baseUrl: z.string().trim(),
   timeoutMs: z.coerce.number().int().min(MIN_PROVIDER_TIMEOUT_MS).max(MAX_PROVIDER_TIMEOUT_MS),
+  apiFormat: searchEngineApiFormatSchema.optional(),
   apiKey: z.string().optional(),
 });
 const searchEngineDraftProbeSchema = z.object({
   baseUrl: z.string().trim().min(1),
   timeoutMs: z.coerce.number().int().min(MIN_PROVIDER_TIMEOUT_MS).max(MAX_PROVIDER_TIMEOUT_MS),
+  apiFormat: searchEngineApiFormatSchema,
   apiKey: z.string(),
   useSavedApiKey: z.boolean(),
 });
@@ -98,7 +105,7 @@ function normalizeProviderBaseUrl(value: string, allowHttpLocal: boolean): strin
     return fail("invalid_provider_base_url");
   }
 
-  const isLocalHttp = parsed.protocol === "http:" && isLocalHostname(parsed.hostname);
+  const isLocalHttp = parsed.protocol === "http:" && isHttpDebugHost(parsed.hostname);
   if (!PROVIDER_URL_SCHEMES.has(parsed.protocol)) {
     return fail("invalid_provider_base_url");
   }
@@ -109,6 +116,73 @@ function normalizeProviderBaseUrl(value: string, allowHttpLocal: boolean): strin
     return fail("invalid_provider_base_url");
   }
   return parsed.toString().replace(/\/$/, "");
+}
+
+function normalizeSearchEngineBaseUrl(
+  value: string,
+  apiFormat: SearchEngineApiFormat | null,
+  allowHttpLocal: boolean,
+): string {
+  const normalized = normalizeProviderBaseUrl(value, allowHttpLocal);
+  if (!apiFormat) {
+    return normalized;
+  }
+
+  switch (apiFormat) {
+    case "anthropic_messages":
+      return normalized
+        .replace(/\/models$/, "")
+        .replace(/\/messages$/, "");
+    case "google_gemini":
+      return normalized
+        .replace(/\/models$/, "")
+        .replace(/\/generateContent$/, "");
+    default:
+      return normalized;
+  }
+}
+
+function isHttpDebugHost(hostname: string): boolean {
+  if (isLocalHostname(hostname)) {
+    return true;
+  }
+  if (hostname === "host.docker.internal") {
+    return true;
+  }
+  const ipVersion = isIP(hostname);
+  if (ipVersion === 4) {
+    return isPrivateIpv4(hostname);
+  }
+  if (ipVersion === 6) {
+    return isPrivateIpv6(hostname);
+  }
+  return false;
+}
+
+function isPrivateIpv4(hostname: string): boolean {
+  const octets = hostname.split(".").map((segment) => Number.parseInt(segment, 10));
+  if (octets.length !== 4 || octets.some((value) => !Number.isInteger(value))) {
+    return false;
+  }
+  const [first, second] = octets;
+  if (first === 10) {
+    return true;
+  }
+  if (first === 172 && second >= 16 && second <= 31) {
+    return true;
+  }
+  if (first === 192 && second === 168) {
+    return true;
+  }
+  if (first === 169 && second === 254) {
+    return true;
+  }
+  return false;
+}
+
+function isPrivateIpv6(hostname: string): boolean {
+  const lower = hostname.toLowerCase();
+  return lower === "::1" || lower.startsWith("fc") || lower.startsWith("fd") || lower.startsWith("fe80:");
 }
 
 export function csvEscape(value: unknown): string {
@@ -178,24 +252,39 @@ export function parseOptionalKeyPoolProvider(
 export function parseProviderConfigPayload(
   raw: unknown,
   allowHttpLocal: boolean,
+  provider: RemoteProvider,
 ): {
   enabled: boolean;
   baseUrl: string;
   timeoutMs: number;
+  apiFormat: SearchEngineApiFormat | null;
   apiKey?: string;
 } {
   const parsed = parseSchema(providerConfigSchema, raw, "invalid_provider_config");
+  const apiFormat =
+    provider === SEARCH_ENGINE_PROVIDER
+      ? parsed.apiFormat ?? "openai_chat_completions"
+      : null;
   const apiKey = parsed.apiKey?.trim();
   if (!parsed.baseUrl) {
     if (parsed.enabled) {
       return fail("invalid_provider_base_url");
     }
-    return { ...parsed, baseUrl: "", apiKey };
+    return {
+      ...parsed,
+      baseUrl: "",
+      apiFormat,
+      apiKey,
+    };
   }
 
   return {
     ...parsed,
-    baseUrl: normalizeProviderBaseUrl(parsed.baseUrl, allowHttpLocal),
+    baseUrl:
+      provider === SEARCH_ENGINE_PROVIDER
+        ? normalizeSearchEngineBaseUrl(parsed.baseUrl, apiFormat, allowHttpLocal)
+        : normalizeProviderBaseUrl(parsed.baseUrl, allowHttpLocal),
+    apiFormat,
     apiKey,
   };
 }
@@ -206,6 +295,7 @@ export function parseSearchEngineProbePayload(
 ): {
   baseUrl: string;
   timeoutMs: number;
+  apiFormat: SearchEngineApiFormat;
   apiKey: string;
   useSavedApiKey: boolean;
 } {
@@ -215,8 +305,9 @@ export function parseSearchEngineProbePayload(
     "invalid_search_engine_probe",
   );
   return {
-    baseUrl: normalizeProviderBaseUrl(parsed.baseUrl, allowHttpLocal),
+    baseUrl: normalizeSearchEngineBaseUrl(parsed.baseUrl, parsed.apiFormat, allowHttpLocal),
     timeoutMs: parsed.timeoutMs,
+    apiFormat: parsed.apiFormat,
     apiKey: parsed.apiKey.trim(),
     useSavedApiKey: parsed.useSavedApiKey,
   };
@@ -228,6 +319,7 @@ export function parseSearchEngineRequestTestPayload(
 ): {
   baseUrl: string;
   timeoutMs: number;
+  apiFormat: SearchEngineApiFormat;
   apiKey: string;
   useSavedApiKey: boolean;
   model: string;
@@ -238,8 +330,9 @@ export function parseSearchEngineRequestTestPayload(
     "invalid_search_engine_request_test",
   );
   return {
-    baseUrl: normalizeProviderBaseUrl(parsed.baseUrl, allowHttpLocal),
+    baseUrl: normalizeSearchEngineBaseUrl(parsed.baseUrl, parsed.apiFormat, allowHttpLocal),
     timeoutMs: parsed.timeoutMs,
+    apiFormat: parsed.apiFormat,
     apiKey: parsed.apiKey.trim(),
     useSavedApiKey: parsed.useSavedApiKey,
     model: parsed.model,

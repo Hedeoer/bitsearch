@@ -1,6 +1,7 @@
 import { useState } from "react";
 import {
   SEARCH_ENGINE_PROVIDER,
+  type SearchEngineApiFormat,
   type ProviderConfigRecord,
   type RemoteProvider,
   type SearchEngineRequestTestResponse,
@@ -67,12 +68,14 @@ export function ProviderCards(props: ProviderCardsProps) {
   const searchDraft = getProviderDraft(searchEngine, props.drafts, props.system);
 
   function createRequestTestFailure(
+    apiFormat: SearchEngineApiFormat,
     model: string,
     message: string,
     statusCode: number | null,
   ): SearchEngineRequestTestResponse {
     return {
       provider: SEARCH_ENGINE_PROVIDER,
+      apiFormat,
       status: "failed",
       model,
       durationMs: 0,
@@ -81,6 +84,7 @@ export function ProviderCards(props: ProviderCardsProps) {
       error: message,
       modelProbe: {
         status: "failed",
+        probeMode: "models_endpoint",
         modelsCount: null,
         modelListed: null,
         message: null,
@@ -131,6 +135,7 @@ export function ProviderCards(props: ProviderCardsProps) {
       const result = await probeSearchEngineModels(
         connectionPayload.baseUrl,
         connectionPayload.timeoutMs,
+        connectionPayload.apiFormat,
         connectionPayload.apiKey,
         connectionPayload.useSavedApiKey,
       );
@@ -155,13 +160,19 @@ export function ProviderCards(props: ProviderCardsProps) {
       const result = await testSearchEngineRequest(
         connectionPayload.baseUrl,
         connectionPayload.timeoutMs,
+        connectionPayload.apiFormat,
         connectionPayload.apiKey,
         connectionPayload.useSavedApiKey,
         connectionPayload.model,
       );
       if (!result.ok) {
         setRequestTestResult(
-          createRequestTestFailure(connectionPayload.model, result.message, result.status),
+          createRequestTestFailure(
+            connectionPayload.apiFormat,
+            connectionPayload.model,
+            result.message,
+            result.status,
+          ),
         );
         return;
       }
@@ -169,6 +180,7 @@ export function ProviderCards(props: ProviderCardsProps) {
     } catch (error) {
       setRequestTestResult(
         createRequestTestFailure(
+          connectionPayload.apiFormat,
           connectionPayload.model,
           error instanceof Error ? error.message : "Live request test failed.",
           null,

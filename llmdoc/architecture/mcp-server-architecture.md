@@ -36,7 +36,7 @@
 
 - **1.** MCP SDK deserializes JSON-RPC call and routes to the `web_search` handler in `register-tools.ts:228-307`.
 - **2.** Handler calls `requireSearchEngineConfig` to load the `search_engine` provider config and API key from database.
-- **3.** `searchWithSearchEngine` and `getExtraSources` run in parallel via `Promise.all`.
+- **3.** `searchWithSearchEngine` dispatches to the configured `search_engine` format (OpenAI chat, OpenAI responses, Anthropic messages, or Google Gemini), while `getExtraSources` runs in parallel via `Promise.all`.
 - **4.** Results are split/merged via `source-utils.js`, cached in SQLite via `saveSearchSession`, and logged via `logSearchRequest`.
 - **5.** Returns structured JSON with `session_id`, `content`, and `sources_count`.
 

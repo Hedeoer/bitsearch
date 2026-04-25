@@ -1,11 +1,16 @@
 import { nanoid } from "nanoid";
 import type {
   KeyPoolProvider,
+  SearchEngineApiFormat,
   ProviderConfigRecord,
   ProviderKeyRecord,
   RemoteProvider,
 } from "../../shared/contracts.js";
-import { REMOTE_PROVIDERS } from "../../shared/contracts.js";
+import {
+  REMOTE_PROVIDERS,
+  SEARCH_ENGINE_PROVIDER,
+  SEARCH_ENGINE_API_FORMATS,
+} from "../../shared/contracts.js";
 import type { AppDatabase } from "../db/database.js";
 import { decryptSecret, encryptSecret, fingerprintSecret } from "../lib/crypto.js";
 
@@ -14,6 +19,7 @@ interface ProviderConfigRow {
   enabled: number;
   base_url: string;
   api_key_encrypted: string;
+  api_format: string;
   timeout_ms: number;
   updated_at: string;
 }
@@ -41,10 +47,16 @@ interface ProviderKeyRow {
 
 function mapProviderConfig(row: ProviderConfigRow): ProviderConfigRecord {
   const countRow = row as ProviderConfigRow & { key_count?: number };
+  const format =
+    row.provider === SEARCH_ENGINE_PROVIDER &&
+    SEARCH_ENGINE_API_FORMATS.includes(row.api_format as SearchEngineApiFormat)
+      ? (row.api_format as SearchEngineApiFormat)
+      : "openai_chat_completions";
   return {
     provider: row.provider as ProviderConfigRecord["provider"],
     enabled: Boolean(row.enabled),
     baseUrl: row.base_url,
+    apiFormat: row.provider === SEARCH_ENGINE_PROVIDER ? format : null,
     hasApiKey: Boolean(row.api_key_encrypted),
     apiKeyPreview: null,
     keyCount: Number(countRow.key_count ?? 0),
@@ -90,6 +102,7 @@ export function listProviderConfigs(db: AppDatabase): ProviderConfigRecord[] {
   const rows = db.sqlite
     .prepare(
       `SELECT pc.provider, pc.enabled, pc.base_url, pc.api_key_encrypted, pc.timeout_ms, pc.updated_at,
+              pc.api_format,
               COUNT(pk.id) AS key_count
        FROM provider_configs pc
        LEFT JOIN provider_keys pk ON pk.provider = pc.provider
@@ -114,6 +127,7 @@ export function getProviderConfig(
   const row = db.sqlite
     .prepare(
       `SELECT pc.provider, pc.enabled, pc.base_url, pc.api_key_encrypted, pc.timeout_ms, pc.updated_at,
+              pc.api_format,
               COUNT(pk.id) AS key_count
        FROM provider_configs pc
        LEFT JOIN provider_keys pk ON pk.provider = pc.provider
@@ -127,28 +141,33 @@ export function getProviderConfig(
 export function saveProviderConfig(
   db: AppDatabase,
   provider: RemoteProvider,
-  payload: Pick<ProviderConfigRecord, "enabled" | "baseUrl" | "timeoutMs"> & {
+  payload: Pick<ProviderConfigRecord, "enabled" | "baseUrl" | "timeoutMs" | "apiFormat"> & {
     apiKey?: string;
     encryptionKey: string;
   },
 ): void {
   const current = db.sqlite
-    .prepare("SELECT api_key_encrypted FROM provider_configs WHERE provider = ?")
-    .get(provider) as { api_key_encrypted: string } | undefined;
+    .prepare("SELECT api_key_encrypted, api_format FROM provider_configs WHERE provider = ?")
+    .get(provider) as { api_key_encrypted: string; api_format?: string } | undefined;
   const encryptedApiKey =
     payload.apiKey === undefined
       ? (current?.api_key_encrypted ?? "")
       : payload.apiKey
         ? encryptSecret(payload.apiKey, payload.encryptionKey)
         : "";
+  const apiFormat =
+    provider === SEARCH_ENGINE_PROVIDER
+      ? payload.apiFormat ?? "openai_chat_completions"
+      : current?.api_format ?? "openai_chat_completions";
   db.sqlite
     .prepare(
-      `INSERT INTO provider_configs (provider, enabled, base_url, api_key_encrypted, timeout_ms, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?)
+      `INSERT INTO provider_configs (provider, enabled, base_url, api_key_encrypted, api_format, timeout_ms, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(provider) DO UPDATE SET
          enabled = excluded.enabled,
          base_url = excluded.base_url,
          api_key_encrypted = excluded.api_key_encrypted,
+         api_format = excluded.api_format,
          timeout_ms = excluded.timeout_ms,
          updated_at = excluded.updated_at`,
     )
@@ -157,6 +176,7 @@ export function saveProviderConfig(
       payload.enabled ? 1 : 0,
       payload.baseUrl,
       encryptedApiKey,
+      apiFormat,
       payload.timeoutMs,
       db.now(),
     );

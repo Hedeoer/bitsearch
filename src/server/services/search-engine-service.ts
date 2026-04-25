@@ -1,5 +1,6 @@
 import { SEARCH_ENGINE_PROVIDER } from "../../shared/contracts.js";
 import type { SearchEngineRequestTestResponse } from "../../shared/contracts.js";
+import type { SearchEngineApiFormat } from "../../shared/contracts.js";
 import type { AppContext } from "../app-context.js";
 import { getProviderApiKey, getProviderConfig } from "../repos/provider-repo.js";
 import { getSystemSettings } from "../repos/settings-repo.js";
@@ -18,6 +19,7 @@ const EMPTY_SEARCH_RESPONSE_ERROR = "search_engine returned an empty response";
 interface SearchEngineConfigOverrides {
   apiKey?: string;
   baseUrl?: string;
+  apiFormat?: SearchEngineApiFormat;
   model?: string;
   timeoutMs?: number;
 }
@@ -41,6 +43,7 @@ export function requireSearchEngineConfig(
   return {
     apiUrl: baseUrl,
     apiKey,
+    apiFormat: overrides.apiFormat ?? providerConfig?.apiFormat ?? "openai_chat_completions",
     model: overrides.model || settings.defaultSearchModel,
     timeoutMs: overrides.timeoutMs ?? providerConfig?.timeoutMs ?? 30000,
   };
@@ -70,6 +73,7 @@ function buildDraftSearchEngineConfig(
   input: {
     baseUrl: string;
     timeoutMs: number;
+    apiFormat: SearchEngineApiFormat;
     apiKey: string;
     useSavedApiKey: boolean;
     model?: string;
@@ -82,6 +86,7 @@ function buildDraftSearchEngineConfig(
   return {
     apiUrl: input.baseUrl,
     apiKey,
+    apiFormat: input.apiFormat,
     model: input.model || getSystemSettings(context.db).defaultSearchModel,
     timeoutMs: input.timeoutMs,
   };
@@ -110,6 +115,7 @@ function buildModelProbeResult(
   if (result.status === "rejected") {
     return {
       status: "failed",
+      probeMode: "models_endpoint",
       modelsCount: null,
       modelListed: null,
       message: getErrorDetails(result.reason).message,
@@ -117,6 +123,7 @@ function buildModelProbeResult(
   }
   return {
     status: "success",
+    probeMode: "models_endpoint",
     modelsCount: result.value.length,
     modelListed: result.value.includes(inputModel),
     message: result.value.includes(inputModel)
@@ -127,6 +134,7 @@ function buildModelProbeResult(
 
 function buildRequestTestResult(
   input: { model: string },
+  apiFormat: SearchEngineApiFormat,
   startedAt: number,
   modelProbe: SearchEngineRequestTestResponse["modelProbe"],
   payload: {
@@ -138,6 +146,7 @@ function buildRequestTestResult(
 ): SearchEngineRequestTestResponse {
   return {
     provider: SEARCH_ENGINE_PROVIDER,
+    apiFormat,
     status: payload.status,
     model: input.model,
     durationMs: Date.now() - startedAt,
@@ -153,6 +162,7 @@ export async function runSearchEngineRequestTest(
   input: {
     baseUrl: string;
     timeoutMs: number;
+    apiFormat: SearchEngineApiFormat;
     apiKey: string;
     useSavedApiKey: boolean;
     model: string;
@@ -164,11 +174,14 @@ export async function runSearchEngineRequestTest(
     listSearchEngineModels(config),
     searchWithSearchEngine(config, buildSearchMessages(SEARCH_ENGINE_TEST_QUERY, "")),
   ]);
-  const modelProbe = buildModelProbeResult(input.model, modelProbeResult);
+  const modelProbe = buildModelProbeResult(
+    input.model,
+    modelProbeResult,
+  );
 
   if (requestResult.status === "rejected") {
     const errorDetails = getErrorDetails(requestResult.reason);
-    return buildRequestTestResult(input, startedAt, modelProbe, {
+    return buildRequestTestResult(input, input.apiFormat, startedAt, modelProbe, {
       status: "failed",
       responsePreview: null,
       statusCode: errorDetails.statusCode,
@@ -178,7 +191,7 @@ export async function runSearchEngineRequestTest(
 
   const responseText = requestResult.value.trim();
   if (!responseText) {
-    return buildRequestTestResult(input, startedAt, modelProbe, {
+    return buildRequestTestResult(input, input.apiFormat, startedAt, modelProbe, {
       status: "failed",
       responsePreview: null,
       statusCode: null,
@@ -186,7 +199,7 @@ export async function runSearchEngineRequestTest(
     });
   }
 
-  return buildRequestTestResult(input, startedAt, modelProbe, {
+  return buildRequestTestResult(input, input.apiFormat, startedAt, modelProbe, {
     status: "success",
     responsePreview: responseText.slice(0, 280),
     statusCode: null,

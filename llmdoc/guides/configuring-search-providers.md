@@ -14,8 +14,13 @@ Each provider has a config record in the `provider_configs` table, managed via `
 
 For each provider (`search_engine`, `tavily`, `firecrawl`), set:
 - **enabled**: Toggle the provider on/off.
-- **baseUrl**: API endpoint base URL (for example, an OpenAI-compatible `/models` + `/chat/completions` provider for `search_engine`, `https://api.tavily.com` for Tavily, `https://api.firecrawl.dev/v1` for Firecrawl).
+- **baseUrl**: API endpoint base URL. For `search_engine`, the expected root depends on `apiFormat`:
+  - `openai_chat_completions` / `openai_responses`: OpenAI-style roots such as `https://api.openai.com/v1`
+  - `anthropic_messages`: Anthropic-style roots such as `https://api.anthropic.com`
+  - `google_gemini`: Gemini API roots such as `https://generativelanguage.googleapis.com/v1beta`
+  - Third-party relays may also work with compatibility prefixes like `/v1`, `/anthropic`, or `/gemini`
 - **timeoutMs**: Request timeout in milliseconds. `search_engine` enforces a minimum of 120s for search; Firecrawl enforces a minimum of 60s for scrape.
+- **apiFormat** (`search_engine` only): One of `openai_chat_completions`, `openai_responses`, `anthropic_messages`, `google_gemini`
 
 ## 2. Add API Keys
 
@@ -45,7 +50,13 @@ The provider order is stored in `generic_provider_order`, and the mode is stored
 
 Set the default search model via `system_settings` (key: `default_search_model`). Default: `"grok-4-fast"`. Can be overridden per-request by passing a model parameter. Available models can be listed via `listSearchEngineModels()` in `src/server/providers/search-engine-client.ts`.
 
-The admin console can probe models from `/admin/providers/search_engine/models`, which calls the configured provider's `/models` endpoint. If probing fails or returns an empty list, you can still type the model name manually.
+The admin console can probe models from `/admin/providers/search_engine/models`. The backend dispatches probe logic by `apiFormat`:
+
+- OpenAI formats: `/models`
+- Anthropic: Models API
+- Gemini: `models.list`
+
+If probing fails or returns an empty list, you can still type the model name manually.
 
 ## 5. Verify Configuration
 
@@ -61,5 +72,6 @@ The admin console can probe models from `/admin/providers/search_engine/models`,
 | "No enabled provider or usable key" | All providers disabled or no keys imported | Enable at least one provider and import keys |
 | All attempts show `rate_limit` errors | Key pool exhausted across all keys | Add more API keys or reduce request volume |
 | search_engine returns "未完整配置" error | Missing baseUrl or API key for search_engine | Set both via `saveProviderConfig()` |
+| search_engine model probe returns 404 / Not Found | Base URL prefix does not match the selected `apiFormat` | Check whether the upstream expects `/v1`, `/anthropic`, or `/gemini`, then align `baseUrl` and `apiFormat` |
 | Requests always use same provider | `genericRoutingMode` set to `single_provider` | Switch to `ordered_failover` if you want failover |
 | Keys not rotating evenly | Key `last_used_at` not updating | Verify `markKeyUsage()` is called (check `fetch-router.ts:125,161`) |

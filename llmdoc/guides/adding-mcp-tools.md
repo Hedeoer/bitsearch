@@ -8,7 +8,7 @@ A step-by-step guide for registering a new tool in the bitsearch MCP server.
 
 3. **Implement the handler logic:** The handler receives validated params as its first argument. Use `AppContext` (captured in the `createMcpServer` closure) to access `context.db` and `context.bootstrap`. Return either `toolJsonResult({...})` for structured JSON or `{ content: [{ type: "text", text: "..." }] }` for plain text.
 
-4. **Connect to backend services:** Import and call the appropriate service/repo functions. For provider-routed operations, use `runWithKeyPool` from `src/server/providers/fetch-router.ts`. For direct `search_engine` calls, use `requireSearchEngineConfig` to get credentials. For database access, use repo functions from `src/server/repos/`.
+4. **Connect to backend services:** Import and call the appropriate service/repo functions. For provider-routed operations, use `runWithKeyPool` from `src/server/providers/fetch-router.ts`. For direct `search_engine` calls, use `requireSearchEngineConfig` to get credentials and `searchWithSearchEngine` / `listSearchEngineModels` to dispatch by the configured API format. For database access, use repo functions from `src/server/repos/`.
 
 5. **Add request logging (if applicable):** Call `logSearchRequest()` (defined in `register-tools.ts:51-83`) with tool name, status, timing, and input/output metadata to ensure the tool's usage appears in the admin activity log.
 

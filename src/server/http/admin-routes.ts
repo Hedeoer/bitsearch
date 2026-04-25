@@ -159,7 +159,7 @@ export function createAdminRouter(context: AppContext): Router {
 
   router.put("/providers/:provider", (req, res) => {
     const provider = parseRemoteProvider(req.params.provider);
-    const payload = parseProviderConfigPayload(req.body ?? {}, allowHttpLocal);
+    const payload = parseProviderConfigPayload(req.body ?? {}, allowHttpLocal, provider);
     runWithToolSurfaceBroadcast(() => {
       saveProviderConfig(context.db, provider, {
         ...payload,
@@ -189,10 +189,16 @@ export function createAdminRouter(context: AppContext): Router {
     listAvailableSearchEngineModels(context, {
       baseUrl: payload.baseUrl,
       timeoutMs: payload.timeoutMs,
+      apiFormat: payload.apiFormat,
       ...(payload.useSavedApiKey ? {} : { apiKey: payload.apiKey }),
     })
       .then((models) => {
-        res.json({ provider, models });
+        res.json({
+          provider,
+          apiFormat: payload.apiFormat,
+          probeMode: "models_endpoint",
+          models,
+        });
       })
       .catch((error) => {
         if (error instanceof HttpRequestError) {

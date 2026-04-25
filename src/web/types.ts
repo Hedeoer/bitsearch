@@ -3,6 +3,7 @@ import type {
   DashboardSummary,
   ProviderConfigRecord,
   ProviderKeyRecord,
+  SearchEngineApiFormat,
   SystemSettings,
   ToolSurfaceSnapshot,
 } from "@shared/contracts";
@@ -18,6 +19,7 @@ export type ProviderDraft = {
   apiKey: string;
   apiKeyPreview: string;
   revealedApiKey: string;
+  apiFormat: SearchEngineApiFormat;
   searchModel: string;
 };
 

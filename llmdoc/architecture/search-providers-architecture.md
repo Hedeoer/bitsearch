@@ -8,7 +8,7 @@
 ## 2. Core Components
 
 - `src/server/providers/fetch-router.ts` (`runWithKeyPool`, `isFailoverError`, `classifyErrorType`): Central routing engine that iterates generic-routing providers, handles failover, and logs telemetry.
-- `src/server/providers/search-engine-client.ts` (`searchWithSearchEngine`, `buildSearchMessages`, `listSearchEngineModels`): AI-powered search via OpenAI-compatible chat completion API with SSE streaming. Single-key model.
+- `src/server/providers/search-engine-client.ts` (`searchWithSearchEngine`, `buildSearchMessages`, `listSearchEngineModels`): AI-powered search adapter for four `search_engine` formats -- OpenAI Chat Completions, OpenAI Responses, Anthropic Messages, and Google Gemini. Single-key model with provider-specific model probing.
 - `src/server/providers/tavily-client.ts` (`tavilySearch`, `tavilyExtract`, `tavilyMap`, `tavilyUsage`): Web search, URL content extraction, and site mapping. Key-pool model.
 - `src/server/providers/firecrawl-client.ts` (`firecrawlSearch`, `firecrawlScrape`, `firecrawlMap`, `firecrawlCreditUsage`): Web search, URL scraping, and site mapping. Key-pool model.
 - `src/server/services/planning-engine.ts` (`processPlanningPhase`): Multi-phase query analysis engine that decomposes queries by complexity level.
@@ -35,7 +35,15 @@
 
 - **1. Config Assembly:** `requireSearchEngineConfig()` loads provider config, decrypts single API key via `getProviderApiKey()`, and reads `defaultSearchModel` from settings.
 - **2. Message Construction:** `buildSearchMessages()` at `src/server/providers/search-engine-client.ts` creates system+user messages, injects time context for time-sensitive queries.
-- **3. Streaming Call:** `searchWithSearchEngine()` calls `/chat/completions` with `stream: true`, minimum 120s timeout. Response parsed as SSE via `requestTextStream()`.
+- **3. Provider Dispatch:** `searchWithSearchEngine()` dispatches by `apiFormat`:
+  - `openai_chat_completions` -> `@ai-sdk/openai` chat model
+  - `openai_responses` -> `@ai-sdk/openai` responses model
+  - `anthropic_messages` -> `@ai-sdk/anthropic`
+  - `google_gemini` -> `@ai-sdk/google`
+- **4. Model Probe Dispatch:** `listSearchEngineModels()` dispatches by `apiFormat` and uses provider-specific REST endpoints:
+  - OpenAI formats -> `/models`
+  - Anthropic -> `/v1/models`
+  - Gemini -> `models.list`
 - **4. Supplemental Sources:** `getExtraSources()` at `src/server/mcp/register-tools.ts:100-155` independently queries Tavily/Firecrawl for additional web results.
 
 ### 3.3 Planning Engine
@@ -51,4 +59,5 @@
 - **Two-tier key model:** `search_engine` uses a single key (stored in `provider_configs.api_key_encrypted`) because it serves as a dedicated AI search endpoint. Tavily/Firecrawl use key pools (stored in `provider_keys` table) to distribute rate limits across multiple keys.
 - **LRU rotation:** Keys sorted by `last_used_at ASC` ensures even distribution across pool, reducing per-key rate limit pressure.
 - **Error classification split:** Retryable vs non-retryable distinction prevents wasting attempts on permanent failures (e.g., 401 auth errors) while maximizing resilience for transient issues.
-- **Search engine isolation:** `search_engine` does not participate in the `runWithKeyPool` router because it has a fundamentally different interface (streaming chat completion vs. REST JSON), different output shape (prose with inline citations vs. structured results), and a single-key model.
+- **Search engine isolation:** `search_engine` does not participate in the `runWithKeyPool` router because it has a fundamentally different interface than generic retrieval, uses a single-key model, and now multiplexes multiple upstream AI protocols behind one config entry.
+- **Provider-specific model probing:** Model discovery is not delegated to a unified SDK API. The server probes each `search_engine` format with provider-specific endpoints, similar to multi-channel AI gateways that normalize upstream differences at the adapter boundary.

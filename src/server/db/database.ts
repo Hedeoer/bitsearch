@@ -67,6 +67,15 @@ function assertEncryptionKeyCompatibility(
 function applyMigrations(db: DatabaseSync): void {
   ensureColumn(
     db,
+    "provider_configs",
+    "api_format",
+    "ALTER TABLE provider_configs ADD COLUMN api_format TEXT NOT NULL DEFAULT 'openai_chat_completions'",
+  );
+  db.prepare(
+    "UPDATE provider_configs SET api_format = 'openai_chat_completions' WHERE provider = 'search_engine' AND (api_format IS NULL OR api_format = '')",
+  ).run();
+  ensureColumn(
+    db,
     "admin_users",
     "password_updated_at",
     "ALTER TABLE admin_users ADD COLUMN password_updated_at TEXT",
@@ -196,11 +205,11 @@ function seedSystemSettings(
 
 function seedProviderConfigs(db: DatabaseSync, now: string): void {
   const stmt = db.prepare(
-    "INSERT OR IGNORE INTO provider_configs (provider, enabled, base_url, api_key_encrypted, timeout_ms, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+    "INSERT OR IGNORE INTO provider_configs (provider, enabled, base_url, api_key_encrypted, api_format, timeout_ms, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
   );
-  stmt.run("search_engine", 0, "", "", 30000, now);
-  stmt.run("tavily", 0, "https://api.tavily.com", "", 30000, now);
-  stmt.run("firecrawl", 0, "https://api.firecrawl.dev/v2", "", 30000, now);
+  stmt.run("search_engine", 0, "", "", "openai_chat_completions", 30000, now);
+  stmt.run("tavily", 0, "https://api.tavily.com", "", "openai_chat_completions", 30000, now);
+  stmt.run("firecrawl", 0, "https://api.firecrawl.dev/v2", "", "openai_chat_completions", 30000, now);
 }
 
 export function createDatabase(config: BootstrapConfig): AppDatabase {

@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS provider_configs (
   enabled INTEGER NOT NULL DEFAULT 0,
   base_url TEXT NOT NULL DEFAULT '',
   api_key_encrypted TEXT NOT NULL DEFAULT '',
+  api_format TEXT NOT NULL DEFAULT 'openai_chat_completions',
   timeout_ms INTEGER NOT NULL DEFAULT 30000,
   updated_at TEXT NOT NULL
 );

@@ -50,9 +50,9 @@ The admin API consists of **28 endpoints** split across two routers: a public au
 | Method | Path | Request Body | Response Type | Description |
 |--------|------|-------------|---------------|-------------|
 | GET | `/providers` | -- | `ProviderConfigRecord[]` | List all provider configs |
-| PUT | `/providers/:provider` | `{enabled, baseUrl, timeoutMs, apiKey?}` | `ProviderConfigRecord[]` | Update provider config |
-| POST | `/providers/:provider/models` | `{baseUrl, timeoutMs, apiKey, useSavedApiKey}` | `{provider, models[]}` | Probe models from `/models` for `search_engine` using staged settings without saving |
-| POST | `/providers/:provider/request-test` | `{baseUrl, timeoutMs, apiKey, useSavedApiKey, model}` | `SearchEngineRequestTestResponse` | Run a real staged `chat/completions` request for `search_engine` without saving |
+| PUT | `/providers/:provider` | `{enabled, baseUrl, timeoutMs, apiFormat?, apiKey?}` | `ProviderConfigRecord[]` | Update provider config |
+| POST | `/providers/:provider/models` | `{baseUrl, timeoutMs, apiFormat, apiKey, useSavedApiKey}` | `{provider, apiFormat, probeMode, models[]}` | Probe `search_engine` models using provider-specific logic for the selected API format |
+| POST | `/providers/:provider/request-test` | `{baseUrl, timeoutMs, apiFormat, apiKey, useSavedApiKey, model}` | `SearchEngineRequestTestResponse` | Run a real staged request for `search_engine` using the selected API format |
 
 ### Key Pool Management (session required)
 

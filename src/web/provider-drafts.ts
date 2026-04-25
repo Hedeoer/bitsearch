@@ -20,6 +20,7 @@ export function createProviderDraft(
     apiKey: provider.apiKeyPreview ?? "",
     apiKeyPreview: provider.apiKeyPreview ?? "",
     revealedApiKey: "",
+    apiFormat: provider.apiFormat ?? "openai_chat_completions",
     searchModel: provider.provider === SEARCH_ENGINE_PROVIDER ? system.defaultSearchModel : "",
   };
 }
@@ -53,6 +54,12 @@ export function isProviderDirty(
     return true;
   }
   if (provider.timeoutMs !== draft.timeoutMs) {
+    return true;
+  }
+  if (
+    provider.provider === SEARCH_ENGINE_PROVIDER &&
+    draft.apiFormat !== (provider.apiFormat ?? "openai_chat_completions")
+  ) {
     return true;
   }
   const savedApiKeyValues = [draft.apiKeyPreview, draft.revealedApiKey].filter(Boolean);

@@ -1,5 +1,6 @@
 import {
   SEARCH_ENGINE_PROVIDER,
+  type SearchEngineApiFormat,
   type ProviderConfigRecord,
   type RemoteProvider,
   type SearchEngineRequestTestResponse,
@@ -35,19 +36,21 @@ export function revealSearchEngineApiKey(): Promise<ApiResult<{ apiKey: string }
 export async function probeSearchEngineModels(
   baseUrl: string,
   timeoutMs: number,
+  apiFormat: SearchEngineApiFormat,
   apiKey: string,
   useSavedApiKey: boolean,
 ): Promise<ApiResult<import("@shared/contracts").SearchEngineModelsResponse>> {
   return apiRequest<import("@shared/contracts").SearchEngineModelsResponse>(
     "POST",
     `/admin/providers/${SEARCH_ENGINE_PROVIDER}/models`,
-    { baseUrl, timeoutMs, apiKey, useSavedApiKey },
+    { baseUrl, timeoutMs, apiFormat, apiKey, useSavedApiKey },
   );
 }
 
 export async function testSearchEngineRequest(
   baseUrl: string,
   timeoutMs: number,
+  apiFormat: SearchEngineApiFormat,
   apiKey: string,
   useSavedApiKey: boolean,
   model: string,
@@ -55,7 +58,7 @@ export async function testSearchEngineRequest(
   return apiRequest<SearchEngineRequestTestResponse>(
     "POST",
     `/admin/providers/${SEARCH_ENGINE_PROVIDER}/request-test`,
-    { baseUrl, timeoutMs, apiKey, useSavedApiKey, model },
+    { baseUrl, timeoutMs, apiFormat, apiKey, useSavedApiKey, model },
   );
 }
 
@@ -74,6 +77,7 @@ export function buildSearchEngineConnectionPayload(
 ): {
   baseUrl: string;
   timeoutMs: number;
+  apiFormat: SearchEngineApiFormat;
   apiKey: string;
   useSavedApiKey: boolean;
   model: string;
@@ -83,6 +87,7 @@ export function buildSearchEngineConnectionPayload(
   return {
     baseUrl: draft.baseUrl,
     timeoutMs: draft.timeoutMs,
+    apiFormat: draft.apiFormat,
     apiKey: useSavedApiKey ? "" : draft.apiKey,
     useSavedApiKey,
     model: draft.searchModel,
@@ -114,6 +119,7 @@ export async function saveDirtyProviders(input: {
       enabled: draft.enabled,
       baseUrl: draft.baseUrl,
       timeoutMs: draft.timeoutMs,
+      apiFormat: provider === SEARCH_ENGINE_PROVIDER ? draft.apiFormat : undefined,
       ...(provider === SEARCH_ENGINE_PROVIDER
         ? { apiKey: shouldPersistApiKey(draft) ? draft.apiKey : undefined }
         : {}),

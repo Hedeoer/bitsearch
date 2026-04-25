@@ -3,7 +3,7 @@
 ## 1. Identity
 
 - **What it is:** A remote MCP (Model Context Protocol) server that gives AI agents web search, content extraction, and site mapping capabilities through a unified HTTP/SSE interface.
-- **Purpose:** Aggregates multiple search providers (`search_engine`, Tavily, Firecrawl) behind a single MCP endpoint with automatic failover, API key pool management, and operational observability.
+- **Purpose:** Aggregates multiple search providers (`search_engine`, Tavily, Firecrawl) behind a single MCP endpoint with automatic failover, API key pool management, and operational observability. The `search_engine` layer can target OpenAI, Anthropic, and Gemini-style upstream APIs through one configurable provider entry.
 
 ## 2. High-Level Description
 
@@ -15,7 +15,7 @@ BitSearch is a split frontend/backend TypeScript monorepo. The **server** layer 
 | ------------ | ------------------------------------------------------- |
 | Runtime      | Node.js with native `node:sqlite` (DatabaseSync)       |
 | Language     | TypeScript (strict, ESM)                                |
-| Server       | Express 5, `@modelcontextprotocol/sdk` ^1.17            |
+| Server       | Express 5, `@modelcontextprotocol/sdk` ^1.17, AI SDK provider adapters for OpenAI / Anthropic / Gemini |
 | Frontend     | React 19, React Router 7, Vite 7                       |
 | Database     | SQLite (WAL mode, 9 tables)                             |
 | Security     | bcrypt, AES-256-GCM encryption, session cookies, Bearer tokens |
@@ -31,7 +31,7 @@ BitSearch is a split frontend/backend TypeScript monorepo. The **server** layer 
 
 ## 5. Key Capabilities
 
-- **Two-layer retrieval model:** `search_engine` for AI-powered search; Tavily and Firecrawl for generic retrieval routing plus provider-native advanced tools. Generic routing uses `single_provider` or `ordered_failover`.
+- **Two-layer retrieval model:** `search_engine` for AI-powered search across OpenAI / Anthropic / Gemini-compatible upstream formats; Tavily and Firecrawl for generic retrieval routing plus provider-native advanced tools. Generic routing uses `single_provider` or `ordered_failover`.
 - **API key pool management:** Bulk import, LRU rotation, health monitoring, quota synchronization, and per-key telemetry for Tavily and Firecrawl.
 - **Query planning engine:** Six-phase workflow (intent, complexity, sub-queries, search terms, tool mapping, execution order) with complexity-based phase gating.
 - **Activity tracking:** Two-level logging (request + attempt) with provider failover visibility, dashboard metrics, and configurable retention.

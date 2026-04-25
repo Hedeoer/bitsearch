@@ -512,21 +512,36 @@ If you previously enabled native search in a wrapper or shortcut, remove `--sear
 
 ### 4. Configure providers
 
-#### search_engine (OpenAI-compatible endpoint)
+#### search_engine (multi-format AI endpoint)
 
-`search_engine` is the core search provider. Point it at any OpenAI-compatible chat completions service.
+`search_engine` is the core search provider. It supports four upstream API formats behind one configuration entry:
+
+- `openai_chat_completions`
+- `openai_responses`
+- `anthropic_messages`
+- `google_gemini`
 
 In the **Providers** workspace, set:
 
-- **Base URL** — the root of the OpenAI-compatible API, e.g.:
+- **Base URL** — the root of the upstream API. Common patterns:
   - OpenAI: `https://api.openai.com/v1`
   - Ollama (local): `http://localhost:11434/v1`
-  - Any third-party relay: follow the provider's documentation
+  - Anthropic: `https://api.anthropic.com`
+  - Gemini API: `https://generativelanguage.googleapis.com/v1beta`
+  - Third-party relays can also work. Common compatible prefixes include `/v1`, `/anthropic`, and `/gemini`.
+- **API Format** — choose the protocol that matches the upstream endpoint:
+  - `OpenAI Chat Completions`
+  - `OpenAI Responses`
+  - `Anthropic Messages`
+  - `Google Gemini API`
 - **API Key** — the API key for the service (stored encrypted, never logged)
 - **Model** — the model ID to use for search; can also be switched at runtime via the `switch_model` MCP tool
 - **Timeout** — set to ≥ 120 000 ms; search completions take longer than regular chat requests
-- **Probe models** — checks the staged `/models` endpoint response without saving changes
-- **Run live test** — sends a real staged `chat/completions` request without saving changes so you can verify Base URL, API key, timeout, and model together
+- **Probe models** — runs a provider-specific model probe without saving changes:
+  - OpenAI formats use `/models`
+  - Anthropic uses its Models API
+  - Gemini uses `models.list`
+- **Run live test** — sends a real staged request using the selected API format without saving changes so you can verify Base URL, API key, timeout, and model together
 
 #### Tavily (key pool)
 
