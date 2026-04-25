@@ -76,10 +76,10 @@ export function useKeyWorkspaceActions(config: ActionConfig) {
     }
   }
 
-  async function importKeys() {
+  async function importKeys(): Promise<boolean> {
     if (!config.rawKeys.trim()) {
       config.onToast("warning", "Paste at least one key before importing");
-      return;
+      return false;
     }
     setIsImporting(true);
     try {
@@ -92,8 +92,10 @@ export function useKeyWorkspaceActions(config: ActionConfig) {
       config.setRawKeys("");
       config.onToast("success", summarizeAction("Import complete", res.data));
       await config.refreshWorkspace();
+      return true;
     } catch (error) {
       config.onToast("error", getErrorMessage(error, "Key import failed"));
+      return false;
     } finally {
       setIsImporting(false);
     }

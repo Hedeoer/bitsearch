@@ -26,6 +26,7 @@ export interface FirecrawlHistoricalCreditUsageResponse {
     startDate?: string;
     endDate?: string;
     apiKey?: string;
+    creditsUsed?: number;
     totalCredits?: number;
   }>;
 }
@@ -164,7 +165,7 @@ export async function firecrawlHistoricalCreditUsage(
 ): Promise<FirecrawlHistoricalCreditUsageResponse> {
   const baseUrl = config.baseUrl.replace(/\/$/, "");
   return requestJson<FirecrawlHistoricalCreditUsageResponse>(
-    `${baseUrl}/team/credit-usage/historical?byApiKey=true`,
+    `${baseUrl}/team/credit-usage/historical`,
     {
       method: "GET",
       headers: { Authorization: `Bearer ${config.apiKey}` },

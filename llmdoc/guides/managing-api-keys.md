@@ -12,11 +12,21 @@ Guide for importing, monitoring, and managing API keys in the key pool system.
 ## Sync Quota Information
 
 1. **Quick test (health check only):** Call `testKeys(context, provider, ids)` in `src/server/services/key-pool-service.ts:196-204`. This calls provider quota endpoints and updates health status without fetching historical data.
-2. **Full quota sync:** Call `syncKeyQuotas(context, provider, ids)` in `src/server/services/key-pool-service.ts:206-214`. For Firecrawl, this additionally fetches historical credit usage per API key.
+2. **Full quota sync:** Call `syncKeyQuotas(context, provider, ids)` in `src/server/services/key-pool-service.ts`. For Firecrawl, this additionally fetches historical team credit usage from `/team/credit-usage/historical`.
 3. **What gets updated:** Each key's `last_check_status` (healthy/unhealthy), `last_check_error`, `quota_json`, and `quota_synced_at` columns are updated.
 4. **Provider-specific data:**
    - **Tavily:** Key-level usage/limit across 5 operation types + account-level plan usage.
-   - **Firecrawl:** Team credit remaining/plan totals + billing period + optional per-key historical credits.
+   - **Firecrawl:** Team remaining/plan credits from `/team/credit-usage` plus latest-period historical used credits from `/team/credit-usage/historical`.
+
+### Firecrawl-Specific Rule
+
+BitSearch assumes each imported Firecrawl key belongs to a different Firecrawl team. Under that project rule:
+- key `used` = latest historical `creditsUsed`
+- key `remaining` = current `remainingCredits`
+- derived key `total` = `used + remaining`
+- pool Firecrawl totals are direct sums across keys
+
+The admin UI intentionally shows Firecrawl quota in compact `used/remaining` form rather than exposing all raw provider fields.
 
 ## Monitor Key Health
 

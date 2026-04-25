@@ -81,25 +81,21 @@ function mapFirecrawlTeamQuota(
 
 function pickHistoricalQuota(
   payload: Awaited<ReturnType<typeof firecrawlHistoricalCreditUsage>>,
-  secret: string,
 ): FirecrawlHistoricalQuotaSnapshot {
   const periods = (payload.periods ?? [])
-    .filter((item) => item.apiKey === secret)
-    .sort((left, right) => (left.endDate ?? "").localeCompare(right.endDate ?? ""));
+    .sort((left, right) => (left.startDate ?? "").localeCompare(right.startDate ?? ""));
   const latest = periods.at(-1);
   if (!latest) {
     return {
-      historicalCredits: null,
+      totalCredits: null,
       startDate: null,
       endDate: null,
-      byApiKeyMatched: false,
     };
   }
   return {
-    historicalCredits: toNumber(latest.totalCredits),
+    totalCredits: toNumber(latest.creditsUsed ?? latest.totalCredits),
     startDate: latest.startDate ?? null,
     endDate: latest.endDate ?? null,
-    byApiKeyMatched: true,
   };
 }
 
@@ -178,7 +174,7 @@ async function refreshFirecrawlKeys(
         mergeQuota(key.quota, {
           firecrawl: {
             team: mapFirecrawlTeamQuota(teamUsage),
-            historical: historical ? pickHistoricalQuota(historical, key.secret) : key.quota?.firecrawl?.historical ?? null,
+            historical: historical ? pickHistoricalQuota(historical) : key.quota?.firecrawl?.historical ?? null,
           },
         }),
       );

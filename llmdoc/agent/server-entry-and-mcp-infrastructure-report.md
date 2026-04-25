@@ -98,7 +98,7 @@
 - `src/server/repos/key-pool-repo.ts` (listManagedKeys): Loads keys with filters (provider, status, query, tag), decrypts secrets for query matching, strips secrets before returning (lines 128-138).
 - `src/server/repos/key-pool-repo.ts` (saveKeyHealth): Updates last_check_status, last_checked_at, last_check_error for key ID (lines 169-182).
 - `src/server/repos/key-pool-repo.ts` (saveKeyQuota): Updates quota_json, quota_synced_at for key ID (lines 184-196).
-- `src/server/repos/key-pool-summary.ts` (buildKeyPoolSummary): Aggregates per-key quota data into pool-level summary with provider-specific logic (Tavily: sum key usage/limit, dedupe accounts; Firecrawl: sum team credits, detect historical by-key matching) (lines 101-121).
+- `src/server/repos/key-pool-summary.ts` (buildKeyPoolSummary): Aggregates per-key quota data into pool-level summary with provider-specific logic (Tavily: sum key usage/limit, dedupe accounts; Firecrawl: sum `used` and `remaining` across keys under the project rule that each imported key belongs to a different team) (lines 101-121).
 
 #### System Settings
 

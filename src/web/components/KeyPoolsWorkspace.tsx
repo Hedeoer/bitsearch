@@ -6,7 +6,7 @@ import type { ToastTone } from "./Feedback";
 import { ConfirmDialog, InlineSpinner, LoadingOverlay, EmptyState } from "./Feedback";
 import { formatNumber, formatDateTime } from "../format";
 import type { KeySortMode } from "../types";
-import { KeyInventoryCard, renderFirecrawlQuota } from "./KeyInventoryCard";
+import { KeyInventoryCard } from "./KeyInventoryCard";
 import type { KeyListStatus, KeyPoolSummary, KeyPoolProvider } from "@shared/contracts";
 import { KeyPoolProviderPicker } from "./KeyPoolProviderPicker";
 import { useKeyWorkspace } from "./useKeyWorkspace";
@@ -19,7 +19,9 @@ function renderSummaryQuota(summary: KeyPoolSummary | null): string {
     return `${base} · ${summary.tavily.account.currentPlan ?? "plan"} ${formatNumber(summary.tavily.account.planUsage)} / ${formatNumber(summary.tavily.account.planLimit)}`;
   }
   if (summary.provider === "firecrawl") {
-    return renderFirecrawlQuota(summary.firecrawl?.team ?? null, null);
+    const firecrawl = summary.firecrawl;
+    if (!firecrawl) return "Not synced";
+    return `${formatNumber(firecrawl.totalUsedCredits)}/${formatNumber(firecrawl.totalRemainingCredits)}`;
   }
   return "Not synced";
 }
@@ -34,11 +36,9 @@ function computeQuotaPercentage(summary: KeyPoolSummary | null): number | null {
       return summary.tavily.totalKeyUsage / summary.tavily.totalKeyLimit;
     }
   }
-  if (summary.provider === "firecrawl" && summary.firecrawl?.team) {
-    if (summary.firecrawl.team.planCredits > 0) {
-      const team = summary.firecrawl.team;
-      const usage = team.planCredits - team.remainingCredits;
-      return usage / team.planCredits;
+  if (summary.provider === "firecrawl" && summary.firecrawl) {
+    if (summary.firecrawl.totalCredits > 0) {
+      return summary.firecrawl.totalUsedCredits / summary.firecrawl.totalCredits;
     }
   }
   return null;
@@ -186,10 +186,10 @@ export function KeyPoolsWorkspace(props: KeyPoolsWorkspaceProps) {
             <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
               <button 
                 className={workspace.summary?.totalKeys === 0 ? "primary-button pulse" : "secondary-button"}
-                onClick={() => setIsImportOpen(!isImportOpen)}
+                onClick={() => setIsImportOpen(true)}
                 style={{ padding: '0.2rem 0.65rem', minHeight: '30px' }}
               >
-                {isImportOpen ? <ChevronDown size={14} style={{ marginRight: '4px' }} /> : <ChevronRight size={14} style={{ marginRight: '4px' }} />}
+                <Upload size={14} style={{ marginRight: '4px' }} />
                 Manage & Import
               </button>
             </div>
@@ -197,48 +197,7 @@ export function KeyPoolsWorkspace(props: KeyPoolsWorkspaceProps) {
           
           <SummaryCards loading={workspace.loading} summary={workspace.summary} />
 
-          {/* Collapsible Import / Export */}
-          {isImportOpen && (
-            <div className="import-panel" style={{ marginTop: '1rem', padding: '1rem', background: 'rgba(255, 255, 255, 0.02)', border: '1px dashed var(--border)', borderRadius: '8px' }}>
-              <div className="import-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-                <label className="field">
-                  <span>Import Tags</span>
-                  <input
-                    value={workspace.importTags}
-                    onChange={(event) => workspace.setImportTags(event.target.value)}
-                    placeholder="search, production, backup"
-                  />
-                </label>
-              </div>
-              <label className="field" style={{ marginTop: '0.85rem' }}>
-                <span>Paste Keys</span>
-                <textarea
-                  rows={4}
-                  value={workspace.rawKeys}
-                  onChange={(event) => workspace.setRawKeys(event.target.value)}
-                  placeholder="One API key per line"
-                />
-              </label>
-              <div className="action-row" style={{ marginTop: '0.85rem', display: 'flex', gap: '0.65rem' }}>
-                <button
-                  className="primary-button"
-                  disabled={workspace.isImporting}
-                  onClick={() => void workspace.importKeys()}
-                >
-                  {workspace.isImporting ? <InlineSpinner label="Importing" /> : <><Upload size={14} /> Import Text</>}
-                </button>
-                <a
-                  className="secondary-button link-button"
-                  href={`/api/admin/keys/export.csv?provider=${workspace.provider}`}
-                >
-                  <Download size={14} /> Export CSV
-                </a>
-              </div>
-              <p className="supporting compact" style={{ marginTop: '0.5rem' }}>
-                Last quota sync: {formatDateTime(workspace.summary?.quotaSyncedAt ?? null)}
-              </p>
-            </div>
-          )}
+
 
           <div style={{ paddingBottom: '1.25rem' }} />
 
@@ -415,6 +374,86 @@ export function KeyPoolsWorkspace(props: KeyPoolsWorkspaceProps) {
         pending={workspace.isConfirmingDelete}
         title={workspace.confirmDelete?.title ?? ""}
       />
+
+      {isImportOpen && (
+        <div className="dialog-backdrop" role="presentation" onClick={() => !workspace.isImporting && setIsImportOpen(false)}>
+          <section
+            className="dialog-card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="import-dialog-title"
+            onClick={(event) => event.stopPropagation()}
+            style={{ minWidth: '500px' }}
+          >
+            <div className="eyebrow">Key Operations</div>
+            <h3 id="import-dialog-title">Manage & Import Keys</h3>
+            <p className="supporting">Paste your {workspace.provider} API keys below to add them to your pool.</p>
+            
+            <div className="import-panel" style={{ marginTop: '1rem' }}>
+              <label className="field">
+                <span>Import Tags</span>
+                <input
+                  value={workspace.importTags}
+                  onChange={(event) => workspace.setImportTags(event.target.value)}
+                  placeholder="search, production, backup"
+                  disabled={workspace.isImporting}
+                />
+              </label>
+              
+              <label className="field" style={{ marginTop: '1.25rem' }}>
+                <span>Paste Keys</span>
+                <textarea
+                  rows={6}
+                  value={workspace.rawKeys}
+                  onChange={(event) => workspace.setRawKeys(event.target.value)}
+                  placeholder="One API key per line"
+                  disabled={workspace.isImporting}
+                  style={{ fontFamily: 'monospace' }}
+                />
+              </label>
+              
+              <div style={{ marginTop: '1rem' }}>
+                <p className="supporting compact" style={{ margin: 0, fontSize: '0.75rem' }}>
+                  Last quota sync: {formatDateTime(workspace.summary?.quotaSyncedAt ?? null)}
+                </p>
+              </div>
+            </div>
+
+            <div className="dialog-actions" style={{ marginTop: '2rem', justifyContent: 'space-between' }}>
+              <div>
+                <a
+                  className="secondary-button"
+                  href={`/api/admin/keys/export.csv?provider=${workspace.provider}`}
+                >
+                  <Download size={14} /> Export CSV
+                </a>
+              </div>
+              <div style={{ display: 'flex', gap: '0.75rem' }}>
+                <button
+                  className="secondary-button"
+                  type="button"
+                  onClick={() => setIsImportOpen(false)}
+                  disabled={workspace.isImporting}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="primary-button"
+                  disabled={workspace.isImporting}
+                  onClick={async () => {
+                    const success = await workspace.importKeys();
+                    if (success) {
+                      setIsImportOpen(false);
+                    }
+                  }}
+                >
+                  {workspace.isImporting ? <InlineSpinner label="Importing" /> : <><Upload size={14} /> Import Keys</>}
+                </button>
+              </div>
+            </div>
+          </section>
+        </div>
+      )}
     </>
   );
 }

@@ -89,10 +89,9 @@ export interface FirecrawlTeamQuotaSnapshot {
 }
 
 export interface FirecrawlHistoricalQuotaSnapshot {
-  historicalCredits: number | null;
+  totalCredits: number | null;
   startDate: string | null;
   endDate: string | null;
-  byApiKeyMatched: boolean;
 }
 
 export interface ProviderKeyQuotaSnapshot {
@@ -206,8 +205,11 @@ export interface KeyPoolSummary {
     account: TavilyAccountQuotaSnapshot | null;
   } | null;
   firecrawl: {
-    team: FirecrawlTeamQuotaSnapshot | null;
-    historicalByKey: boolean;
+    totalUsedCredits: number;
+    totalRemainingCredits: number;
+    totalCredits: number;
+    billingPeriodStart: string | null;
+    billingPeriodEnd: string | null;
   } | null;
 }
 

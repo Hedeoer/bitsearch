@@ -1,16 +1,16 @@
 import type {
-  FirecrawlTeamQuotaSnapshot,
   KeyPoolProvider,
   KeyPoolSummary,
   ProviderKeyQuotaSnapshot,
   ProviderKeyRecord,
   TavilyAccountQuotaSnapshot,
 } from "../../shared/contracts.js";
+import { getFirecrawlQuotaMetrics } from "../../shared/firecrawl-quota.js";
 
 const MULTI_TAVILY_ACCOUNT_NOTE =
   "Detected multiple Tavily account snapshots. Showing aggregated account quota.";
 const FIRECRAWL_KEY_HISTORY_NOTE =
-  "Firecrawl only exposes team-level credits. Summary totals all configured Firecrawl keys.";
+  "Firecrawl totals assume each imported key belongs to a different team.";
 
 function selectQuotaSyncedAt(records: ProviderKeyRecord[]): string | null {
   return records
@@ -69,13 +69,14 @@ function buildFirecrawlSummary(
 
   const starts = new Set<string>();
   const ends = new Set<string>();
-  let historicalByKey = false;
+  let totalUsedCredits = 0;
   let totalRemainingCredits = 0;
-  let totalPlanCredits = 0;
   for (const snapshot of snapshots) {
-    historicalByKey ||= Boolean(snapshot.historical?.byApiKeyMatched);
-    totalRemainingCredits += snapshot.team.remainingCredits;
-    totalPlanCredits += snapshot.team.planCredits;
+    const metrics = getFirecrawlQuotaMetrics(snapshot.team, snapshot.historical);
+    if (metrics) {
+      totalUsedCredits += metrics.usedCredits;
+      totalRemainingCredits += metrics.remainingCredits;
+    }
     if (snapshot.team.billingPeriodStart) {
       starts.add(snapshot.team.billingPeriodStart);
     }
@@ -86,13 +87,11 @@ function buildFirecrawlSummary(
 
   return {
     summary: {
-      team: {
-        remainingCredits: totalRemainingCredits,
-        planCredits: totalPlanCredits,
-        billingPeriodStart: starts.size === 1 ? [...starts][0] : null,
-        billingPeriodEnd: ends.size === 1 ? [...ends][0] : null,
-      },
-      historicalByKey,
+      totalUsedCredits,
+      totalRemainingCredits,
+      totalCredits: totalUsedCredits + totalRemainingCredits,
+      billingPeriodStart: starts.size === 1 ? [...starts][0] : null,
+      billingPeriodEnd: ends.size === 1 ? [...ends][0] : null,
     },
     note: FIRECRAWL_KEY_HISTORY_NOTE,
   };

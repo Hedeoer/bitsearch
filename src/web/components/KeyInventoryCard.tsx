@@ -6,6 +6,7 @@ import type {
   ProviderKeyRecord,
   TavilyAccountQuotaSnapshot,
 } from "@shared/contracts";
+import { getFirecrawlQuotaMetrics } from "@shared/firecrawl-quota";
 import { formatDateTime, formatNumber } from "../format";
 import { InlineSpinner } from "./Feedback";
 
@@ -68,11 +69,11 @@ export function renderFirecrawlQuota(
 ): string {
   if (!team) return "Not synced";
 
-  if (team.planCredits > 0) {
-    return `${formatNumber(team.remainingCredits)}/${formatNumber(team.planCredits)}`;
+  const metrics = getFirecrawlQuotaMetrics(team, historical);
+  if (!metrics) {
+    return "Not synced";
   }
-    
-  return `${formatNumber(team.remainingCredits)}`;
+  return `${formatNumber(metrics.usedCredits)}/${formatNumber(metrics.remainingCredits)}`;
 }
 
 function MetaSep() {
@@ -176,7 +177,10 @@ export function KeyInventoryCard(props: KeyCardProps) {
               <span title={`Used (Created: ${formatDateTime(props.item.createdAt)})`} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                 <Clock size={12} /> {formatDateTime(props.item.lastUsedAt)}
               </span>
-              <span title="Quota" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              <span
+                title={props.item.provider === "firecrawl" ? "Used / Remaining" : "Quota"}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+              >
                 <Database size={12} /> {quotaText}
               </span>
               {props.item.note && (

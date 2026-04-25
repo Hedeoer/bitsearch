@@ -558,7 +558,18 @@ Firecrawl handles `web_fetch` (page scrape → Markdown), `web_map` (site URL gr
 
 1. Get a key at <https://www.firecrawl.dev> — the free tier includes 500 credits/month.
 2. Open the **Keys** workspace, select **Firecrawl**, paste the key, and click **Import**.
-3. Base URL default: `https://api.firecrawl.dev/v2` — leave unchanged unless you use a proxy.
+3. Firecrawl quota display assumes each imported key belongs to a different Firecrawl team. Do not import multiple keys from the same team into the same pool if you want accurate pool totals.
+4. Base URL default: `https://api.firecrawl.dev/v2` — leave unchanged unless you use a proxy.
+
+When you run **Sync** for Firecrawl keys, BitSearch reads:
+- `GET /team/credit-usage` for team remaining credits
+- `GET /team/credit-usage/historical` for the latest billing-period used credits
+
+The admin UI currently displays Firecrawl quota in a compact `used/remaining` style:
+- key card: `usedCredits / remainingCredits`
+- pool summary: `sum(usedCredits) / sum(remainingCredits)`
+
+Internally, BitSearch derives a Firecrawl total as `usedCredits + remainingCredits` for summary math, but the visible UI keeps the compact `used/remaining` format for consistency with Tavily cards.
 
 #### Generic retrieval routing
 

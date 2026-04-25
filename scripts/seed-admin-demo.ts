@@ -115,10 +115,9 @@ function buildFirecrawlQuota(index: number): string {
         billingPeriodEnd: "2026-03-31T23:59:59.999Z",
       },
       historical: {
-        historicalCredits: 30 + index,
+        totalCredits: 30 + index,
         startDate: "2026-02-01T00:00:00.000Z",
         endDate: "2026-02-28T23:59:59.999Z",
-        byApiKeyMatched: index % 3 === 0,
       },
     },
   });

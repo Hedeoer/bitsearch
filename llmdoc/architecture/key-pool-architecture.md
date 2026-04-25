@@ -42,6 +42,14 @@
 - **5. Quota persist:** `src/server/repos/key-pool-repo.ts:235-247` (`saveKeyQuota`) stores provider-specific quota snapshot as JSON in `quota_json` column.
 - **6. Summary aggregation:** `src/server/repos/key-pool-summary.ts:101-121` (`buildKeyPoolSummary`) aggregates per-key quotas into pool-level totals.
 
+For Firecrawl, BitSearch uses the following project rule:
+- each imported key is treated as one Firecrawl team
+- `used` comes from the latest historical billing-period `creditsUsed`
+- `remaining` comes from `/team/credit-usage`
+- derived `total` is `used + remaining`
+
+This keeps Firecrawl aggregation simple and deterministic so long as the same Firecrawl team is not imported more than once.
+
 ### 3d. Encryption Scheme
 
 - **Key derivation:** SHA-256 hash of `keyMaterial` string produces 256-bit AES key (`src/server/lib/crypto.ts:6-8`).
@@ -55,3 +63,4 @@
 - **Fingerprint deduplication:** The (provider, fingerprint) unique constraint prevents importing the same key twice without needing to decrypt existing keys for comparison.
 - **Encryption at boundary:** Secrets are encrypted/decrypted only in the repository layer, never stored or transmitted in plaintext through the service layer.
 - **Quota as JSON:** Storing provider-specific quota structures as JSON in `quota_json` enables schema flexibility -- Tavily and Firecrawl have entirely different quota models.
+- **Firecrawl team assumption:** Firecrawl quota reporting is team-scoped. BitSearch therefore relies on the operational rule that each imported Firecrawl key maps to a different team when displaying pool totals.

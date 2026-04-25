@@ -77,7 +77,20 @@ These fields are computed via SQL JOIN at query time in `src/server/repos/key-po
 
 ## 6. Quota JSON Structure
 
-The `quota_json` column stores a `ProviderKeyQuotaSnapshot` object. Structure varies by provider -- see `src/shared/contracts.ts:62-71` for the full type. Key sub-structures:
+The `quota_json` column stores a `ProviderKeyQuotaSnapshot` object. Structure varies by provider. Key sub-structures:
 
 - **Tavily keys:** `{ tavily: { key: TavilyKeyQuotaSnapshot, account: TavilyAccountQuotaSnapshot | null } }`
 - **Firecrawl keys:** `{ firecrawl: { team: FirecrawlTeamQuotaSnapshot, historical: FirecrawlHistoricalQuotaSnapshot | null } }`
+
+### Firecrawl quota snapshot
+
+Firecrawl snapshots store:
+- `team.remainingCredits`
+- `team.planCredits`
+- `team.billingPeriodStart`
+- `team.billingPeriodEnd`
+- `historical.totalCredits`
+- `historical.startDate`
+- `historical.endDate`
+
+BitSearch syncs `historical.totalCredits` from the latest billing-period record returned by `/team/credit-usage/historical`. The project treats each imported Firecrawl key as a distinct team for quota display and pool aggregation.
