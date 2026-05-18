@@ -39,17 +39,47 @@ Project endpoints:
 ### Architecture
 
 ```mermaid
-flowchart LR
-    Client[LLM Client] -- MCP --> Server[BitSearch Gateway]
-    Server -- web_search --> SearchEngine[Search Engine API]
-    Server -- web_fetch / web_map --> Router{Failover Router}
-    Router -- Priority 1 --> Tavily[Tavily API]
-    Router -- Priority 2 --> Firecrawl[Firecrawl API]
-    Server -- tavily_crawl --> Tavily
-    Server -- firecrawl_* --> Firecrawl
-    Server -. telemetry .-> SQLite[(Local Database)]
-    Admin[Admin UI] -- HTTP --> SQLite
+flowchart TB
+    subgraph Clients
+        McpClient[LLM / MCP Client]
+        Browser[Browser Admin UI]
+    end
+
+    subgraph BitSearch[BitSearch Express Server]
+        McpEndpoint[MCP /mcp<br/>Streamable HTTP]
+        AdminApi[Admin HTTP API]
+        Tools[MCP Tool Layer<br/>search, fetch/map, planning, pagination]
+        Services[Services<br/>routing, key pools, planning, telemetry]
+        Repos[Repositories]
+    end
+
+    subgraph Providers[External Providers]
+        SearchEngine[Search Engine API<br/>OpenAI / Anthropic / Gemini-compatible]
+        Tavily[Tavily API]
+        Firecrawl[Firecrawl API]
+    end
+
+    SQLite[(SQLite<br/>settings, keys, logs, artifacts)]
+
+    McpClient -->|Bearer MCP requests| McpEndpoint
+    Browser -->|session-auth HTTP| AdminApi
+
+    McpEndpoint --> Tools
+    AdminApi --> Services
+    Tools --> Services
+    Services --> Repos
+    Repos --> SQLite
+
+    Services -->|web_search| SearchEngine
+    Services -->|web_fetch / web_map<br/>ordered failover| Tavily
+    Services -->|web_fetch / web_map<br/>ordered failover| Firecrawl
+    Services -->|tavily_crawl| Tavily
+    Services -->|firecrawl_*| Firecrawl
 ```
+
+![BitSearch architecture overview](docs/images/architecture.png)
+
+The MCP endpoint and admin API share the same Express application context. The browser never talks to SQLite directly; it goes through authenticated admin routes, services, and repositories. Generic `web_fetch` and `web_map` calls use ordered failover across Tavily and Firecrawl key pools, while provider-native tools call their matching upstream APIs directly.
 
 ### Why BitSearch
 
