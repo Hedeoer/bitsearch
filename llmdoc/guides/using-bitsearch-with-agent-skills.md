@@ -66,7 +66,7 @@ The template content stays the same; only the discovery location changes.
 
 If the client exposes built-in web tools, disable them locally when you want BitSearch to be the active search and retrieval layer. Otherwise the model may call native `WebSearch` or `WebFetch` instead of the BitSearch MCP tools, which bypasses BitSearch routing, source caching, and Planning Engine behavior.
 
-BitSearch cannot change those local settings remotely. The `toggle_builtin_tools` MCP tool is only a remote-deployment stub and does not disable client-native tools.
+BitSearch cannot change those local settings remotely; disable client-native tools in the client configuration or launch command.
 
 ### Claude Code
 

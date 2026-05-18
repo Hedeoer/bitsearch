@@ -636,25 +636,6 @@ export function createMcpRuntime(context: AppContext): McpRuntime {
   );
 
   server.registerTool(
-    "toggle_builtin_tools",
-    {
-      description: "Remote deployment cannot modify local Claude Code settings.",
-      inputSchema: z.object({
-        action: z.string().optional().default("status"),
-      }),
-    },
-    async ({ action = "status" }) => ({
-      ...budgetedToolJsonResult(context, "toggle_builtin_tools", {
-        blocked: false,
-        action,
-        error: "unsupported_in_remote_deployment",
-        message: "The remote HTTP MCP service cannot modify the client's local .claude/settings.json",
-      }),
-      isError: true,
-    }),
-  );
-
-  server.registerTool(
     "plan_intent",
     {
       description: "Phase 1 of search planning: Analyze user intent.",

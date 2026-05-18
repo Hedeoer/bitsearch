@@ -2,7 +2,7 @@
 
 ## 1. Core Summary
 
-The bitsearch MCP server exposes 21 tools across five categories: search (4), provider-specific advanced retrieval (7), result pagination (1), configuration (3), and planning (6). Tool schemas are defined in `src/server/mcp/register-tools.ts` and `src/server/mcp/provider-tools.ts`. Generic tools such as `web_fetch` and `web_map` use failover routing, while provider-specific tools execute only against their named provider. Large retrieval results are stored server-side as artifacts and exposed through bounded previews plus pagination metadata. Planning tools share session state via `session_id` and return progress metadata.
+The bitsearch MCP server exposes 20 tools across five categories: search (4), provider-specific advanced retrieval (7), result pagination (1), configuration (2), and planning (6). Tool schemas are defined in `src/server/mcp/register-tools.ts` and `src/server/mcp/provider-tools.ts`. Generic tools such as `web_fetch` and `web_map` use failover routing, while provider-specific tools execute only against their named provider. Large retrieval results are stored server-side as artifacts and exposed through bounded previews plus pagination metadata. Planning tools share session state via `session_id` and return progress metadata.
 
 ## 2. Source of Truth
 
@@ -236,15 +236,6 @@ Persists a new default search model to system settings.
 | `model` | string | yes | Search model identifier |
 
 **Returns:** `{ status, previous_model, current_model, message }`
-
-### `toggle_builtin_tools`
-Stub tool. Always returns an error indicating remote MCP servers cannot modify local client settings.
-
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `action` | string | no | `"status"` | Requested action |
-
-**Returns:** Error with `isError: true`.
 
 ## 7. Planning Tools
 

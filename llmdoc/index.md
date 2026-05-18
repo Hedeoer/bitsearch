@@ -30,6 +30,6 @@
 
 - [Coding Conventions](reference/coding-conventions.md) -- TypeScript strict ESM, file naming, import patterns, and style rules.
 - [Git Conventions](reference/git-conventions.md) -- Conventional Commits format, branch strategy, and PR guidelines.
-- [MCP Tools Reference](reference/mcp-tools-reference.md) -- All 21 tools with parameter tables, types, return shapes, and large-result pagination behavior.
+- [MCP Tools Reference](reference/mcp-tools-reference.md) -- All 20 tools with parameter tables, types, return shapes, and large-result pagination behavior.
 - [Key Pool Data Model](reference/key-pool-data-model.md) -- `provider_keys` schema, computed fields, health states, and quota JSON structure.
 - [Admin API Endpoints](reference/admin-api-endpoints.md) -- 26 REST endpoints across auth, dashboard, providers, keys, and activity.

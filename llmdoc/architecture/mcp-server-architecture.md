@@ -2,7 +2,7 @@
 
 ## 1. Identity
 
-- **What it is:** An HTTP-based Model Context Protocol (MCP) server embedded within the bitsearch Express application, exposing 21 tools for web search, provider-specific retrieval, result pagination, configuration, and search planning.
+- **What it is:** An HTTP-based Model Context Protocol (MCP) server embedded within the bitsearch Express application, exposing 20 tools for web search, provider-specific retrieval, result pagination, configuration, and search planning.
 - **Purpose:** Provides a standardized MCP interface so LLM clients (e.g., Claude Code) can invoke bitsearch capabilities over HTTP+SSE without stdio coupling.
 
 ## 2. Core Components
@@ -47,7 +47,7 @@
 - **1. Bearer Token:** `middleware.ts:24-33` compares `Authorization` header against `context.bootstrap.mcpBearerToken` (from `MCP_BEARER_TOKEN` env var, dev default: `"bitsearch-dev-token"`). Returns 401 on mismatch.
 - **2. Origin Check:** `middleware.ts:35-45` reads `allowedOrigins` from system settings. Passes if: no Origin header, empty whitelist, or Origin is in list. Returns 403 on mismatch.
 
-## 4. Tool Inventory (21 Tools)
+## 4. Tool Inventory (20 Tools)
 
 ### Search Tools (4)
 
@@ -76,13 +76,12 @@
 | `firecrawl_extract` | Submit async structured extraction job | `urls`, `prompt?`, `schema?`, `enable_web_search?`, `show_sources?` |
 | `firecrawl_extract_status` | Poll Firecrawl structured extraction result | `id` |
 
-### Configuration Tools (3)
+### Configuration Tools (2)
 
 | Tool | Purpose | Key Parameters |
 |------|---------|----------------|
 | `get_config_info` | Return server config and test `search_engine` connectivity | (none) |
 | `switch_model` | Change default search model | `model` |
-| `toggle_builtin_tools` | Stub; returns error for remote deployment | `action?` |
 
 ### Planning Tools (6)
 

@@ -18,7 +18,7 @@ BitSearch packages two things into one deployable service: an HTTP-based Model C
 
 Its core differentiator is not just exposing search and crawl tools, but combining the strengths of a search-engine model with Tavily and Firecrawl into a more disciplined retrieval loop: use the search engine to plan and search broadly, use Tavily / Firecrawl to fetch or crawl the most relevant targets, then cross-check evidence across multiple rounds before presenting conclusions. This makes BitSearch especially suitable for workflows that need better grounding and lower hallucination risk than one-shot search or one-shot crawling alone.
 
-The backend exposes `21` MCP tools over streamable HTTP, routes generic fetch-like operations across Tavily and Firecrawl key pools, and also exposes provider-specific crawl / batch / extract tools for advanced workflows. It persists telemetry in SQLite. The frontend gives a single user one workspace for provider configuration, key imports, quota sync, MCP access details, dashboards, and request activity inspection. BitSearch does not implement team-facing collaboration or multi-user workspace features.
+The backend exposes `20` MCP tools over streamable HTTP, routes generic fetch-like operations across Tavily and Firecrawl key pools, and also exposes provider-specific crawl / batch / extract tools for advanced workflows. It persists telemetry in SQLite. The frontend gives a single user one workspace for provider configuration, key imports, quota sync, MCP access details, dashboards, and request activity inspection. BitSearch does not implement team-facing collaboration or multi-user workspace features.
 
 Project endpoints:
 
@@ -27,7 +27,7 @@ Project endpoints:
 
 ### Highlights
 
-- Exposes `21` MCP tools across search, provider-specific web extraction, result pagination, configuration, and planning workflows.
+- Exposes `20` MCP tools across search, provider-specific web extraction, result pagination, configuration, and planning workflows.
 - Combines `search_engine`, Tavily, and Firecrawl into a planned multi-round search, crawl, and verification workflow instead of treating them as isolated tools.
 - Uses broad search plus targeted fetch/crawl plus source cross-checking to reduce misinformation and retrieval hallucinations.
 - Supports multi-provider routing with ordered failover for Tavily and Firecrawl operations.
@@ -468,7 +468,6 @@ Some clients ship with built-in web tools such as `WebSearch` or `WebFetch`. Eve
 Important constraints:
 
 - Disable native web tools in the client itself. BitSearch cannot do this remotely.
-- The `toggle_builtin_tools` MCP tool is only a stub for remote deployments and always returns an error instead of changing local client settings.
 
 ##### Claude Code
 
@@ -630,7 +629,7 @@ These settings limit the size returned to the MCP client. They do not limit how 
 
 ### MCP Tools Reference
 
-BitSearch exposes 21 tools to the LLM client, covering four main areas.
+BitSearch exposes 20 tools to the LLM client, covering four main areas.
 
 <details>
 <summary>Expand the full MCP tools reference</summary>
@@ -660,7 +659,6 @@ A scaffold for LLMs to generate structured search strategies for highly complex 
 - **`get_result_page`**: Reads one bounded page from a stored large tool result using `result_id`, `next_cursor`, and optional `item_index`.
 - **`get_config_info`**: Retrieves current server settings, key pool status, and tests search engine connectivity.
 - **`switch_model`**: Toggles the default AI model used for `web_search`.
-- **`toggle_builtin_tools`**: Indicates status of local client tool overriding (primarily for local Claude Code setups).
 
 </details>
 

@@ -45,7 +45,6 @@
 - `src/server/mcp/register-tools.ts` (web_map tool): Registered at lines 338-373; calls buildWebMapResult with URL, instructions, max_depth, max_breadth, limit, timeout parameters.
 - `src/server/mcp/register-tools.ts` (get_config_info tool): Registered at lines 375-425; returns system settings, provider configs, key pool status, and search_engine connectivity test.
 - `src/server/mcp/register-tools.ts` (switch_model tool): Registered at lines 427-452; updates default_search_model system setting.
-- `src/server/mcp/register-tools.ts` (toggle_builtin_tools tool): Registered at lines 454-476; stub that always returns error for remote deployment.
 - `src/server/mcp/register-tools.ts` (plan_intent tool): Registered at lines 478-514; phase 1 of planning engine, calls processPlanningPhase with intent_analysis phase name.
 - `src/server/mcp/register-tools.ts` (plan_complexity tool): Registered at lines 516-541; phase 2, calls processPlanningPhase with complexity_assessment phase name.
 - `src/server/mcp/register-tools.ts` (plan_sub_query tool): Registered at lines 543-575; phase 3, calls processPlanningPhase with query_decomposition phase name.

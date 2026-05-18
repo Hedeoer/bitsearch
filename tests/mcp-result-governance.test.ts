@@ -90,6 +90,7 @@ test("MCP tool surface returns bounded previews and manifest resources", async (
 
   const tools = await client.listTools();
   assert.ok(tools.tools.some((tool) => tool.name === "get_result_page"));
+  assert.ok(!tools.tools.some((tool) => tool.name === "toggle_builtin_tools"));
 
   const manualLargeArtifact = context.db.sqlite.prepare(
     `INSERT INTO tool_result_artifacts
