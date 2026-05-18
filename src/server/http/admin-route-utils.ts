@@ -26,9 +26,16 @@ const MAX_BEARER_TOKEN_LENGTH = 512;
 const MAX_MODEL_NAME_LENGTH = 120;
 const MAX_PROVIDER_TIMEOUT_MS = 120_000;
 const MAX_RETENTION_DAYS = 365;
+const MAX_RESULT_BUDGET_CHARS = 1_000_000;
 const MIN_PROVIDER_TIMEOUT_MS = 1_000;
+const MIN_RESULT_BUDGET_CHARS = 1_000;
 const PROVIDER_URL_SCHEMES = new Set(["https:", "http:"]);
 const SPREADSHEET_FORMULA_PREFIX = /^[=+\-@]/;
+const DEFAULT_MCP_RESULT_BUDGET = {
+  firstResponseChars: 20_000,
+  pageChars: 50_000,
+  hardResponseChars: 200_000,
+};
 
 const keyListStatusSchema = z.enum(KEY_LIST_STATUSES);
 const keyPoolProviderSchema = z.enum(KEY_POOL_PROVIDERS);
@@ -67,6 +74,14 @@ const systemSettingsSchema = z
     defaultSearchModel: z.string().trim().min(1).max(MAX_MODEL_NAME_LENGTH),
     logRetentionDays: z.coerce.number().int().min(1).max(MAX_RETENTION_DAYS),
     allowedOrigins: z.array(z.string().trim().min(1)).max(MAX_ALLOWED_ORIGINS),
+    mcpResultBudget: z
+      .object({
+        firstResponseChars: z.coerce.number().int().min(MIN_RESULT_BUDGET_CHARS).max(MAX_RESULT_BUDGET_CHARS),
+        pageChars: z.coerce.number().int().min(MIN_RESULT_BUDGET_CHARS).max(MAX_RESULT_BUDGET_CHARS),
+        hardResponseChars: z.coerce.number().int().min(MIN_RESULT_BUDGET_CHARS).max(MAX_RESULT_BUDGET_CHARS),
+      })
+      .optional()
+      .default(DEFAULT_MCP_RESULT_BUDGET),
   })
   .superRefine((value, context) => {
     const expectedLength = value.genericRoutingMode === "single_provider" ? 1 : KEY_POOL_PROVIDERS.length;
@@ -75,6 +90,20 @@ const systemSettingsSchema = z
         code: z.ZodIssueCode.custom,
         message: "invalid_generic_provider_order_length",
         path: ["genericProviderOrder"],
+      });
+    }
+    if (value.mcpResultBudget.firstResponseChars > value.mcpResultBudget.pageChars) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "invalid_mcp_result_budget_order",
+        path: ["mcpResultBudget", "firstResponseChars"],
+      });
+    }
+    if (value.mcpResultBudget.pageChars > value.mcpResultBudget.hardResponseChars) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "invalid_mcp_result_budget_order",
+        path: ["mcpResultBudget", "pageChars"],
       });
     }
   });
@@ -369,6 +398,7 @@ export function parseSystemSettingsPayload(
       parsed.genericProviderOrder,
     ),
     allowedOrigins,
+    mcpResultBudget: parsed.mcpResultBudget ?? DEFAULT_MCP_RESULT_BUDGET,
   };
 }
 

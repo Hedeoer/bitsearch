@@ -8,8 +8,10 @@ A step-by-step guide for registering a new tool in the bitsearch MCP server.
 
 3. **Implement the handler logic:** The handler receives validated params as its first argument. Use `AppContext` (captured in the `createMcpServer` closure) to access `context.db` and `context.bootstrap`. Return either `toolJsonResult({...})` for structured JSON or `{ content: [{ type: "text", text: "..." }] }` for plain text.
 
+   If the tool can produce large text, arrays, crawl output, or extraction payloads, store the full result as a server-side artifact and return only a bounded preview plus `result_id` / `result_uri` / `next_cursor` metadata. Use `get_result_page` for follow-up reads instead of returning the entire payload in one MCP response.
+
 4. **Connect to backend services:** Import and call the appropriate service/repo functions. For provider-routed operations, use `runWithKeyPool` from `src/server/providers/fetch-router.ts`. For direct `search_engine` calls, use `requireSearchEngineConfig` to get credentials and `searchWithSearchEngine` / `listSearchEngineModels` to dispatch by the configured API format. For database access, use repo functions from `src/server/repos/`.
 
 5. **Add request logging (if applicable):** Call `logSearchRequest()` (defined in `register-tools.ts:51-83`) with tool name, status, timing, and input/output metadata to ensure the tool's usage appears in the admin activity log.
 
-6. **Verify:** Start the server with `npm run dev`. Use an MCP client (e.g., Claude Code configured with the bitsearch MCP endpoint) to call your new tool. Check the admin console activity log to confirm the request was logged. No separate registration step is needed -- the tool is available as soon as `createMcpServer` returns.
+6. **Verify:** Start the server with `npm run dev`. Use an MCP client (e.g., Claude Code configured with the bitsearch MCP endpoint) to call your new tool. Check the admin console activity log to confirm the request was logged. For large-result tools, also verify that the first response is bounded, that `get_result_page` can continue the result, and that the resource URI resolves to the pagination manifest. No separate registration step is needed -- the tool is available as soon as `createMcpServer` returns.

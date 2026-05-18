@@ -158,6 +158,27 @@ function applyMigrations(db: DatabaseSync): void {
     "quota_synced_at",
     "ALTER TABLE provider_keys ADD COLUMN quota_synced_at TEXT",
   );
+  db.exec(
+    `CREATE TABLE IF NOT EXISTS tool_result_artifacts (
+      id TEXT PRIMARY KEY,
+      tool_name TEXT NOT NULL,
+      kind TEXT NOT NULL,
+      uri TEXT NOT NULL UNIQUE,
+      mime_type TEXT NOT NULL DEFAULT 'application/json',
+      title TEXT,
+      summary_json TEXT NOT NULL DEFAULT '{}',
+      content_json TEXT NOT NULL,
+      total_items INTEGER,
+      total_chars INTEGER NOT NULL,
+      created_at TEXT NOT NULL
+    )`,
+  );
+  db.exec(
+    "CREATE INDEX IF NOT EXISTS idx_tool_result_artifacts_created_at ON tool_result_artifacts(created_at)",
+  );
+  db.exec(
+    "CREATE INDEX IF NOT EXISTS idx_tool_result_artifacts_tool_name_created_at ON tool_result_artifacts(tool_name, created_at DESC)",
+  );
 }
 
 function refreshRequestLogSearchIndex(db: DatabaseSync): void {
@@ -193,6 +214,11 @@ function seedSystemSettings(
     ["default_search_model", JSON.stringify("grok-4-fast")],
     ["log_retention_days", JSON.stringify(7)],
     ["allowed_origins", JSON.stringify([])],
+    ["mcp_result_budget", JSON.stringify({
+      firstResponseChars: 20_000,
+      pageChars: 50_000,
+      hardResponseChars: 200_000,
+    })],
     ["mcp_bearer_token", JSON.stringify(mcpBearerToken)],
   ];
   const stmt = db.prepare(

@@ -38,6 +38,11 @@ export interface SystemSettings {
   defaultSearchModel: string;
   logRetentionDays: number;
   allowedOrigins: string[];
+  mcpResultBudget: {
+    firstResponseChars: number;
+    pageChars: number;
+    hardResponseChars: number;
+  };
 }
 
 export interface GenericRoutingSnapshot {

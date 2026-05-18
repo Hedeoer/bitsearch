@@ -7,7 +7,7 @@
 
 ## 2. High-Level Description
 
-BitSearch is a split frontend/backend TypeScript monorepo. The **server** layer exposes 13 MCP tools over Streamable HTTP transport, routing requests across three search providers with key-pool-based failover and LRU key rotation. The **web** layer is a React admin console ("Aether Console") for managing provider configurations, API key inventories, system settings, and request activity. A **shared** contracts module provides type-safe interfaces consumed by both sides. All data is persisted in an embedded SQLite database using the native `node:sqlite` synchronous API.
+BitSearch is a split frontend/backend TypeScript monorepo. The **server** layer exposes 21 MCP tools over Streamable HTTP transport, routing requests across three search providers with key-pool-based failover and LRU key rotation. The **web** layer is a React admin console ("Aether Console") for managing provider configurations, API key inventories, system settings, and request activity. A **shared** contracts module provides type-safe interfaces consumed by both sides. All data is persisted in an embedded SQLite database using the native `node:sqlite` synchronous API.
 
 ## 3. Tech Stack
 
@@ -37,11 +37,12 @@ BitSearch is a split frontend/backend TypeScript monorepo. The **server** layer 
 - **Activity tracking:** Two-level logging (request + attempt) with provider failover visibility, dashboard metrics, and configurable retention.
 - **Admin console:** React Router 7 SPA with four workspace routes: `/overview`, `/providers`, `/keys`, `/activity`. Each workspace is a separate routed page component under `src/web/pages/`.
 
-## 6. MCP Tools (20 total)
+## 6. MCP Tools (21 total)
 
 | Category       | Tools                                                                  |
 | -------------- | ---------------------------------------------------------------------- |
 | Core Search    | `web_search`, `get_sources`, `web_fetch`, `web_map`                    |
+| Result Pagination | `get_result_page`                                                   |
 | Provider-Specific Retrieval | `tavily_crawl`, `firecrawl_crawl`, `firecrawl_crawl_status`, `firecrawl_batch_scrape`, `firecrawl_batch_scrape_status`, `firecrawl_extract`, `firecrawl_extract_status` |
 | Configuration  | `get_config_info`, `switch_model`, `toggle_builtin_tools`              |
 | Planning       | `plan_intent`, `plan_complexity`, `plan_sub_query`, `plan_search_term`, `plan_tool_mapping`, `plan_execution` |

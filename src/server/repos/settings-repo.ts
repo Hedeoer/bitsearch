@@ -76,6 +76,9 @@ export function getSystemSettings(db: AppDatabase): SystemSettings {
     allowedOrigins: parseJson<string[]>(
       map.get("allowed_origins") ?? JSON.stringify(defaults.allowedOrigins),
     ),
+    mcpResultBudget: parseJson<SystemSettings["mcpResultBudget"]>(
+      map.get("mcp_result_budget") ?? JSON.stringify(defaults.mcpResultBudget),
+    ),
   };
 }
 
@@ -109,6 +112,9 @@ export function saveSystemSettings(db: AppDatabase, settings: Partial<SystemSett
   }
   if (settings.allowedOrigins) {
     saveSystemSetting(db, "allowed_origins", settings.allowedOrigins);
+  }
+  if (settings.mcpResultBudget) {
+    saveSystemSetting(db, "mcp_result_budget", settings.mcpResultBudget);
   }
 }
 

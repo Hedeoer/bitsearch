@@ -2,20 +2,65 @@
 
 ## 1. Core Summary
 
-The bitsearch MCP server exposes 20 tools across four categories: search (4), provider-specific advanced retrieval (7), configuration (3), and planning (6). Tool schemas are defined in `src/server/mcp/register-tools.ts` and `src/server/mcp/provider-tools.ts`. Generic tools such as `web_fetch` and `web_map` use failover routing, while provider-specific tools execute only against their named provider. Planning tools share session state via `session_id` and return progress metadata.
+The bitsearch MCP server exposes 21 tools across five categories: search (4), provider-specific advanced retrieval (7), result pagination (1), configuration (3), and planning (6). Tool schemas are defined in `src/server/mcp/register-tools.ts` and `src/server/mcp/provider-tools.ts`. Generic tools such as `web_fetch` and `web_map` use failover routing, while provider-specific tools execute only against their named provider. Large retrieval results are stored server-side as artifacts and exposed through bounded previews plus pagination metadata. Planning tools share session state via `session_id` and return progress metadata.
 
 ## 2. Source of Truth
 
 - **Primary Code:** `src/server/mcp/register-tools.ts` -- Main MCP server factory and built-in tool registrations.
+- **Result Artifacts:** `src/server/mcp/result-artifacts.ts` -- Artifact storage, bounded previews, pagination cursors, and resource manifests for large tool outputs.
 - **Provider-Specific Tools:** `src/server/mcp/provider-tools.ts` -- Tavily / Firecrawl crawl, batch scrape, and extract tools.
 - **Planning Engine:** `src/server/services/planning-engine.ts` -- Phase processing logic, complexity-level phase requirements.
 - **Provider Routing:** `src/server/providers/fetch-router.ts` -- Key pool failover used by `web_fetch` and `web_map`.
 - **Related Architecture:** `/llmdoc/architecture/mcp-server-architecture.md` -- Full execution flow and session lifecycle.
 
-## 3. Search Tools
+## 3. Large Result Pagination
+
+The following tools return a bounded preview first and may include pagination metadata:
+
+- `web_search`
+- `get_sources`
+- `web_fetch`
+- `web_map`
+- `tavily_crawl`
+- `firecrawl_crawl`
+- `firecrawl_crawl_status`
+- `firecrawl_batch_scrape`
+- `firecrawl_batch_scrape_status`
+- `firecrawl_extract`
+- `firecrawl_extract_status`
+
+Common return fields:
+
+| Field | Meaning |
+|-------|---------|
+| `result_id` | Stored artifact identifier used for follow-up reads |
+| `result_uri` | `bitsearch://results/{id}` resource URI for manifest access |
+| `next_cursor` | Cursor for the next bounded page, or `null` when complete |
+| `truncated` | Whether the returned preview/page is incomplete |
+| `returned_chars` | Characters included in the current page or preview |
+| `total_chars` | Total characters in the stored result |
+| `returned_items` | Number of items in the current page, when the result is list-like |
+| `total_items` | Total items in the stored result, when applicable |
+
+Use `get_result_page` to continue reading any stored result.
+
+### `get_result_page`
+Reads one bounded page from a stored large BitSearch MCP tool result.
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `result_id` | string | yes | -- | Artifact ID returned by the original tool call |
+| `cursor` | string | no | `""` | Cursor returned by the previous page |
+| `item_index` | integer | no | -- | Read one specific item as bounded text pages |
+| `max_items` | integer | no | `20` | Maximum items to include in one page (1-100) |
+| `max_chars` | integer | no | -- | Maximum characters in one page, capped by server budget |
+
+**Returns:** A `ResultPage` object with the fields listed above, or `{ error: "result_not_found_or_expired" }` if the artifact cannot be read.
+
+## 4. Search Tools
 
 ### `web_search`
-Deep web search via `search_engine`. The search layer can target OpenAI chat, OpenAI responses, Anthropic messages, or Google Gemini upstream formats. Optionally fetches extra sources from Tavily/Firecrawl.
+Deep web search via `search_engine`. The search layer can target OpenAI chat, OpenAI responses, Anthropic messages, or Google Gemini upstream formats. Optionally fetches extra sources from Tavily/Firecrawl. Returns a bounded answer preview plus `result_id` / `next_cursor` metadata for follow-up reads.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
@@ -24,28 +69,28 @@ Deep web search via `search_engine`. The search layer can target OpenAI chat, Op
 | `model` | string | no | `""` | Override the default search model (uses system default if empty) |
 | `extra_sources` | integer | no | `0` | Number of extra sources from Tavily/Firecrawl (min: 0) |
 
-**Returns:** `{ session_id, content, sources_count }`
+**Returns:** `{ session_id, content, content_truncated, returned_chars, total_chars, result_id, result_uri, next_cursor, sources_count }`
 
 ### `get_sources`
-Retrieves cached sources from a previous `web_search` call.
+Retrieves a bounded page of cached sources from a previous `web_search` call.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `session_id` | string | yes | Session ID from a prior `web_search` result |
 
-**Returns:** `{ session_id, sources, sources_count }` or `{ error: "session_id_not_found_or_expired" }`
+**Returns:** `{ session_id, sources, sources_count, returned_items, result_id, result_uri, next_cursor, truncated, total_chars }` or `{ error: "session_id_not_found_or_expired" }`
 
 ### `web_fetch`
-Extracts full content from a URL as Markdown. Routes through key pool to Tavily Extract or Firecrawl Scrape.
+Extracts content from a URL as Markdown. Routes through key pool to Tavily Extract or Firecrawl Scrape and returns a bounded preview plus pagination metadata.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `url` | string (URL) | yes | Target URL to extract |
 
-**Returns:** Markdown text content or error message.
+**Returns:** `{ url, content_preview, returned_chars, total_chars, result_id, result_uri, next_cursor, truncated }` or error message.
 
 ### `web_map`
-Maps website structure, returns discovered URLs. Routes through key pool to Tavily Map or Firecrawl Map.
+Maps website structure, returns discovered URLs, and exposes a bounded preview plus pagination metadata. Routes through key pool to Tavily Map or Firecrawl Map.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
@@ -56,9 +101,9 @@ Maps website structure, returns discovered URLs. Routes through key pool to Tavi
 | `limit` | integer | no | `50` | Max URLs returned (1-500) |
 | `timeout` | integer | no | `150` | Timeout in seconds (10-150) |
 
-**Returns:** URL list text or error message.
+**Returns:** `{ url, map_preview, returned_chars, total_chars, result_id, result_uri, next_cursor, truncated }` or error message.
 
-## 4. Provider-Specific Advanced Retrieval Tools
+## 5. Provider-Specific Advanced Retrieval Tools
 
 These tools bypass generic retrieval routing and always use their named provider.
 
@@ -85,7 +130,7 @@ Key parameters:
 - `timeout?`
 - `include_usage?`
 
-**Returns:** `{ provider, base_url, results, response_time, usage, request_id }`
+**Returns:** `{ provider, base_url, results, returned_items, total_items, total_chars, result_id, result_uri, next_cursor, truncated, response_time, usage, request_id }`
 
 ### `firecrawl_crawl`
 Submits an asynchronous Firecrawl crawl job.
@@ -110,12 +155,12 @@ Key parameters:
 - `scrape_options?`
 - `zero_data_retention?`
 
-**Returns:** `{ provider, tool: "crawl", status: "submitted", success, id, url }`
+**Returns:** `{ provider, tool: "crawl", status: "submitted", success, id, url, result_preview, returned_chars, total_chars, result_id, result_uri, next_cursor, truncated }`
 
 ### `firecrawl_crawl_status`
 Polls Firecrawl crawl job state.
 
-**Returns:** `{ provider, tool: "crawl", id, status, total, completed, credits_used, expires_at, next, data }`
+**Returns:** `{ provider, tool: "crawl", id, status, total, completed, credits_used, expires_at, next, data, returned_items, total_items, total_chars, result_id, result_uri, next_cursor, truncated }`
 
 ### `firecrawl_batch_scrape`
 Submits an asynchronous Firecrawl batch scrape job for multiple URLs.
@@ -147,12 +192,12 @@ Key parameters:
 - `profile?`
 - `zero_data_retention?`
 
-**Returns:** `{ provider, tool: "batch_scrape", status: "submitted", success, id, url, invalid_urls }`
+**Returns:** `{ provider, tool: "batch_scrape", status: "submitted", success, id, url, invalid_urls, result_preview, returned_chars, total_chars, result_id, result_uri, next_cursor, truncated }`
 
 ### `firecrawl_batch_scrape_status`
 Polls batch scrape job state.
 
-**Returns:** `{ provider, tool: "batch_scrape", id, status, total, completed, credits_used, expires_at, next, data }`
+**Returns:** `{ provider, tool: "batch_scrape", id, status, total, completed, credits_used, expires_at, next, data, returned_items, total_items, total_chars, result_id, result_uri, next_cursor, truncated }`
 
 ### `firecrawl_extract`
 Submits an asynchronous structured extraction job.
@@ -169,14 +214,14 @@ Key parameters:
 - `scrape_options?`
 - `ignore_invalid_urls?`
 
-**Returns:** `{ provider, tool: "extract", status: "submitted", success, id, invalid_urls }`
+**Returns:** `{ provider, tool: "extract", status: "submitted", success, id, invalid_urls, result_preview, returned_chars, total_chars, result_id, result_uri, next_cursor, truncated }`
 
 ### `firecrawl_extract_status`
 Polls structured extraction job state.
 
-**Returns:** `{ provider, tool: "extract", id, success, status, data, expires_at, tokens_used }`
+**Returns:** `{ provider, tool: "extract", id, success, status, data, expires_at, tokens_used, returned_items, returned_chars, total_items, total_chars, result_id, result_uri, next_cursor, truncated }`
 
-## 5. Configuration Tools
+## 6. Configuration Tools
 
 ### `get_config_info`
 Returns server configuration and `search_engine` connectivity test. No parameters.
@@ -201,7 +246,7 @@ Stub tool. Always returns an error indicating remote MCP servers cannot modify l
 
 **Returns:** Error with `isError: true`.
 
-## 6. Planning Tools
+## 7. Planning Tools
 
 All planning tools accept `session_id` (auto-generated on first call), `thought` (reasoning trace), `confidence` (0-1, default 1), and `is_revision` (boolean, default false). They return `{ session_id, completed_phases, complexity_level, plan_complete, phases_remaining, executable_plan }`.
 

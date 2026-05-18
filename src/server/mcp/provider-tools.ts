@@ -35,6 +35,12 @@ import {
   type FirecrawlExtractInput,
 } from "../providers/firecrawl-client.js";
 import { tavilyCrawl, type TavilyCrawlInput } from "../providers/tavily-client.js";
+import {
+  getResultPage,
+  readResultBudget,
+  saveArtifact,
+  toolJsonResult,
+} from "./result-artifacts.js";
 
 type ProviderToolConfig = { apiKey: string; baseUrl: string; timeoutMs: number };
 type ProviderExecutor<TInput, TResult> = (
@@ -46,17 +52,6 @@ const FIRECRAWL_BINDING_NOT_FOUND = "firecrawl_job_binding_not_found";
 const FIRECRAWL_BINDING_MISSING_KEY = "firecrawl_job_binding_missing_key";
 const FIRECRAWL_BINDING_TOOL_MISMATCH = "firecrawl_job_binding_tool_mismatch";
 const FIRECRAWL_PROVIDER_CONFIG_MISSING = "firecrawl_provider_config_missing";
-
-function toJsonText(value: unknown): string {
-  return JSON.stringify(value, null, 2);
-}
-
-function toolJsonResult(value: Record<string, unknown>) {
-  return {
-    content: [{ type: "text" as const, text: toJsonText(value) }],
-    structuredContent: value,
-  };
-}
 
 function createBoundStatusMetadata(
   input: {
@@ -548,15 +543,47 @@ function failureResult(provider: KeyPoolProvider, error: string) {
   return toolJsonResult({ provider, status: "failed", error });
 }
 
-function tavilyCrawlResult(data: Awaited<ReturnType<typeof tavilyCrawl>>) {
+function tavilyCrawlResult(
+  context: AppContext,
+  data: Awaited<ReturnType<typeof tavilyCrawl>>,
+) {
+  const items = data.results.map((item) => ({
+    url: item.url,
+    raw_content: item.rawContent,
+    favicon: item.favicon,
+  }));
+  const artifact = saveArtifact(context, {
+    toolName: "tavily_crawl",
+    kind: "crawl_results",
+    title: data.baseUrl,
+    summary: {
+      provider: "tavily",
+      base_url: data.baseUrl,
+      results_count: items.length,
+      response_time: data.responseTime,
+      usage: data.usage,
+      request_id: data.requestId,
+    },
+    content: items,
+    totalItems: items.length,
+  });
+  const budget = readResultBudget(context);
+  const page = getResultPage(context, {
+    resultId: artifact.id,
+    maxItems: 20,
+    maxChars: budget.firstResponseChars,
+  });
   return toolJsonResult({
     provider: "tavily",
     base_url: data.baseUrl,
-    results: data.results.map((item) => ({
-      url: item.url,
-      raw_content: item.rawContent,
-      favicon: item.favicon,
-    })),
+    results: page?.items ?? [],
+    returned_items: page?.returned_items ?? 0,
+    total_items: artifact.totalItems,
+    total_chars: artifact.totalChars,
+    result_id: artifact.id,
+    result_uri: artifact.uri,
+    next_cursor: page?.next_cursor ?? null,
+    truncated: page?.truncated ?? false,
     response_time: data.responseTime,
     usage: data.usage,
     request_id: data.requestId,
@@ -564,10 +591,11 @@ function tavilyCrawlResult(data: Awaited<ReturnType<typeof tavilyCrawl>>) {
 }
 
 function firecrawlSubmitResult(
+  context: AppContext,
   name: "crawl" | "batch_scrape" | "extract",
   data: Awaited<ReturnType<typeof firecrawlCrawl>>,
 ) {
-  return toolJsonResult({
+  const content = {
     provider: "firecrawl",
     tool: name,
     status: "submitted",
@@ -575,14 +603,69 @@ function firecrawlSubmitResult(
     id: data.id,
     url: data.url,
     invalid_urls: data.invalidUrls,
+  };
+  const artifact = saveArtifact(context, {
+    toolName: `firecrawl_${name}`,
+    kind: `${name}_submission`,
+    title: data.id,
+    summary: {
+      provider: "firecrawl",
+      tool: name,
+      id: data.id,
+      success: data.success,
+      url: data.url,
+      invalid_urls_count: data.invalidUrls?.length ?? 0,
+    },
+    content,
+    totalItems: null,
+  });
+  const budget = readResultBudget(context);
+  const page = getResultPage(context, {
+    resultId: artifact.id,
+    maxChars: budget.firstResponseChars,
+  });
+  return toolJsonResult({
+    ...content,
+    result_preview: page?.text ?? "",
+    returned_chars: page?.returned_chars ?? 0,
+    total_chars: artifact.totalChars,
+    result_id: artifact.id,
+    result_uri: artifact.uri,
+    next_cursor: page?.next_cursor ?? null,
+    truncated: page?.truncated ?? false,
   });
 }
 
 function firecrawlStatusResult(
+  context: AppContext,
   tool: "crawl" | "batch_scrape",
   id: string,
   data: Awaited<ReturnType<typeof firecrawlCrawlStatus>>,
 ) {
+  const artifact = saveArtifact(context, {
+    toolName: tool === "crawl" ? "firecrawl_crawl_status" : "firecrawl_batch_scrape_status",
+    kind: `${tool}_status_data`,
+    title: id,
+    summary: {
+      provider: "firecrawl",
+      tool,
+      id,
+      status: data.status,
+      total: data.total,
+      completed: data.completed,
+      credits_used: data.creditsUsed,
+      expires_at: data.expiresAt,
+      next: data.next,
+    },
+    content: data.data,
+    totalItems: data.data.length,
+  });
+  const budget = readResultBudget(context);
+  const page = getResultPage(context, {
+    resultId: artifact.id,
+    maxItems: 20,
+    maxChars: budget.firstResponseChars,
+  });
   return toolJsonResult({
     provider: "firecrawl",
     tool,
@@ -593,23 +676,61 @@ function firecrawlStatusResult(
     credits_used: data.creditsUsed,
     expires_at: data.expiresAt,
     next: data.next,
-    data: data.data,
+    data: page?.items ?? [],
+    returned_items: page?.returned_items ?? 0,
+    total_items: artifact.totalItems,
+    total_chars: artifact.totalChars,
+    result_id: artifact.id,
+    result_uri: artifact.uri,
+    next_cursor: page?.next_cursor ?? null,
+    truncated: page?.truncated ?? false,
   });
 }
 
 function firecrawlExtractStatusResult(
+  context: AppContext,
   id: string,
   data: Awaited<ReturnType<typeof firecrawlExtractStatus>>,
 ) {
+  const artifact = saveArtifact(context, {
+    toolName: "firecrawl_extract_status",
+    kind: "extract_status_data",
+    title: id,
+    summary: {
+      provider: "firecrawl",
+      tool: "extract",
+      id,
+      success: data.success,
+      status: data.status,
+      expires_at: data.expiresAt,
+      tokens_used: data.tokensUsed,
+    },
+    content: data.data,
+    totalItems: Array.isArray(data.data) ? data.data.length : null,
+  });
+  const budget = readResultBudget(context);
+  const page = getResultPage(context, {
+    resultId: artifact.id,
+    maxItems: 20,
+    maxChars: budget.firstResponseChars,
+  });
   return toolJsonResult({
     provider: "firecrawl",
     tool: "extract",
     id,
     success: data.success,
     status: data.status,
-    data: data.data,
+    data: page?.items ?? page?.text ?? null,
     expires_at: data.expiresAt,
     tokens_used: data.tokensUsed,
+    returned_items: page?.returned_items ?? null,
+    returned_chars: page?.returned_chars ?? 0,
+    total_items: artifact.totalItems,
+    total_chars: artifact.totalChars,
+    result_id: artifact.id,
+    result_uri: artifact.uri,
+    next_cursor: page?.next_cursor ?? null,
+    truncated: page?.truncated ?? false,
   });
 }
 
@@ -685,7 +806,7 @@ export function registerProviderTools(
           },
           execute: tavilyCrawl,
         });
-        return result.ok ? tavilyCrawlResult(result.data) : failureResult("tavily", result.error);
+        return result.ok ? tavilyCrawlResult(context, result.data) : failureResult("tavily", result.error);
       },
     );
     if (!exposedTools.has("tavily_crawl")) {
@@ -763,7 +884,7 @@ export function registerProviderTools(
         keyId: result.keyId,
         keyFingerprint: result.keyFingerprint,
       });
-      return firecrawlSubmitResult("crawl", result.data);
+      return firecrawlSubmitResult(context, "crawl", result.data);
       },
     );
     if (!exposedTools.has("firecrawl_crawl")) {
@@ -787,7 +908,7 @@ export function registerProviderTools(
           execute: (config, value) => firecrawlCrawlStatus(config, value.id),
         });
         return result.ok
-          ? firecrawlStatusResult("crawl", id, result.data)
+          ? firecrawlStatusResult(context, "crawl", id, result.data)
           : failureResult("firecrawl", result.error);
       },
     );
@@ -880,7 +1001,7 @@ export function registerProviderTools(
         keyId: result.keyId,
         keyFingerprint: result.keyFingerprint,
       });
-      return firecrawlSubmitResult("batch_scrape", result.data);
+      return firecrawlSubmitResult(context, "batch_scrape", result.data);
       },
     );
     if (!exposedTools.has("firecrawl_batch_scrape")) {
@@ -904,7 +1025,7 @@ export function registerProviderTools(
           execute: (config, value) => firecrawlBatchScrapeStatus(config, value.id),
         });
         return result.ok
-          ? firecrawlStatusResult("batch_scrape", id, result.data)
+          ? firecrawlStatusResult(context, "batch_scrape", id, result.data)
           : failureResult("firecrawl", result.error);
       },
     );
@@ -968,7 +1089,7 @@ export function registerProviderTools(
         keyId: result.keyId,
         keyFingerprint: result.keyFingerprint,
       });
-      return firecrawlSubmitResult("extract", result.data);
+      return firecrawlSubmitResult(context, "extract", result.data);
       },
     );
     if (!exposedTools.has("firecrawl_extract")) {
@@ -992,7 +1113,7 @@ export function registerProviderTools(
           execute: (config, value) => firecrawlExtractStatus(config, value.id),
         });
         return result.ok
-          ? firecrawlExtractStatusResult(id, result.data)
+          ? firecrawlExtractStatusResult(context, id, result.data)
           : failureResult("firecrawl", result.error);
       },
     );

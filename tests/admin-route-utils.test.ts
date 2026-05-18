@@ -2,9 +2,18 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { AppHttpError } from "../src/server/lib/http.js";
 import {
+  parseSystemSettingsPayload,
   parseSearchEngineProbePayload,
   parseSearchEngineRequestTestPayload,
 } from "../src/server/http/admin-route-utils.js";
+
+const VALID_SYSTEM_SETTINGS_PAYLOAD = {
+  genericRoutingMode: "ordered_failover",
+  genericProviderOrder: ["tavily", "firecrawl"],
+  defaultSearchModel: "gpt-4o-mini",
+  logRetentionDays: 30,
+  allowedOrigins: ["https://example.com"],
+};
 
 test("parseSearchEngineProbePayload normalizes local draft settings", () => {
   const payload = parseSearchEngineProbePayload(
@@ -163,5 +172,34 @@ test("parseSearchEngineProbePayload requires a valid apiFormat", () => {
       ),
     (error: unknown) =>
       error instanceof AppHttpError && error.code === "invalid_search_engine_probe",
+  );
+});
+
+test("parseSystemSettingsPayload fills default MCP result budget", () => {
+  const payload = parseSystemSettingsPayload(VALID_SYSTEM_SETTINGS_PAYLOAD, false);
+
+  assert.deepEqual(payload.mcpResultBudget, {
+    firstResponseChars: 20_000,
+    pageChars: 50_000,
+    hardResponseChars: 200_000,
+  });
+});
+
+test("parseSystemSettingsPayload rejects out-of-order MCP result budget", () => {
+  assert.throws(
+    () =>
+      parseSystemSettingsPayload(
+        {
+          ...VALID_SYSTEM_SETTINGS_PAYLOAD,
+          mcpResultBudget: {
+            firstResponseChars: 16_000,
+            pageChars: 8_000,
+            hardResponseChars: 192_000,
+          },
+        },
+        false,
+      ),
+    (error: unknown) =>
+      error instanceof AppHttpError && error.code === "invalid_system_settings",
   );
 });

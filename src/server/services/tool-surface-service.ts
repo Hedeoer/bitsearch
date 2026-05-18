@@ -66,10 +66,12 @@ function createClientGuidance(snapshot: ToolSurfaceSnapshot): ClientGuidance {
     `Generic routing uses ${snapshot.genericRouting.mode} with ${snapshot.genericRouting.effectiveProviderOrder.join(" -> ") || "no available providers"}.`,
     "web_fetch and web_map follow generic routing only.",
     "Provider-native tools never participate in generic routing.",
+    "Large tool results return bounded previews with result_id, result_uri, next_cursor, and can be paged with get_result_page.",
   ];
 
   const promptLines = [
     "Use web_search for open-web discovery and get_sources when source listing is needed.",
+    "When a response includes result_id and next_cursor, call get_result_page instead of asking the tool to return all content again.",
   ];
   if (snapshot.genericTools.includes("web_fetch")) {
     promptLines.push("Use web_fetch for a single known page when plain content is needed.");
@@ -90,6 +92,7 @@ function createClientGuidance(snapshot: ToolSurfaceSnapshot): ClientGuidance {
     promptLines.push("Use firecrawl_crawl for deep asynchronous crawling and always poll firecrawl_crawl_status.");
   }
   promptLines.push("Do not assume provider-native tools follow generic routing.");
+  promptLines.push("Do not read bitsearch://results resources as a substitute for pagination; they are manifests for get_result_page.");
 
   return {
     systemBehavior: behavior,

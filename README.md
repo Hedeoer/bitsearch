@@ -18,7 +18,7 @@ BitSearch packages two things into one deployable service: an HTTP-based Model C
 
 Its core differentiator is not just exposing search and crawl tools, but combining the strengths of a search-engine model with Tavily and Firecrawl into a more disciplined retrieval loop: use the search engine to plan and search broadly, use Tavily / Firecrawl to fetch or crawl the most relevant targets, then cross-check evidence across multiple rounds before presenting conclusions. This makes BitSearch especially suitable for workflows that need better grounding and lower hallucination risk than one-shot search or one-shot crawling alone.
 
-The backend exposes `20` MCP tools over streamable HTTP, routes generic fetch-like operations across Tavily and Firecrawl key pools, and also exposes provider-specific crawl / batch / extract tools for advanced workflows. It persists telemetry in SQLite. The frontend gives a single user one workspace for provider configuration, key imports, quota sync, MCP access details, dashboards, and request activity inspection. BitSearch does not implement team-facing collaboration or multi-user workspace features.
+The backend exposes `21` MCP tools over streamable HTTP, routes generic fetch-like operations across Tavily and Firecrawl key pools, and also exposes provider-specific crawl / batch / extract tools for advanced workflows. It persists telemetry in SQLite. The frontend gives a single user one workspace for provider configuration, key imports, quota sync, MCP access details, dashboards, and request activity inspection. BitSearch does not implement team-facing collaboration or multi-user workspace features.
 
 Project endpoints:
 
@@ -27,7 +27,7 @@ Project endpoints:
 
 ### Highlights
 
-- Exposes `20` MCP tools across search, provider-specific web extraction, configuration, and planning workflows.
+- Exposes `21` MCP tools across search, provider-specific web extraction, result pagination, configuration, and planning workflows.
 - Combines `search_engine`, Tavily, and Firecrawl into a planned multi-round search, crawl, and verification workflow instead of treating them as isolated tools.
 - Uses broad search plus targeted fetch/crawl plus source cross-checking to reduce misinformation and retrieval hallucinations.
 - Supports multi-provider routing with ordered failover for Tavily and Firecrawl operations.
@@ -584,6 +584,27 @@ Set in the **Overview** workspace under **Generic Retrieval Routing**:
 
 Generic retrieval routing only affects `web_fetch`, `web_map`, and `web_search` extra sources. Provider-specific tools such as `tavily_crawl` and `firecrawl_*` always execute against their named provider and never fall back across providers.
 
+#### MCP large result handling
+
+Many retrieval tools can produce more text than an MCP client can safely consume in one response. BitSearch stores the complete tool result server-side as a `bitsearch://results/{id}` artifact, returns a bounded preview first, and includes pagination metadata:
+
+- `result_id` / `result_uri` identify the stored result.
+- `next_cursor` points to the next bounded page when more content is available.
+- `truncated` indicates whether the returned preview/page is incomplete.
+- `returned_chars`, `total_chars`, `returned_items`, and `total_items` describe page and result size where applicable.
+
+To continue reading a large result, call `get_result_page` with the `result_id` and the latest `next_cursor`. For array-like results with one oversized item, call `get_result_page` with `item_index` to read that item as bounded text pages.
+
+The **MCP result budget** controls response sizing:
+
+| Setting | Default | Controls |
+|---------|---------|----------|
+| `First Response Chars` | `20000` | Maximum preview size returned by the original tool call |
+| `Page Chars` | `50000` | Default page size for follow-up `get_result_page` calls |
+| `Hard Response Chars` | `200000` | Absolute per-response cap, including explicit `max_chars` requests |
+
+These settings limit the size returned to the MCP client. They do not limit how much an upstream provider crawls, scrapes, or extracts, and they do not impose a maximum size for the server-side artifact stored in SQLite.
+
 ### Screenshots
 
 ![BitSearch overview](docs/images/overview.png)
@@ -609,16 +630,16 @@ Generic retrieval routing only affects `web_fetch`, `web_map`, and `web_search` 
 
 ### MCP Tools Reference
 
-BitSearch exposes 20 tools to the LLM client, covering four main areas.
+BitSearch exposes 21 tools to the LLM client, covering four main areas.
 
 <details>
 <summary>Expand the full MCP tools reference</summary>
 
 #### 1. Search & Web Access
-- **`web_search`**: Performs AI-driven web search using the configured search engine model. Caches sources server-side.
-- **`get_sources`**: Retrieves source links cached during a `web_search` call using the returned `session_id`.
-- **`web_fetch`**: Extracts full Markdown content from a target URL. Automatically fails over across Tavily and Firecrawl key pools.
-- **`web_map`**: Maps website structure and discovers URLs using Tavily Map or Firecrawl.
+- **`web_search`**: Performs AI-driven web search using the configured search engine model. Caches sources server-side and returns a bounded answer preview plus result pagination metadata.
+- **`get_sources`**: Retrieves a bounded page of source links cached during a `web_search` call using the returned `session_id`.
+- **`web_fetch`**: Extracts Markdown content from a target URL, stores the full result server-side, and returns a bounded preview. Automatically fails over across Tavily and Firecrawl key pools.
+- **`web_map`**: Maps website structure and discovers URLs using Tavily Map or Firecrawl, returning a bounded preview plus pagination metadata.
 
 #### 2. Provider-Specific Advanced Retrieval
 - **`tavily_crawl`**: Synchronously traverses a site and returns extracted page content from Tavily in one call.
@@ -636,6 +657,7 @@ A scaffold for LLMs to generate structured search strategies for highly complex 
 - **`plan_execution`**: Phase 6 - Determine parallel vs. sequential execution.
 
 #### 4. System Management
+- **`get_result_page`**: Reads one bounded page from a stored large tool result using `result_id`, `next_cursor`, and optional `item_index`.
 - **`get_config_info`**: Retrieves current server settings, key pool status, and tests search engine connectivity.
 - **`switch_model`**: Toggles the default AI model used for `web_search`.
 - **`toggle_builtin_tools`**: Indicates status of local client tool overriding (primarily for local Claude Code setups).
@@ -735,6 +757,13 @@ Choose tools by task shape, not by habit.
 - `firecrawl_extract` is asynchronous. After submission, always call `firecrawl_extract_status` until the job reaches a terminal state, unless the user explicitly wants only the submission step.
 - Never treat Firecrawl submit tools as final-result tools.
 - Preserve and inspect terminal job states such as `completed`, `failed`, or `cancelled` exactly as returned.
+
+### Large Result Rules
+
+- Many BitSearch tools return a bounded preview plus `result_id`, `result_uri`, `next_cursor`, and `truncated` metadata instead of the full result.
+- If `truncated` is true or `next_cursor` is present and more raw content is needed, call `get_result_page` with `result_id` and the latest `next_cursor`.
+- For a large individual array item, call `get_result_page` with `result_id` and `item_index`.
+- Do not assume the first tool response contains all fetched, crawled, scraped, or extracted content.
 
 ## 4. Workflow Preferences
 

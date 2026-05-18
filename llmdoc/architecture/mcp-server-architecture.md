@@ -2,12 +2,13 @@
 
 ## 1. Identity
 
-- **What it is:** An HTTP-based Model Context Protocol (MCP) server embedded within the bitsearch Express application, exposing 20 tools for web search, provider-specific retrieval, configuration, and search planning.
+- **What it is:** An HTTP-based Model Context Protocol (MCP) server embedded within the bitsearch Express application, exposing 21 tools for web search, provider-specific retrieval, result pagination, configuration, and search planning.
 - **Purpose:** Provides a standardized MCP interface so LLM clients (e.g., Claude Code) can invoke bitsearch capabilities over HTTP+SSE without stdio coupling.
 
 ## 2. Core Components
 
 - `src/server/mcp/register-tools.ts` (`createMcpServer`): Factory that instantiates `McpServer`, registers the generic search/config/planning tools, and delegates advanced provider-specific tools to `registerProviderTools`.
+- `src/server/mcp/result-artifacts.ts` (`saveArtifact`, `getResultPage`, `readArtifactResource`): Stores complete tool outputs in SQLite, generates bounded previews, issues pagination cursors, and serves `bitsearch://results/{id}` resource manifests for follow-up reads.
 - `src/server/mcp/provider-tools.ts` (`registerProviderTools`): Registers seven provider-specific tools for Tavily Crawl and Firecrawl crawl / batch scrape / extract submit-status pairs. Contains single-provider key-pool execution and request logging helpers.
 - `src/server/mcp/transport-router.ts` (`handleMcpPost`, `handleMcpGet`, `handleMcpDelete`): Session-aware HTTP handlers that manage `StreamableHTTPServerTransport` instances in an in-memory Map keyed by session ID. Sessions are stored as `TransportSession { transport, lastSeenAt }` to track last activity time. Idle sessions are automatically cleaned up after 30 minutes of inactivity (`MCP_SESSION_TTL_MS`); a sweep timer runs every 5 minutes (`MCP_SESSION_SWEEP_INTERVAL_MS`) calling `cleanupIdleTransports()`. The sweep timer is unref'd via `sweepTimer.unref()` so it does not prevent process exit.
 - `src/server/app.ts` (`createApp`, lines 53-61): Mounts the three MCP HTTP methods at `/mcp` with authentication middleware.
@@ -38,14 +39,15 @@
 - **2.** Handler calls `requireSearchEngineConfig` to load the `search_engine` provider config and API key from database.
 - **3.** `searchWithSearchEngine` dispatches to the configured `search_engine` format (OpenAI chat, OpenAI responses, Anthropic messages, or Google Gemini), while `getExtraSources` runs in parallel via `Promise.all`.
 - **4.** Results are split/merged via `source-utils.js`, cached in SQLite via `saveSearchSession`, and logged via `logSearchRequest`.
-- **5.** Returns structured JSON with `session_id`, `content`, and `sources_count`.
+- **5.** The complete answer is stored as a result artifact; the first response returns a bounded preview plus `result_id`, `result_uri`, `next_cursor`, and truncation metadata.
+- **6.** Clients continue reading with `get_result_page` or the `bitsearch://results/{id}` resource manifest when more content is needed.
 
 ### 3.4 Authentication Flow
 
 - **1. Bearer Token:** `middleware.ts:24-33` compares `Authorization` header against `context.bootstrap.mcpBearerToken` (from `MCP_BEARER_TOKEN` env var, dev default: `"bitsearch-dev-token"`). Returns 401 on mismatch.
 - **2. Origin Check:** `middleware.ts:35-45` reads `allowedOrigins` from system settings. Passes if: no Origin header, empty whitelist, or Origin is in list. Returns 403 on mismatch.
 
-## 4. Tool Inventory (20 Tools)
+## 4. Tool Inventory (21 Tools)
 
 ### Search Tools (4)
 
@@ -55,6 +57,12 @@
 | `get_sources` | Retrieve cached sources from a prior `web_search` | `session_id` |
 | `web_fetch` | Extract URL content as Markdown via Tavily/Firecrawl | `url` |
 | `web_map` | Map website structure, return discovered URLs | `url`, `instructions?`, `max_depth?`, `max_breadth?`, `limit?`, `timeout?` |
+
+### Result Pagination Tools (1)
+
+| Tool | Purpose | Key Parameters |
+|------|---------|----------------|
+| `get_result_page` | Read one bounded page from a stored large tool result | `result_id`, `cursor?`, `item_index?`, `max_items?`, `max_chars?` |
 
 ### Provider-Specific Retrieval Tools (7)
 
@@ -96,3 +104,4 @@ Planning phases required per complexity level: Level 1 = phases 1-3, Level 2 = p
 - **In-memory session Map:** Simple session management without external state stores; acceptable given single-process deployment model.
 - **Zod-only validation at MCP boundary:** MCP tool inputs are validated with Zod schemas; downstream services rely on TypeScript types.
 - **Dual execution model:** `web_fetch` / `web_map` keep ordered failover, while `tavily_crawl` and `firecrawl_*` execute only against their named provider so advanced provider features can map cleanly to official APIs.
+- **Large result artifacts:** Large responses are persisted as artifacts and paginated through bounded previews so clients can continue reading without receiving oversized single responses.

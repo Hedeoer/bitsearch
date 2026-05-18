@@ -1,5 +1,6 @@
 import {
   McpServer,
+  ResourceTemplate,
   type RegisteredTool,
 } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
@@ -52,21 +53,19 @@ import {
   shouldExposeTool,
 } from "../services/tool-surface-service.js";
 import { registerProviderTools } from "./provider-tools.js";
+import {
+  budgetedToolJsonResult,
+  getResultPage,
+  readArtifactResource,
+  readResultBudget,
+  saveArtifact,
+  toolErrorResult,
+  toolJsonResult,
+} from "./result-artifacts.js";
 
 export interface McpRuntime {
   server: McpServer;
   syncToolSurface(nextToolSurface: ToolSurfaceSnapshot): void;
-}
-
-function toJsonText(value: unknown): string {
-  return JSON.stringify(value, null, 2);
-}
-
-function toolJsonResult(value: Record<string, unknown>) {
-  return {
-    content: [{ type: "text" as const, text: toJsonText(value) }],
-    structuredContent: value,
-  };
 }
 
 function logSearchRequest(
@@ -249,10 +248,48 @@ export function createMcpRuntime(context: AppContext): McpRuntime {
   });
   const conditionalTools = new Map<string, RegisteredTool>();
 
+  server.registerResource(
+    "tool-result-artifact",
+    new ResourceTemplate("bitsearch://results/{id}", { list: undefined }),
+    {
+      title: "Tool Result Artifact",
+      description: "Read a stored BitSearch MCP tool result by URI.",
+      mimeType: "application/json",
+    },
+    (uri) => readArtifactResource(context, uri),
+  );
+
+  server.registerTool(
+    "get_result_page",
+    {
+      description: "Read one bounded page from a stored large BitSearch MCP tool result. Use result_id and next_cursor returned by prior tool calls.",
+      inputSchema: z.object({
+        result_id: z.string(),
+        cursor: z.string().optional().default(""),
+        item_index: z.number().int().min(0).optional(),
+        max_items: z.number().int().min(1).max(100).optional().default(20),
+        max_chars: z.number().int().min(1_000).max(1_000_000).optional(),
+      }),
+    },
+    async ({ result_id, cursor = "", item_index, max_items = 20, max_chars }) => {
+      const page = getResultPage(context, {
+        resultId: result_id,
+        cursor: cursor || undefined,
+        itemIndex: item_index,
+        maxItems: max_items,
+        maxChars: max_chars,
+      });
+      if (!page) {
+        return toolErrorResult("result_not_found_or_expired", { result_id });
+      }
+      return toolJsonResult(page);
+    },
+  );
+
   server.registerTool(
     "web_search",
     {
-      description: "Performs a deep web search based on the given query and returns the search engine answer directly.",
+      description: "Performs a deep web search and returns a bounded answer preview plus result_id/result_uri pagination metadata.",
       inputSchema: z.object({
         query: z.string(),
         platform: z.string().optional().default(""),
@@ -309,9 +346,33 @@ export function createMcpRuntime(context: AppContext): McpRuntime {
             extraSourcesRequested: extra_sources,
           },
         });
+        const artifact = saveArtifact(context, {
+          toolName: "web_search",
+          kind: "text",
+          title: query,
+          summary: {
+            session_id: sessionId,
+            query,
+            sources_count: mergedSources.length,
+          },
+          content: answer,
+          totalItems: null,
+        });
+        const budget = readResultBudget(context);
+        const page = getResultPage(context, {
+          resultId: artifact.id,
+          maxChars: budget.firstResponseChars,
+        });
+        const preview = page?.text ?? "";
         return toolJsonResult({
           session_id: sessionId,
-          content: answer,
+          content: preview,
+          content_truncated: page?.truncated ?? false,
+          returned_chars: preview.length,
+          total_chars: artifact.totalChars,
+          result_id: artifact.id,
+          result_uri: artifact.uri,
+          next_cursor: page?.next_cursor ?? null,
           sources_count: mergedSources.length,
         });
       } catch (error) {
@@ -338,7 +399,7 @@ export function createMcpRuntime(context: AppContext): McpRuntime {
   server.registerTool(
     "get_sources",
     {
-      description: "Retrieve all cached sources for a previous web_search call.",
+      description: "Retrieve a bounded page of cached sources for a previous web_search call. Use get_result_page for remaining pages.",
       inputSchema: z.object({
         session_id: z.string(),
       }),
@@ -346,17 +407,35 @@ export function createMcpRuntime(context: AppContext): McpRuntime {
     async ({ session_id }) => {
       const session = getSearchSession(context.db, session_id);
       if (!session) {
-        return toolJsonResult({
-          session_id,
-          sources: [],
-          sources_count: 0,
-          error: "session_id_not_found_or_expired",
-        });
+        return toolErrorResult("session_id_not_found_or_expired", { session_id });
       }
+      const artifact = saveArtifact(context, {
+        toolName: "get_sources",
+        kind: "sources",
+        title: `Sources for search session ${session_id}`,
+        summary: {
+          session_id,
+          sources_count: session.sourcesCount,
+        },
+        content: session.sources,
+        totalItems: session.sourcesCount,
+      });
+      const budget = readResultBudget(context);
+      const page = getResultPage(context, {
+        resultId: artifact.id,
+        maxItems: 20,
+        maxChars: budget.firstResponseChars,
+      });
       return toolJsonResult({
         session_id,
-        sources: session.sources,
+        sources: page?.items ?? [],
         sources_count: session.sourcesCount,
+        returned_items: page?.returned_items ?? 0,
+        result_id: artifact.id,
+        result_uri: artifact.uri,
+        next_cursor: page?.next_cursor ?? null,
+        truncated: page?.truncated ?? false,
+        total_chars: artifact.totalChars,
       });
     },
   );
@@ -370,9 +449,36 @@ export function createMcpRuntime(context: AppContext): McpRuntime {
           url: z.string().url(),
         }),
       },
-      async ({ url }) => ({
-        content: [{ type: "text" as const, text: await buildWebFetchResult(context, url) }],
-      }),
+      async ({ url }) => {
+        const content = await buildWebFetchResult(context, url);
+        const artifact = saveArtifact(context, {
+          toolName: "web_fetch",
+          kind: "text",
+          title: url,
+          summary: {
+            url,
+            content_chars: content.length,
+          },
+          content,
+          totalItems: null,
+        });
+        const budget = readResultBudget(context);
+        const page = getResultPage(context, {
+          resultId: artifact.id,
+          maxChars: budget.firstResponseChars,
+        });
+        const preview = page?.text ?? "";
+        return toolJsonResult({
+          url,
+          content_preview: preview,
+          returned_chars: preview.length,
+          total_chars: artifact.totalChars,
+          result_id: artifact.id,
+          result_uri: artifact.uri,
+          next_cursor: page?.next_cursor ?? null,
+          truncated: page?.truncated ?? false,
+        });
+      },
     );
     if (!shouldExposeTool(toolSurface, "web_fetch")) {
       tool.disable();
@@ -401,21 +507,44 @@ export function createMcpRuntime(context: AppContext): McpRuntime {
         max_breadth = 20,
         limit = 50,
         timeout = 150,
-      }) => ({
-        content: [
-          {
-            type: "text" as const,
-            text: await buildWebMapResult(context, {
-              url,
-              instructions,
-              maxDepth: max_depth,
-              maxBreadth: max_breadth,
-              limit,
-              timeout,
-            }),
+      }) => {
+        const content = await buildWebMapResult(context, {
+          url,
+          instructions,
+          maxDepth: max_depth,
+          maxBreadth: max_breadth,
+          limit,
+          timeout,
+        });
+        const artifact = saveArtifact(context, {
+          toolName: "web_map",
+          kind: "text",
+          title: url,
+          summary: {
+            url,
+            limit,
+            content_chars: content.length,
           },
-        ],
-      }),
+          content,
+          totalItems: null,
+        });
+        const budget = readResultBudget(context);
+        const page = getResultPage(context, {
+          resultId: artifact.id,
+          maxChars: budget.firstResponseChars,
+        });
+        const preview = page?.text ?? "";
+        return toolJsonResult({
+          url,
+          map_preview: preview,
+          returned_chars: preview.length,
+          total_chars: artifact.totalChars,
+          result_id: artifact.id,
+          result_uri: artifact.uri,
+          next_cursor: page?.next_cursor ?? null,
+          truncated: page?.truncated ?? false,
+        });
+      },
     );
     if (!shouldExposeTool(toolSurface, "web_map")) {
       tool.disable();
@@ -459,37 +588,30 @@ export function createMcpRuntime(context: AppContext): McpRuntime {
         };
       }
 
-      return {
-        content: [
-          {
-            type: "text" as const,
-            text: toJsonText({
-              settings,
-              generic_routing: liveToolSurface.genericRouting,
-              provider_capabilities: liveToolSurface.providerCapabilities,
-              tool_surface: {
-                generic_tools: liveToolSurface.genericTools,
-                provider_tools: liveToolSurface.providerTools,
-                exposed_tools: liveToolSurface.exposedTools,
-                hidden_tools: liveToolSurface.hiddenTools,
-                requires_reconnect: liveToolSurface.requiresReconnect,
-                behavior_changes_apply_immediately: liveToolSurface.behaviorChangesApplyImmediately,
-                last_refreshed_at: liveToolSurface.lastRefreshedAt,
-              },
-              tool_surface_notes: liveToolSurface.clientGuidance.systemBehavior,
-              providers: providerConfigs,
-              key_pool_status: providerConfigs
-                .filter((item) => item?.provider !== SEARCH_ENGINE_PROVIDER)
-                .map((item) => ({
-                  provider: item?.provider,
-                  enabled: item?.enabled,
-                  key_count: item?.keyCount ?? 0,
-                })),
-              connection_test: connectionTest,
-            }),
-          },
-        ],
-      };
+      return budgetedToolJsonResult(context, "get_config_info", {
+        settings,
+        generic_routing: liveToolSurface.genericRouting,
+        provider_capabilities: liveToolSurface.providerCapabilities,
+        tool_surface: {
+          generic_tools: liveToolSurface.genericTools,
+          provider_tools: liveToolSurface.providerTools,
+          exposed_tools: liveToolSurface.exposedTools,
+          hidden_tools: liveToolSurface.hiddenTools,
+          requires_reconnect: liveToolSurface.requiresReconnect,
+          behavior_changes_apply_immediately: liveToolSurface.behaviorChangesApplyImmediately,
+          last_refreshed_at: liveToolSurface.lastRefreshedAt,
+        },
+        tool_surface_notes: liveToolSurface.clientGuidance.systemBehavior,
+        providers: providerConfigs,
+        key_pool_status: providerConfigs
+          .filter((item) => item?.provider !== SEARCH_ENGINE_PROVIDER)
+          .map((item) => ({
+            provider: item?.provider,
+            enabled: item?.enabled,
+            key_count: item?.keyCount ?? 0,
+          })),
+        connection_test: connectionTest,
+      });
     },
   );
 
@@ -504,19 +626,12 @@ export function createMcpRuntime(context: AppContext): McpRuntime {
     async ({ model }) => {
       const previous = getSystemSettings(context.db).defaultSearchModel;
       saveSystemSetting(context.db, "default_search_model", model);
-      return {
-        content: [
-          {
-            type: "text" as const,
-            text: toJsonText({
-              status: "Success",
-              previous_model: previous,
-              current_model: model,
-              message: `Model switched from ${previous} to ${model}`,
-            }),
-          },
-        ],
-      };
+      return budgetedToolJsonResult(context, "switch_model", {
+        status: "Success",
+        previous_model: previous,
+        current_model: model,
+        message: `Model switched from ${previous} to ${model}`,
+      });
     },
   );
 
@@ -529,17 +644,12 @@ export function createMcpRuntime(context: AppContext): McpRuntime {
       }),
     },
     async ({ action = "status" }) => ({
-      content: [
-        {
-          type: "text" as const,
-          text: toJsonText({
-            blocked: false,
-            action,
-            error: "unsupported_in_remote_deployment",
-            message: "The remote HTTP MCP service cannot modify the client's local .claude/settings.json",
-          }),
-        },
-      ],
+      ...budgetedToolJsonResult(context, "toggle_builtin_tools", {
+        blocked: false,
+        action,
+        error: "unsupported_in_remote_deployment",
+        message: "The remote HTTP MCP service cannot modify the client's local .claude/settings.json",
+      }),
       isError: true,
     }),
   );
@@ -563,7 +673,9 @@ export function createMcpRuntime(context: AppContext): McpRuntime {
       }),
     },
     async ({ thought, session_id, confidence, is_revision, ...rest }) =>
-      toolJsonResult(
+      budgetedToolJsonResult(
+        context,
+        "plan_intent",
         processPlanningPhase(context, "intent_analysis", {
           sessionId: session_id,
           thought,
@@ -598,7 +710,9 @@ export function createMcpRuntime(context: AppContext): McpRuntime {
       }),
     },
     async ({ session_id, thought, confidence, is_revision, ...rest }) =>
-      toolJsonResult(
+      budgetedToolJsonResult(
+        context,
+        "plan_complexity",
         processPlanningPhase(context, "complexity_assessment", {
           sessionId: session_id,
           thought,
@@ -627,7 +741,9 @@ export function createMcpRuntime(context: AppContext): McpRuntime {
       }),
     },
     async ({ session_id, thought, confidence, is_revision, depends_on, ...rest }) =>
-      toolJsonResult(
+      budgetedToolJsonResult(
+        context,
+        "plan_sub_query",
         processPlanningPhase(context, "query_decomposition", {
           sessionId: session_id,
           thought,
@@ -670,7 +786,9 @@ export function createMcpRuntime(context: AppContext): McpRuntime {
       purpose,
       round,
     }) =>
-      toolJsonResult(
+      budgetedToolJsonResult(
+        context,
+        "plan_search_term",
         processPlanningPhase(context, "search_strategy", {
           sessionId: session_id,
           thought,
@@ -708,7 +826,9 @@ export function createMcpRuntime(context: AppContext): McpRuntime {
       is_revision,
       ...rest
     }) =>
-      toolJsonResult(
+      budgetedToolJsonResult(
+        context,
+        "plan_tool_mapping",
         processPlanningPhase(context, "tool_selection", {
           sessionId: session_id,
           thought,
@@ -745,7 +865,9 @@ export function createMcpRuntime(context: AppContext): McpRuntime {
       estimated_rounds,
       is_revision,
     }) =>
-      toolJsonResult(
+      budgetedToolJsonResult(
+        context,
+        "plan_execution",
         processPlanningPhase(context, "execution_order", {
           sessionId: session_id,
           thought,

@@ -104,6 +104,20 @@ CREATE TABLE IF NOT EXISTS search_sessions (
   created_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS tool_result_artifacts (
+  id TEXT PRIMARY KEY,
+  tool_name TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  uri TEXT NOT NULL UNIQUE,
+  mime_type TEXT NOT NULL DEFAULT 'application/json',
+  title TEXT,
+  summary_json TEXT NOT NULL DEFAULT '{}',
+  content_json TEXT NOT NULL,
+  total_items INTEGER,
+  total_chars INTEGER NOT NULL,
+  created_at TEXT NOT NULL
+);
+
 CREATE VIRTUAL TABLE IF NOT EXISTS request_logs_fts USING fts5(
   request_id UNINDEXED,
   tool_name,
@@ -176,6 +190,12 @@ CREATE INDEX IF NOT EXISTS idx_provider_keys_provider_enabled_created_at
 
 CREATE INDEX IF NOT EXISTS idx_search_sessions_created_at
   ON search_sessions(created_at);
+
+CREATE INDEX IF NOT EXISTS idx_tool_result_artifacts_created_at
+  ON tool_result_artifacts(created_at);
+
+CREATE INDEX IF NOT EXISTS idx_tool_result_artifacts_tool_name_created_at
+  ON tool_result_artifacts(tool_name, created_at DESC);
 
 CREATE INDEX IF NOT EXISTS idx_planning_sessions_updated_at
   ON planning_sessions(updated_at);

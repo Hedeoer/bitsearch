@@ -13,6 +13,7 @@
     "build:server": "tsc -p tsconfig.server.json",
     "check": "tsc --noEmit",
     "test": "node --import tsx --test tests/**/*.test.ts",
+    "smoke:mcp-large-results": "tsx scripts/mcp-large-result-smoke.ts",
     "seed:admin-demo": "tsx scripts/seed-admin-demo.ts",
     "start": "node dist/server/main.js"
   },

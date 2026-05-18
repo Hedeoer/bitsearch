@@ -5,8 +5,39 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { StrategyPanelProps } from "./strategy-types";
 
+const MAX_RESULT_BUDGET_CHARS = 1_000_000;
+const MIN_RESULT_BUDGET_CHARS = 1_000;
+const RESULT_BUDGET_STEP = 1_000;
+
+type ResultBudget = SystemSettings["mcpResultBudget"];
+
 function getSecondaryProvider(primary: KeyPoolProvider): KeyPoolProvider {
   return primary === "tavily" ? "firecrawl" : "tavily";
+}
+
+function parseBudgetChars(value: string, fallback: number): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return fallback;
+  }
+  return Math.min(
+    MAX_RESULT_BUDGET_CHARS,
+    Math.max(MIN_RESULT_BUDGET_CHARS, Math.trunc(parsed)),
+  );
+}
+
+function normalizeResultBudget(
+  current: ResultBudget,
+  patch: Partial<ResultBudget>,
+): ResultBudget {
+  const next = { ...current, ...patch };
+  if (next.firstResponseChars > next.pageChars) {
+    next.pageChars = next.firstResponseChars;
+  }
+  if (next.pageChars > next.hardResponseChars) {
+    next.hardResponseChars = next.pageChars;
+  }
+  return next;
 }
 
 function selectRoutingOrder(
@@ -26,6 +57,14 @@ export function StrategyRoutingTab(props: StrategyPanelProps) {
   const availableProvidersKey = availableGenericProviders.join(",");
   const selectedPrimary = props.system.genericProviderOrder[0] ?? "tavily";
   const canUseFailover = availableGenericProviders.length > 1;
+  const resultBudget = props.system.mcpResultBudget;
+
+  function updateResultBudget(patch: Partial<ResultBudget>) {
+    props.setSystem((current) => ({
+      ...current,
+      mcpResultBudget: normalizeResultBudget(current.mcpResultBudget, patch),
+    }));
+  }
 
   useEffect(() => {
     if (availableGenericProviders.length !== 1) {
@@ -130,6 +169,79 @@ export function StrategyRoutingTab(props: StrategyPanelProps) {
           }
         />
       </label>
+
+      <div className="rounded-[20px] border border-white/8 bg-white/4 p-4">
+        <div className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--text-dim)]">
+          MCP result budget
+        </div>
+        <div className="mt-3 grid gap-3 xl:grid-cols-3">
+          <label className="field">
+            <span>First Response Chars</span>
+            <input
+              className="font-['IBM_Plex_Mono']"
+              disabled={props.loading}
+              inputMode="numeric"
+              max={MAX_RESULT_BUDGET_CHARS}
+              min={MIN_RESULT_BUDGET_CHARS}
+              step={RESULT_BUDGET_STEP}
+              type="number"
+              value={resultBudget.firstResponseChars}
+              onChange={(event) =>
+                updateResultBudget({
+                  firstResponseChars: parseBudgetChars(
+                    event.target.value,
+                    resultBudget.firstResponseChars,
+                  ),
+                })
+              }
+            />
+            <p className="field-note">Initial preview size.</p>
+          </label>
+
+          <label className="field">
+            <span>Page Chars</span>
+            <input
+              className="font-['IBM_Plex_Mono']"
+              disabled={props.loading}
+              inputMode="numeric"
+              max={MAX_RESULT_BUDGET_CHARS}
+              min={MIN_RESULT_BUDGET_CHARS}
+              step={RESULT_BUDGET_STEP}
+              type="number"
+              value={resultBudget.pageChars}
+              onChange={(event) =>
+                updateResultBudget({
+                  pageChars: parseBudgetChars(event.target.value, resultBudget.pageChars),
+                })
+              }
+            />
+            <p className="field-note">Follow-up page size.</p>
+          </label>
+
+          <label className="field">
+            <span>Hard Response Chars</span>
+            <input
+              className="font-['IBM_Plex_Mono']"
+              disabled={props.loading}
+              inputMode="numeric"
+              max={MAX_RESULT_BUDGET_CHARS}
+              min={MIN_RESULT_BUDGET_CHARS}
+              step={RESULT_BUDGET_STEP}
+              type="number"
+              value={resultBudget.hardResponseChars}
+              onChange={(event) =>
+                updateResultBudget({
+                  hardResponseChars: parseBudgetChars(
+                    event.target.value,
+                    resultBudget.hardResponseChars,
+                  ),
+                })
+              }
+            />
+            <p className="field-note">Absolute response cap.</p>
+          </label>
+        </div>
+      </div>
 
       <div className="flex justify-end">
         <Button disabled={props.loading} type="button" onClick={props.onSave}>
