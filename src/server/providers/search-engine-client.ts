@@ -1,4 +1,4 @@
-import { generateText } from "ai";
+import { generateText, streamText } from "ai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createOpenAI } from "@ai-sdk/openai";
@@ -24,6 +24,14 @@ interface AnthropicModelListResponse {
 interface GoogleModelListResponse {
   models?: Array<{ name?: string }>;
   nextPageToken?: string;
+}
+
+interface UpstreamErrorLike {
+  cause?: unknown;
+  message?: string;
+  name?: string;
+  responseBody?: string;
+  statusCode?: number;
 }
 
 export interface SearchEngineMessage {
@@ -105,6 +113,60 @@ function getPrompt(messages: SearchEngineMessage[]): string {
     .map((message) => message.content)
     .join("\n")
     .trim();
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object";
+}
+
+function getUpstreamErrorLike(error: unknown): UpstreamErrorLike {
+  if (!isRecord(error)) {
+    return {};
+  }
+  return {
+    cause: error.cause,
+    message: typeof error.message === "string" ? error.message : undefined,
+    name: typeof error.name === "string" ? error.name : undefined,
+    responseBody: typeof error.responseBody === "string" ? error.responseBody : undefined,
+    statusCode: typeof error.statusCode === "number" ? error.statusCode : undefined,
+  };
+}
+
+function collectErrorDetails(error: unknown): {
+  message: string;
+  responseBody: string;
+  statusCode: number | null;
+} {
+  const current = getUpstreamErrorLike(error);
+  const cause = current.cause ? collectErrorDetails(current.cause) : null;
+  return {
+    message: [current.name, current.message, cause?.message].filter(Boolean).join(" "),
+    responseBody: [current.responseBody, cause?.responseBody].filter(Boolean).join(" "),
+    statusCode: current.statusCode ?? cause?.statusCode ?? null,
+  };
+}
+
+function isStreamCompatibilityError(error: unknown): boolean {
+  const details = collectErrorDetails(error);
+  if (details.statusCode === null || ![400, 404, 405].includes(details.statusCode)) {
+    return false;
+  }
+
+  const text = `${details.message} ${details.responseBody}`.toLowerCase();
+  if (!text.includes("stream")) {
+    return false;
+  }
+
+  return [
+    "not support",
+    "not supported",
+    "unsupported",
+    "not allowed",
+    "stream_options",
+    "unknown parameter",
+    "unrecognized",
+    "invalid parameter",
+  ].some((indicator) => text.includes(indicator));
 }
 
 async function listOpenAIModels(config: SearchEngineClientConfig): Promise<string[]> {
@@ -235,6 +297,59 @@ function createGoogleProvider(config: SearchEngineClientConfig) {
   });
 }
 
+async function generateOpenAIChatText(
+  config: SearchEngineClientConfig,
+  system: string,
+  prompt: string,
+): Promise<string> {
+  const openai = createOpenAIProvider(config);
+  const { text } = await generateText({
+    model: openai.chat(config.model),
+    system,
+    prompt,
+    abortSignal: createAbortSignal(config.timeoutMs),
+  });
+  return text.trim();
+}
+
+async function streamOpenAIChatText(
+  config: SearchEngineClientConfig,
+  system: string,
+  prompt: string,
+): Promise<string> {
+  const openai = createOpenAIProvider(config);
+  let streamError: unknown;
+  const result = streamText({
+    model: openai.chat(config.model),
+    system,
+    prompt,
+    abortSignal: createAbortSignal(config.timeoutMs),
+    onError: ({ error }) => {
+      streamError = error;
+    },
+  });
+  try {
+    return (await result.text).trim();
+  } catch (error) {
+    throw streamError ?? error;
+  }
+}
+
+async function searchWithOpenAIChatCompletions(
+  config: SearchEngineClientConfig,
+  system: string,
+  prompt: string,
+): Promise<string> {
+  try {
+    return await streamOpenAIChatText(config, system, prompt);
+  } catch (error) {
+    if (!isStreamCompatibilityError(error)) {
+      throw error;
+    }
+    return generateOpenAIChatText(config, system, prompt);
+  }
+}
+
 export async function listSearchEngineModels(
   config: SearchEngineClientConfig,
 ): Promise<string[]> {
@@ -258,14 +373,7 @@ export async function searchWithSearchEngine(
 
   switch (config.apiFormat) {
     case "openai_chat_completions": {
-      const openai = createOpenAIProvider(config);
-      const { text } = await generateText({
-        model: openai.chat(config.model),
-        system,
-        prompt,
-        abortSignal: createAbortSignal(config.timeoutMs),
-      });
-      return text.trim();
+      return searchWithOpenAIChatCompletions(config, system, prompt);
     }
     case "openai_responses": {
       const openai = createOpenAIProvider(config);
