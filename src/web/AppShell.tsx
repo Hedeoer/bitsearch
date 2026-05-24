@@ -94,6 +94,7 @@ export function AppShell(props: AppShellProps) {
               saveErrors={props.providerSaveErrors}
               saving={props.savingProviders}
               system={props.system}
+              toolSurface={props.toolSurface}
             />
           }
         />
