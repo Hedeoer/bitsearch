@@ -259,3 +259,46 @@
     grid-template-columns: 1fr;
   }
 }
+
+.activity-payload-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 0.9rem;
+  border-bottom: 1px solid var(--border);
+  background: rgba(10, 14, 20, 0.5);
+}
+
+.activity-payload-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.activity-payload-toolbar-btn {
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0.4rem;
+}
+
+.activity-payload-toolbar-btn .text-primary {
+  color: var(--primary);
+}
+
+.activity-payload-toolbar-copied {
+  position: absolute;
+  top: -1.5rem;
+  right: 0;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  background: var(--success);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 600;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}

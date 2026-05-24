@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { AlertTriangle, ClipboardCopy, GitBranch, KeyRound, Server, Timer, Wrench } from "lucide-react";
+import { AlertTriangle, GitBranch, KeyRound, Server, Timer, Wrench } from "lucide-react";
+import { PayloadToolbar } from "./PayloadToolbar";
 import type { ActivityDetailRecord } from "@shared/contracts";
 import { EmptyState, LoadingOverlay } from "../Feedback";
 import { formatDateTime, formatDuration, statusTone } from "../../format";
@@ -42,7 +43,7 @@ function SummaryCard(
 
 export function ActivityInspector(props: ActivityInspectorProps) {
   const [activeTab, setActiveTab] = useState<InspectorTab>("input");
-  const [copyMessage, setCopyMessage] = useState("");
+  const [wordWrap, setWordWrap] = useState(false);
   const request = props.detail?.request ?? null;
   const diagnostics = props.detail?.diagnostics ?? null;
 
@@ -57,19 +58,6 @@ export function ActivityInspector(props: ActivityInspectorProps) {
       messages: prettyPrint(props.detail?.messages),
     } as const;
   }, [props.detail, request]);
-
-  async function copyValue(label: string, value: string | null) {
-    if (!value) {
-      return;
-    }
-    try {
-      await navigator.clipboard.writeText(value);
-      setCopyMessage(`${label} copied`);
-    } catch {
-      setCopyMessage(`${label} copy failed`);
-    }
-    window.setTimeout(() => setCopyMessage(""), 1200);
-  }
 
   if (!props.loading && !props.error && !props.detail) {
     return (
@@ -109,7 +97,6 @@ export function ActivityInspector(props: ActivityInspectorProps) {
                   <div className="eyebrow">Diagnostics</div>
                   <h3>Execution summary</h3>
                 </div>
-                {copyMessage ? <span className="chip primary-chip">{copyMessage}</span> : null}
               </div>
               <div className="activity-diagnostic-chip-row">
                 {diagnostics.isSlow ? <span className="status-pill warning">Slow request</span> : null}
@@ -119,20 +106,6 @@ export function ActivityInspector(props: ActivityInspectorProps) {
               <p className="supporting">
                 {diagnostics.failureStageHint ?? "No diagnostic hint was required for this request."}
               </p>
-              <div className="activity-copy-row">
-                <button className="text-button" type="button" onClick={() => copyValue("Request ID", request.id)}>
-                  <ClipboardCopy size={13} />
-                  Request ID
-                </button>
-                <button className="text-button" type="button" onClick={() => copyValue("URL", request.targetUrl)}>
-                  <ClipboardCopy size={13} />
-                  URL
-                </button>
-                <button className="text-button" type="button" onClick={() => copyValue("Retry chain", diagnostics.retryChainLabel)}>
-                  <ClipboardCopy size={13} />
-                  Retry chain
-                </button>
-              </div>
               <pre className="activity-code-block">{diagnostics.retryChainLabel}</pre>
             </article>
 
@@ -171,9 +144,9 @@ export function ActivityInspector(props: ActivityInspectorProps) {
                 {props.detail.attempts.length === 0 ? (
                   <div className="activity-payload-empty">
                     <GitBranch className="text-dim" size={32} style={{ marginBottom: "1rem", opacity: 0.5 }} />
-                    <h4>直接/内联生命周期</h4>
+                    <h4>Direct / Inline Lifecycle</h4>
                     <p className="supporting compact">
-                      此请求由服务进程直接处理，未生成外部重试或多尝试步骤链路。
+                      This request was handled directly by the service process without generating external retry or multi-attempt step chains.
                     </p>
                   </div>
                 ) : (
@@ -202,7 +175,13 @@ export function ActivityInspector(props: ActivityInspectorProps) {
             </article>
 
             <article className="activity-payload-panel">
-              <div className="activity-tab-row" role="tablist" aria-label="Payload inspector tabs">
+              <PayloadToolbar
+                activeTab={activeTab}
+                payloadContent={payloadMap?.[activeTab] !== "-" ? payloadMap?.[activeTab] : null}
+                wordWrap={wordWrap}
+                onToggleWrap={() => setWordWrap(!wordWrap)}
+              />
+              <div className="activity-tab-row activity-payload-tabs" role="tablist" aria-label="Payload inspector tabs">
                 <button type="button" className={`activity-tab${activeTab === "input" ? " activity-tab-active" : ""}`} onClick={() => setActiveTab("input")}>Input</button>
                 <button type="button" className={`activity-tab${activeTab === "output" ? " activity-tab-active" : ""}`} onClick={() => setActiveTab("output")}>Output</button>
                 <button type="button" className={`activity-tab${activeTab === "metadata" ? " activity-tab-active" : ""}`} onClick={() => setActiveTab("metadata")}>Metadata</button>
@@ -213,12 +192,12 @@ export function ActivityInspector(props: ActivityInspectorProps) {
                   <p>No content captured for {activeTab}</p>
                 </div>
               ) : (
-                <div className="activity-code-shell">
-                  <button className="icon-button activity-copy-code" type="button" onClick={() => copyValue(activeTab, payloadMap?.[activeTab] ?? null)} title="Copy payload">
-                    <ClipboardCopy size={13} />
-                  </button>
-                  <pre className="activity-code-block">{payloadMap?.[activeTab]}</pre>
-                </div>
+                <pre 
+                  className="activity-code-block"
+                  style={{ whiteSpace: wordWrap ? "pre-wrap" : "pre" }}
+                >
+                  {payloadMap?.[activeTab]}
+                </pre>
               )}
             </article>
           </div>
