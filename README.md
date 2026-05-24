@@ -471,16 +471,36 @@ If your client supports the open Agent Skills standard, prefer `skill + mcp` ove
 
 This repository ships one standard BitSearch skill template in `skills/bitsearch-research/`. It merges routing rules, evidence rules, retrieval workflow, and Planning Engine escalation into one coherent skill that can be reused across Agent Skills-compatible clients.
 
-Recommended installation:
+#### Option A: Install via the `skills` CLI (recommended)
+
+The [`skills`](https://github.com/vercel-labs/skills) CLI automatically clones this repo, discovers `skills/bitsearch-research/`, detects installed agents, and writes the skill into the correct directory for each one.
 
 ```bash
-mkdir -p .agents/skills
-cp -R skills/bitsearch-research .agents/skills/
+# Project-level install (interactive agent selection)
+npx skills add Hedeoer/bitsearch
+
+# User-wide install
+npx skills add Hedeoer/bitsearch -g
+
+# Non-interactive install into Claude Code only
+npx skills add Hedeoer/bitsearch --skill bitsearch-research -a claude-code -g -y
+
+# Preview discoverable skills without installing
+npx skills add Hedeoer/bitsearch --list
 ```
 
-User-wide install:
+`--skill bitsearch-research` matches the `name` field declared in `skills/bitsearch-research/SKILL.md`. Use `-a` once per target agent (for example `-a claude-code -a cursor -a codex`) or run without `-a` to pick from the interactive list.
+
+#### Option B: Manual copy
+
+If you prefer not to use the CLI, copy the skill folder directly.
 
 ```bash
+# Project-level
+mkdir -p .agents/skills
+cp -R skills/bitsearch-research .agents/skills/
+
+# User-wide
 mkdir -p ~/.agents/skills
 cp -R skills/bitsearch-research ~/.agents/skills/
 ```
