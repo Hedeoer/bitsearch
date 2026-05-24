@@ -13,8 +13,9 @@ type ActivityFeedProps = {
   onSelect: (requestId: string) => void;
 };
 
-function getPreview(item: ActivityListItem): string {
-  return item.errorSummary ?? item.resultPreview ?? "No preview captured";
+function truncate(text: string | null | undefined, max: number): string {
+  if (!text) return "";
+  return text.length > max ? text.slice(0, max) + "..." : text;
 }
 
 function FeedCard(
@@ -31,53 +32,35 @@ function FeedCard(
       className={`activity-feed-card interactive-card${props.selected ? " activity-feed-card-selected" : ""}`}
       onClick={props.onSelect}
     >
-      <div className="activity-feed-card-top">
-        <div className="activity-feed-card-title">
+      {/* 第一层 */}
+      <div className="activity-feed-header">
+        <div className="activity-feed-tool">
           <span className="chip primary-chip">
             <Server size={12} />
             {props.item.toolName}
           </span>
-          {props.item.isSlow ? <span className="status-pill warning">Slow</span> : null}
-          {props.item.isFallback ? <span className="status-pill neutral">Fallback</span> : null}
+          <span className="text-soft compact">({props.item.finalProvider ?? "no provider"})</span>
         </div>
         <span className={`status-pill ${tone}`}>{props.item.status}</span>
       </div>
 
-      <div className="activity-feed-card-meta">
-        <span>
-          <Timer size={11} />
-          {formatDuration(props.item.durationMs)}
-        </span>
-        <span>
-          <ArrowDownUp size={11} />
-          {formatNumber(props.item.attempts)} attempt{props.item.attempts === 1 ? "" : "s"}
-        </span>
-        <span>
-          <Calendar size={11} />
-          {formatDateTime(props.item.createdAt)}
-        </span>
+      {/* 第二层 */}
+      <div className="activity-feed-meta">
+        <span>⏱️ {props.item.durationMs}ms</span>
+        <span>•</span>
+        <span>{props.item.attempts} Attempt{props.item.attempts > 1 ? "s" : ""}</span>
+        <span>•</span>
+        <span>{formatDateTime(props.item.createdAt)}</span>
       </div>
 
-      <div className="activity-feed-card-provider-row">
-        <span className="activity-feed-card-provider">
-          {props.item.finalProvider ?? "no final provider"}
-        </span>
-        {props.item.primaryErrorType ? (
-          <span className="activity-feed-card-error-type">
-            <AlertTriangle size={11} />
-            {props.item.primaryErrorType}
-          </span>
-        ) : null}
+      {/* 第三层 */}
+      <div className="activity-feed-preview">
+        {props.item.status === "success" ? (
+          <span className="text-soft compact">📝 {truncate(props.item.resultPreview ?? "No preview captured", 80)}</span>
+        ) : (
+          <span className="danger compact">⚠️ {truncate(props.item.errorSummary ?? "No error details", 80)}</span>
+        )}
       </div>
-
-      {props.item.targetUrl ? (
-        <p className="activity-feed-card-url">
-          <Globe size={12} />
-          {props.item.targetUrl}
-        </p>
-      ) : null}
-
-      <p className="activity-feed-card-preview">{getPreview(props.item)}</p>
     </button>
   );
 }

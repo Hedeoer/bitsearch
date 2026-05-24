@@ -24,7 +24,15 @@ function SummaryCard(
         </span>
         <span className="eyebrow">{props.label}</span>
       </div>
-      <strong className="activity-summary-value">{props.value}</strong>
+      <div className="activity-summary-value" style={{
+        fontSize: "2.25rem",
+        fontWeight: 700,
+        background: "linear-gradient(135deg, #ffffff 0%, var(--text-soft) 100%)",
+        WebkitBackgroundClip: "text",
+        WebkitTextFillColor: "transparent"
+      }}>
+        {props.value}
+      </div>
       <p className="supporting compact">{props.supporting}</p>
     </article>
   );

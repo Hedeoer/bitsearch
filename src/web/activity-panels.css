@@ -182,12 +182,18 @@
 }
 
 .activity-payload-empty {
-  margin-top: 0.6rem;
-  padding: 2.5rem 1rem;
+  display: grid;
+  place-items: center;
+  min-height: 280px;
+  padding: 2rem;
   text-align: center;
-  border-radius: 12px;
-  border: 1px dashed var(--border-strong);
-  background: rgba(223, 226, 235, 0.02);
+  color: var(--text-soft);
+}
+
+.activity-payload-empty h4 {
+  margin: 0.5rem 0 0.25rem;
+  font-size: 1.05rem;
+  color: var(--text);
 }
 
 .activity-payload-empty p {
@@ -198,17 +204,20 @@
 
 .activity-code-block {
   margin: 0.6rem 0 0;
+  max-height: 400px;
   white-space: pre-wrap;
   word-break: break-word;
   font-family: "IBM Plex Mono", monospace;
   font-size: 0.78rem;
   line-height: 1.58;
   color: var(--text-soft);
-  background: rgba(0, 229, 255, 0.03);
-  border: 1px solid rgba(0, 229, 255, 0.12);
+  background: rgba(10, 14, 20, 0.75);
+  border: 1px solid rgba(0, 229, 255, 0.15);
   border-radius: 12px;
   padding: 0.9rem;
   overflow-x: auto;
+  overflow-y: auto;
+  scrollbar-width: thin;
 }
 
 .activity-attempt-item {

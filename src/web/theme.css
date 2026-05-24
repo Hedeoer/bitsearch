@@ -4,14 +4,18 @@
   color-scheme: dark;
   font-family: "Inter", "IBM Plex Sans", sans-serif;
   --bg: #0a0e14;
+  --bg-level-0: #080c10;
+  --bg-level-1: #0f141c;
+  --bg-level-2: #171d26;
+  --bg-level-3: #1f2733;
   --shell: rgba(16, 20, 26, 0.96);
   --surface: rgba(24, 28, 34, 0.9);
   --surface-raised: rgba(28, 32, 38, 0.94);
   --surface-bright: rgba(49, 53, 60, 0.95);
   --surface-soft: rgba(18, 24, 32, 0.76);
   --text: #dfe2eb;
-  --text-soft: #98a8ba;
-  --text-dim: #7a8898;
+  --text-soft: #a3b3c2;
+  --text-dim: #94a3b8;
   --border: rgba(59, 73, 76, 0.42);
   --border-strong: rgba(132, 147, 150, 0.34);
   --primary: #00daf3;
@@ -375,10 +379,15 @@ a[aria-disabled="true"] {
   overflow: visible;
   padding: 1rem 1.15rem;
   border-radius: 18px;
-  background: linear-gradient(180deg, rgba(28, 32, 38, 0.94), rgba(18, 22, 30, 0.94));
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-md);
+  background: linear-gradient(180deg, var(--bg-level-2) 0%, #121820 100%);
+  border: 1px solid rgba(0, 229, 255, 0.08);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
   backdrop-filter: blur(20px);
+}
+
+.surface-card:hover {
+  background: linear-gradient(180deg, var(--bg-level-3) 0%, var(--bg-level-2) 100%);
+  border-color: rgba(0, 229, 255, 0.2);
 }
 
 .surface-card::before {

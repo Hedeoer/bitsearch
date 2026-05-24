@@ -169,7 +169,13 @@ export function ActivityInspector(props: ActivityInspectorProps) {
             <article className="activity-attempt-panel">
               <div className="activity-attempt-timeline">
                 {props.detail.attempts.length === 0 ? (
-                  <p className="supporting">No attempt records were captured for this request.</p>
+                  <div className="activity-payload-empty">
+                    <GitBranch className="text-dim" size={32} style={{ marginBottom: "1rem", opacity: 0.5 }} />
+                    <h4>直接/内联生命周期</h4>
+                    <p className="supporting compact">
+                      此请求由服务进程直接处理，未生成外部重试或多尝试步骤链路。
+                    </p>
+                  </div>
                 ) : (
                   props.detail.attempts.map((attempt) => (
                     <article key={attempt.id} className="activity-attempt-item">
