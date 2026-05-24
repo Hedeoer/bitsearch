@@ -78,6 +78,8 @@ export interface ToolSurfaceSnapshot {
   providerCapabilities: ProviderCapabilitySnapshot[];
   genericTools: string[];
   providerTools: string[];
+  metaTools: string[];
+  planningTools: string[];
   exposedTools: string[];
   hiddenTools: HiddenToolRecord[];
   requiresReconnect: boolean;

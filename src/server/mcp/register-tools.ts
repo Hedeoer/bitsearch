@@ -241,7 +241,6 @@ async function buildWebMapResult(
 }
 
 export function createMcpRuntime(context: AppContext): McpRuntime {
-  const toolSurface = getToolSurfaceSnapshot(context);
   const server = new McpServer({
     name: "bitsearch",
     version: "0.1.0",
@@ -480,9 +479,7 @@ export function createMcpRuntime(context: AppContext): McpRuntime {
         });
       },
     );
-    if (!shouldExposeTool(toolSurface, "web_fetch")) {
-      tool.disable();
-    }
+    // Tool will be enabled/disabled by syncToolSurface
     conditionalTools.set("web_fetch", tool);
   }
 
@@ -546,15 +543,24 @@ export function createMcpRuntime(context: AppContext): McpRuntime {
         });
       },
     );
-    if (!shouldExposeTool(toolSurface, "web_map")) {
-      tool.disable();
-    }
+    // Tool will be enabled/disabled by syncToolSurface
     conditionalTools.set("web_map", tool);
   }
 
-  const providerTools = registerProviderTools(server, context, toolSurface);
+  const providerTools = registerProviderTools(server, context);
   for (const [toolName, tool] of providerTools.entries()) {
     conditionalTools.set(toolName, tool);
+  }
+
+  // Initial tool surface sync
+  const toolSurface = getToolSurfaceSnapshot(context);
+  const exposedTools = new Set(toolSurface.exposedTools);
+  for (const [toolName, tool] of conditionalTools.entries()) {
+    if (exposedTools.has(toolName)) {
+      tool.enable();
+    } else {
+      tool.disable();
+    }
   }
 
   server.registerTool(
@@ -595,6 +601,8 @@ export function createMcpRuntime(context: AppContext): McpRuntime {
         tool_surface: {
           generic_tools: liveToolSurface.genericTools,
           provider_tools: liveToolSurface.providerTools,
+          meta_tools: liveToolSurface.metaTools,
+          planning_tools: liveToolSurface.planningTools,
           exposed_tools: liveToolSurface.exposedTools,
           hidden_tools: liveToolSurface.hiddenTools,
           requires_reconnect: liveToolSurface.requiresReconnect,

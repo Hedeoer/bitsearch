@@ -19,6 +19,17 @@ import { getSystemSettings } from "../repos/settings-repo.js";
 
 const GENERIC_ROUTED_TOOLS = ["web_fetch", "web_map"];
 
+// Static tool lists for meta and planning tools
+const META_TOOLS_STATIC = ["get_result_page", "get_config_info", "switch_model"];
+const PLANNING_TOOLS_STATIC = [
+  "plan_intent",
+  "plan_complexity",
+  "plan_sub_query",
+  "plan_search_term",
+  "plan_tool_mapping",
+  "plan_execution",
+];
+
 function getProviderHiddenReason(
   enabled: boolean,
   enabledKeyCount: number,
@@ -149,12 +160,23 @@ export function getToolSurfaceSnapshot(context: AppContext): ToolSurfaceSnapshot
   ];
   const providerTools = providerCapabilities.flatMap((item) => item.exposedTools);
 
+  // Use static tool lists - complete and accurate
+  const metaTools = META_TOOLS_STATIC;
+  const planningTools = PLANNING_TOOLS_STATIC;
+
   const snapshot: ToolSurfaceSnapshot = {
     genericRouting,
     providerCapabilities,
     genericTools,
     providerTools,
-    exposedTools: [...genericTools, ...providerTools],
+    metaTools,
+    planningTools,
+    exposedTools: [
+      ...genericTools,
+      ...providerTools,
+      ...metaTools,
+      ...planningTools,
+    ],
     hiddenTools: [
       ...hiddenGenericTools,
       ...providerCapabilities.flatMap((item) => item.hiddenTools),

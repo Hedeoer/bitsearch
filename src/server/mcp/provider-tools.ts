@@ -4,7 +4,7 @@ import {
 } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { nanoid } from "nanoid";
-import type { KeyPoolProvider, ToolSurfaceSnapshot } from "../../shared/contracts.js";
+import type { KeyPoolProvider } from "../../shared/contracts.js";
 import type { AppContext } from "../app-context.js";
 import { HttpRequestError } from "../lib/http.js";
 import {
@@ -737,13 +737,11 @@ function firecrawlExtractStatusResult(
 export function registerProviderTools(
   server: McpServer,
   context: AppContext,
-  toolSurface: ToolSurfaceSnapshot,
 ): Map<string, RegisteredTool> {
   const objectSchema = z.record(z.unknown());
   const stringArraySchema = z.array(z.string());
   const urlArraySchema = z.array(z.string().url()).min(1);
   const formatSchema = z.array(z.union([z.string(), objectSchema])).optional().default(["markdown"]);
-  const exposedTools = new Set(toolSurface.exposedTools);
   const registry = new Map<string, RegisteredTool>();
 
   {
@@ -809,9 +807,7 @@ export function registerProviderTools(
         return result.ok ? tavilyCrawlResult(context, result.data) : failureResult("tavily", result.error);
       },
     );
-    if (!exposedTools.has("tavily_crawl")) {
-      tool.disable();
-    }
+    // Tool will be enabled/disabled by syncToolSurface
     registry.set("tavily_crawl", tool);
   }
 
@@ -887,9 +883,7 @@ export function registerProviderTools(
       return firecrawlSubmitResult(context, "crawl", result.data);
       },
     );
-    if (!exposedTools.has("firecrawl_crawl")) {
-      tool.disable();
-    }
+    // Tool will be enabled/disabled by syncToolSurface
     registry.set("firecrawl_crawl", tool);
   }
 
@@ -912,9 +906,7 @@ export function registerProviderTools(
           : failureResult("firecrawl", result.error);
       },
     );
-    if (!exposedTools.has("firecrawl_crawl_status")) {
-      tool.disable();
-    }
+    // Tool will be enabled/disabled by syncToolSurface
     registry.set("firecrawl_crawl_status", tool);
   }
 
@@ -1004,9 +996,7 @@ export function registerProviderTools(
       return firecrawlSubmitResult(context, "batch_scrape", result.data);
       },
     );
-    if (!exposedTools.has("firecrawl_batch_scrape")) {
-      tool.disable();
-    }
+    // Tool will be enabled/disabled by syncToolSurface
     registry.set("firecrawl_batch_scrape", tool);
   }
 
@@ -1029,9 +1019,7 @@ export function registerProviderTools(
           : failureResult("firecrawl", result.error);
       },
     );
-    if (!exposedTools.has("firecrawl_batch_scrape_status")) {
-      tool.disable();
-    }
+    // Tool will be enabled/disabled by syncToolSurface
     registry.set("firecrawl_batch_scrape_status", tool);
   }
 
@@ -1092,9 +1080,7 @@ export function registerProviderTools(
       return firecrawlSubmitResult(context, "extract", result.data);
       },
     );
-    if (!exposedTools.has("firecrawl_extract")) {
-      tool.disable();
-    }
+    // Tool will be enabled/disabled by syncToolSurface
     registry.set("firecrawl_extract", tool);
   }
 
@@ -1117,9 +1103,7 @@ export function registerProviderTools(
           : failureResult("firecrawl", result.error);
       },
     );
-    if (!exposedTools.has("firecrawl_extract_status")) {
-      tool.disable();
-    }
+    // Tool will be enabled/disabled by syncToolSurface
     registry.set("firecrawl_extract_status", tool);
   }
 
