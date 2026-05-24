@@ -36,6 +36,8 @@ export const EMPTY_TOOL_SURFACE: ToolSurfaceSnapshot = {
   providerCapabilities: [],
   genericTools: ["web_search", "get_sources"],
   providerTools: [],
+  metaTools: [],
+  planningTools: [],
   exposedTools: ["web_search", "get_sources"],
   hiddenTools: [],
   requiresReconnect: true,

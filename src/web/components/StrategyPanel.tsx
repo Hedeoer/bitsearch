@@ -10,7 +10,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LoadingOverlay } from "./Feedback";
 import { StrategyAccessTab } from "./strategy/StrategyAccessTab";
 import { StrategyRoutingTab } from "./strategy/StrategyRoutingTab";
-import { StrategySurfaceTab } from "./strategy/StrategySurfaceTab";
 import type { StrategyPanelProps } from "./strategy/strategy-types";
 
 export function StrategyPanel(props: StrategyPanelProps) {
@@ -20,10 +19,10 @@ export function StrategyPanel(props: StrategyPanelProps) {
       <CardHeader className="pb-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <div className="eyebrow">Control Deck</div>
-            <CardTitle className="mt-2">Routing, surface, and access</CardTitle>
+            <div className="eyebrow">Configuration</div>
+            <CardTitle className="mt-2">Configuration & Access</CardTitle>
             <CardDescription className="mt-2 max-w-xl">
-              Edit routing, inspect tool exposure, and manage access without repeating the overview state.
+              Edit routing and manage access without repeating the overview state.
             </CardDescription>
           </div>
           <Badge variant="neutral">controls</Badge>
@@ -33,14 +32,10 @@ export function StrategyPanel(props: StrategyPanelProps) {
         <Tabs defaultValue="routing">
           <TabsList>
             <TabsTrigger value="routing">Routing</TabsTrigger>
-            <TabsTrigger value="surface">Tool Surface</TabsTrigger>
             <TabsTrigger value="access">Access</TabsTrigger>
           </TabsList>
           <TabsContent value="routing">
             <StrategyRoutingTab {...props} />
-          </TabsContent>
-          <TabsContent value="surface">
-            <StrategySurfaceTab toolSurface={props.toolSurface} />
           </TabsContent>
           <TabsContent value="access">
             <StrategyAccessTab

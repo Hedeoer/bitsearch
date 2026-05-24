@@ -6,7 +6,7 @@ import type { StrategyPanelProps } from "./strategy-types";
 function ToolGroup(props: Readonly<{
   label: string;
   tools: string[];
-  variant: "default" | "neutral" | "warning";
+  variant: "default" | "neutral" | "warning" | "success";
 }>) {
   return (
     <div className="grid gap-3 rounded-[20px] border border-white/8 bg-white/4 p-4">
@@ -47,19 +47,19 @@ export function StrategySurfaceTab(props: Pick<StrategyPanelProps, "toolSurface"
           variant="neutral"
         />
       </div>
+      <div className="grid gap-3 xl:grid-cols-2">
+        <ToolGroup
+          label="Meta tools"
+          tools={props.toolSurface.metaTools}
+          variant="success"
+        />
+        <ToolGroup
+          label="Planning tools"
+          tools={props.toolSurface.planningTools}
+          variant="success"
+        />
+      </div>
       <ToolGroup label="Hidden tools" tools={hiddenTools} variant="warning" />
-
-      <details className="rounded-[22px] border border-white/8 bg-[color:var(--ui-card-soft)] p-4">
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium text-[color:var(--text)]">
-          <span>Recommended prompt</span>
-          <ChevronDown className="size-4 text-[color:var(--text-dim)]" />
-        </summary>
-        <ScrollArea className="mt-4 max-h-44 pr-3">
-          <pre className="whitespace-pre-wrap font-['IBM_Plex_Mono'] text-[12px] leading-6 text-[color:var(--text-soft)]">
-            {props.toolSurface.clientGuidance.recommendedPrompt}
-          </pre>
-        </ScrollArea>
-      </details>
     </div>
   );
 }
