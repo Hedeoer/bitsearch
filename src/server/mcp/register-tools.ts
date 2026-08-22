@@ -241,10 +241,42 @@ async function buildWebMapResult(
 }
 
 export function createMcpRuntime(context: AppContext): McpRuntime {
-  const server = new McpServer({
-    name: "bitsearch",
-    version: "0.1.0",
-  });
+  const server = new McpServer(
+    {
+      name: "bitsearch",
+      version: "0.1.0",
+    },
+    {
+      instructions: [
+        "# BitSearch MCP Server Usage Guide",
+        "",
+        "## Planning Workflow (MANDATORY)",
+        "",
+        "For any research, investigation, or multi-step question, you MUST use the `plan_*` tool series BEFORE calling any search or fetch tool (`web_search`, `web_fetch`, `tavily_crawl`, etc.).",
+        "",
+        "The planning pipeline is:",
+        "",
+        "1. `plan_intent` - Analyze what the user is asking and identify ambiguities.",
+        "2. `plan_complexity` - Assess complexity level (1-3) and estimate sub-queries/tool calls.",
+        "3. `plan_sub_query` - Decompose into independent sub-queries (one call per sub-query).",
+        "4. `plan_search_term` - For each sub-query, define search terms (one call per term).",
+        "5. `plan_tool_mapping` - Map each sub-query to a specific search tool (web_search / tavily_crawl / web_fetch).",
+        "6. `plan_execution` - Define execution order (parallel groups vs sequential).",
+        "",
+        "After ALL plan tools complete, execute the actual searches according to the plan.",
+        "",
+        "## When to skip planning",
+        "- Simple factual questions with a single lookup → may go directly to `web_search`.",
+        "- User explicitly says \"skip planning\" → skip.",
+        "",
+        "## Result Pagination",
+        "- Large results return a `result_id`. Use `get_result_page` with `cursor`/`item_index` for more pages.",
+      ].join("\n"),
+      capabilities: {
+        logging: {},
+      },
+    },
+  );
   const conditionalTools = new Map<string, RegisteredTool>();
 
   server.registerResource(
@@ -646,7 +678,8 @@ export function createMcpRuntime(context: AppContext): McpRuntime {
   server.registerTool(
     "plan_intent",
     {
-      description: "Phase 1 of search planning: Analyze user intent.",
+      description:
+        "PLANNING STEP 1 (REQUIRED before any search/fetch tool). Analyze user intent, domain, query type, time sensitivity, and ambiguities. Must be the FIRST tool called for any research question.",
       inputSchema: z.object({
         thought: z.string(),
         core_question: z.string(),
@@ -686,7 +719,8 @@ export function createMcpRuntime(context: AppContext): McpRuntime {
   server.registerTool(
     "plan_complexity",
     {
-      description: "Phase 2: Assess search complexity.",
+        description:
+          "PLANNING STEP 2 (REQUIRED after plan_intent). Assess search complexity level 1-3, estimate sub-queries and tool calls. Determines how many sub-queries to decompose.",
       inputSchema: z.object({
         session_id: z.string(),
         thought: z.string(),
@@ -715,7 +749,8 @@ export function createMcpRuntime(context: AppContext): McpRuntime {
   server.registerTool(
     "plan_sub_query",
     {
-      description: "Phase 3: Add one sub-query.",
+        description:
+          "PLANNING STEP 3 (call once per sub-query, after plan_complexity). Decompose the research into independent, self-contained sub-queries with clear boundaries.",
       inputSchema: z.object({
         session_id: z.string(),
         thought: z.string(),
@@ -751,7 +786,8 @@ export function createMcpRuntime(context: AppContext): McpRuntime {
   server.registerTool(
     "plan_search_term",
     {
-      description: "Phase 4: Add one search term.",
+        description:
+          "PLANNING STEP 4 (one call per term, after plan_sub_query). Define a specific search keyword/phrase for a sub-query. Multiple short queries beat one long dump.",
       inputSchema: z.object({
         session_id: z.string(),
         thought: z.string(),
@@ -795,7 +831,8 @@ export function createMcpRuntime(context: AppContext): McpRuntime {
   server.registerTool(
     "plan_tool_mapping",
     {
-      description: "Phase 5: Map a sub-query to a tool.",
+        description:
+          "PLANNING STEP 5 (after plan_search_term). Map each sub-query to the best tool: web_search (general), tavily_crawl (deep site), web_fetch (known URL), firecrawl_* (structured extraction).",
       inputSchema: z.object({
         session_id: z.string(),
         thought: z.string(),
@@ -834,7 +871,8 @@ export function createMcpRuntime(context: AppContext): McpRuntime {
   server.registerTool(
     "plan_execution",
     {
-      description: "Phase 6: Define execution order.",
+        description:
+          "PLANNING STEP 6 (final step before execution). Define parallel groups and sequential dependencies. After this, execute searches according to the plan.",
       inputSchema: z.object({
         session_id: z.string(),
         thought: z.string(),
