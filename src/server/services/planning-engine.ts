@@ -52,7 +52,10 @@ function mergePhaseData(
     return incoming;
   }
   if (phase === "query_decomposition" || phase === "tool_selection") {
-    return [...((current as unknown[]) ?? []), incoming];
+    const existingItems = Array.isArray(current)
+      ? (current as unknown[])
+      : [current];
+    return [...existingItems, incoming];
   }
   if (phase === "search_strategy") {
     const existing = (current as Record<string, unknown>) ?? {};
