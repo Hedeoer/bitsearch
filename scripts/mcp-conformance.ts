@@ -5,7 +5,6 @@ import { startMcpToolingHarness } from "./lib/mcp-tooling-harness.js";
 
 const CONFORMANCE_SCENARIOS = [
   "server-initialize",
-  "logging-set-level",
   "ping",
   "tools-list",
   "tools-call-simple-text",

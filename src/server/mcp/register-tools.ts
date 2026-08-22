@@ -13,6 +13,7 @@ import {
   type ToolSurfaceSnapshot,
 } from "../../shared/contracts.js";
 import type { AppContext } from "../app-context.js";
+import { MCP_INSTRUCTIONS } from "./instructions.js";
 import {
   insertRequestLog,
 } from "../repos/log-repo.js";
@@ -65,6 +66,8 @@ import {
 
 export interface McpRuntime {
   server: McpServer;
+  registeredTools: Map<string, RegisteredTool>;
+  conditionalTools: Map<string, RegisteredTool>;
   syncToolSurface(nextToolSurface: ToolSurfaceSnapshot): void;
 }
 
@@ -240,6 +243,16 @@ async function buildWebMapResult(
   return result.ok ? result.data ?? "" : `Mapping failed: ${result.error}`;
 }
 
+function trackTool(
+  registeredTools: Map<string, RegisteredTool>,
+  conditionalTools: Map<string, RegisteredTool>,
+  tool: RegisteredTool,
+  toolName: string,
+): void {
+  registeredTools.set(toolName, tool);
+  conditionalTools.set(toolName, tool);
+}
+
 export function createMcpRuntime(context: AppContext): McpRuntime {
   const server = new McpServer(
     {
@@ -247,36 +260,12 @@ export function createMcpRuntime(context: AppContext): McpRuntime {
       version: "0.1.0",
     },
     {
-      instructions: [
-        "# BitSearch MCP Server Usage Guide",
-        "",
-        "## Planning Workflow (MANDATORY)",
-        "",
-        "For any research, investigation, or multi-step question, you MUST use the `plan_*` tool series BEFORE calling any search or fetch tool (`web_search`, `web_fetch`, `tavily_crawl`, etc.).",
-        "",
-        "The planning pipeline is:",
-        "",
-        "1. `plan_intent` - Analyze what the user is asking and identify ambiguities.",
-        "2. `plan_complexity` - Assess complexity level (1-3) and estimate sub-queries/tool calls.",
-        "3. `plan_sub_query` - Decompose into independent sub-queries (one call per sub-query).",
-        "4. `plan_search_term` - For each sub-query, define search terms (one call per term).",
-        "5. `plan_tool_mapping` - Map each sub-query to a specific search tool (web_search / tavily_crawl / web_fetch).",
-        "6. `plan_execution` - Define execution order (parallel groups vs sequential).",
-        "",
-        "After ALL plan tools complete, execute the actual searches according to the plan.",
-        "",
-        "## When to skip planning",
-        "- Simple factual questions with a single lookup → may go directly to `web_search`.",
-        "- User explicitly says \"skip planning\" → skip.",
-        "",
-        "## Result Pagination",
-        "- Large results return a `result_id`. Use `get_result_page` with `cursor`/`item_index` for more pages.",
-      ].join("\n"),
+      instructions: MCP_INSTRUCTIONS,
       capabilities: {
-        logging: {},
       },
     },
   );
+  const registeredTools = new Map<string, RegisteredTool>();
   const conditionalTools = new Map<string, RegisteredTool>();
 
   server.registerResource(
@@ -290,7 +279,7 @@ export function createMcpRuntime(context: AppContext): McpRuntime {
     (uri) => readArtifactResource(context, uri),
   );
 
-  server.registerTool(
+  const getResultPageTool = server.registerTool(
     "get_result_page",
     {
       description: "Read one bounded page from a stored large BitSearch MCP tool result. Use result_id and next_cursor returned by prior tool calls.",
@@ -317,7 +306,9 @@ export function createMcpRuntime(context: AppContext): McpRuntime {
     },
   );
 
-  server.registerTool(
+  registeredTools.set("get_result_page", getResultPageTool);
+
+  const webSearchTool = server.registerTool(
     "web_search",
     {
       description: "Performs a deep web search and returns a bounded answer preview plus result_id/result_uri pagination metadata.",
@@ -427,7 +418,9 @@ export function createMcpRuntime(context: AppContext): McpRuntime {
     },
   );
 
-  server.registerTool(
+  registeredTools.set("web_search", webSearchTool);
+
+  const getSourcesTool = server.registerTool(
     "get_sources",
     {
       description: "Retrieve a bounded page of cached sources for a previous web_search call. Use get_result_page for remaining pages.",
@@ -470,6 +463,7 @@ export function createMcpRuntime(context: AppContext): McpRuntime {
       });
     },
   );
+  registeredTools.set("get_sources", getSourcesTool);
 
   {
     const tool = server.registerTool(
@@ -511,8 +505,13 @@ export function createMcpRuntime(context: AppContext): McpRuntime {
         });
       },
     );
-    // Tool will be enabled/disabled by syncToolSurface
-    conditionalTools.set("web_fetch", tool);
+    registeredTools.set("web_fetch", tool);
+    trackTool(
+      registeredTools,
+      conditionalTools,
+      tool,
+      "web_fetch",
+    );
   }
 
   {
@@ -575,12 +574,18 @@ export function createMcpRuntime(context: AppContext): McpRuntime {
         });
       },
     );
-    // Tool will be enabled/disabled by syncToolSurface
-    conditionalTools.set("web_map", tool);
+    registeredTools.set("web_map", tool);
+    trackTool(
+      registeredTools,
+      conditionalTools,
+      tool,
+      "web_map",
+    );
   }
 
   const providerTools = registerProviderTools(server, context);
   for (const [toolName, tool] of providerTools.entries()) {
+    registeredTools.set(toolName, tool);
     conditionalTools.set(toolName, tool);
   }
 
@@ -595,7 +600,7 @@ export function createMcpRuntime(context: AppContext): McpRuntime {
     }
   }
 
-  server.registerTool(
+  const getConfigInfoTool = server.registerTool(
     "get_config_info",
     {
       description: "Returns current server configuration and tests search engine connectivity.",
@@ -655,7 +660,7 @@ export function createMcpRuntime(context: AppContext): McpRuntime {
     },
   );
 
-  server.registerTool(
+  const switchModelTool = server.registerTool(
     "switch_model",
     {
       description: "Switches the default search model used for web_search operations.",
@@ -675,7 +680,7 @@ export function createMcpRuntime(context: AppContext): McpRuntime {
     },
   );
 
-  server.registerTool(
+  const planIntentTool = server.registerTool(
     "plan_intent",
     {
       description:
@@ -716,7 +721,7 @@ export function createMcpRuntime(context: AppContext): McpRuntime {
       ),
   );
 
-  server.registerTool(
+  const planComplexityTool = server.registerTool(
     "plan_complexity",
     {
         description:
@@ -746,7 +751,7 @@ export function createMcpRuntime(context: AppContext): McpRuntime {
       ),
   );
 
-  server.registerTool(
+  const planSubQueryTool = server.registerTool(
     "plan_sub_query",
     {
         description:
@@ -783,7 +788,7 @@ export function createMcpRuntime(context: AppContext): McpRuntime {
       ),
   );
 
-  server.registerTool(
+  const planSearchTermTool = server.registerTool(
     "plan_search_term",
     {
         description:
@@ -828,7 +833,7 @@ export function createMcpRuntime(context: AppContext): McpRuntime {
       ),
   );
 
-  server.registerTool(
+  const planToolMappingTool = server.registerTool(
     "plan_tool_mapping",
     {
         description:
@@ -868,7 +873,7 @@ export function createMcpRuntime(context: AppContext): McpRuntime {
       ),
   );
 
-  server.registerTool(
+  const planExecutionTool = server.registerTool(
     "plan_execution",
     {
         description:
@@ -916,8 +921,24 @@ export function createMcpRuntime(context: AppContext): McpRuntime {
       ),
   );
 
+  for (const [toolName, tool] of [
+    ["get_config_info", getConfigInfoTool],
+    ["switch_model", switchModelTool],
+    ["plan_intent", planIntentTool],
+    ["plan_complexity", planComplexityTool],
+    ["plan_sub_query", planSubQueryTool],
+    ["plan_search_term", planSearchTermTool],
+    ["plan_tool_mapping", planToolMappingTool],
+    ["plan_execution", planExecutionTool],
+  ] as const) {
+    registeredTools.set(toolName, tool);
+    conditionalTools.set(toolName, tool);
+  }
+
   return {
     server,
+    registeredTools,
+    conditionalTools,
     syncToolSurface(nextToolSurface) {
       const exposedTools = new Set(nextToolSurface.exposedTools);
       for (const [toolName, tool] of conditionalTools.entries()) {

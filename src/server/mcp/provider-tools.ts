@@ -738,7 +738,7 @@ export function registerProviderTools(
   server: McpServer,
   context: AppContext,
 ): Map<string, RegisteredTool> {
-  const objectSchema = z.record(z.unknown());
+  const objectSchema = z.record(z.string(), z.unknown());
   const stringArraySchema = z.array(z.string());
   const urlArraySchema = z.array(z.string().url()).min(1);
   const formatSchema = z.array(z.union([z.string(), objectSchema])).optional().default(["markdown"]);
@@ -926,7 +926,7 @@ export function registerProviderTools(
         exclude_tags: stringArraySchema.optional(),
         max_age: z.number().int().nonnegative().optional(),
         min_age: z.number().int().nonnegative().optional(),
-        headers: z.record(z.string()).optional(),
+        headers: z.record(z.string(), z.string()).optional(),
         wait_for: z.number().int().nonnegative().optional().default(0),
         mobile: z.boolean().optional().default(false),
         skip_tls_verification: z.boolean().optional().default(true),

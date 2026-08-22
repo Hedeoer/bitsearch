@@ -11,7 +11,14 @@ import {
   requireMcpAuth,
 } from "./http/middleware.js";
 import { AppHttpError } from "./lib/http.js";
-import { handleMcpDelete, handleMcpGet, handleMcpPost } from "./mcp/transport-router.js";
+import {
+  closeModernMcpHandler,
+  handleMcpDelete,
+  handleMcpGet,
+  handleMcpPost,
+  initializeModernMcpContext,
+} from "./mcp/transport-router.js";
+import { requireAllowedOrigin } from "./http/middleware.js";
 
 function resolvePublicDirectory(): string {
   return path.resolve(process.cwd(), "dist/public");
@@ -35,6 +42,7 @@ function buildCspDirectives() {
 export function createApp(context: AppContext) {
   const app = express();
   const publicDir = resolvePublicDirectory();
+  initializeModernMcpContext(context);
 
   if (context.bootstrap.trustProxy) {
     app.set("trust proxy", 1);
@@ -64,10 +72,18 @@ export function createApp(context: AppContext) {
   app.post("/mcp", requireMcpAuth(context), (req, res, next) => {
     handleMcpPost(context, req, res).catch(next);
   });
-  app.get("/mcp", requireMcpAuth(context), (req, res, next) => {
+  app.get("/mcp", requireAllowedOrigin(context), (req, res, next) => {
+    if (req.header("mcp-protocol-version") !== "2026-07-28") {
+      requireMcpAuth(context)(req, res, next);
+      return;
+    }
     handleMcpGet(req, res).catch(next);
   });
-  app.delete("/mcp", requireMcpAuth(context), (req, res, next) => {
+  app.delete("/mcp", requireAllowedOrigin(context), (req, res, next) => {
+    if (req.header("mcp-protocol-version") !== "2026-07-28") {
+      requireMcpAuth(context)(req, res, next);
+      return;
+    }
     handleMcpDelete(req, res).catch(next);
   });
 

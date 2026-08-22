@@ -12,6 +12,7 @@ import { createDatabase } from "../../src/server/db/database.js";
 import { createAdminSessionStore } from "../../src/server/lib/admin-session.js";
 import {
   closeAllMcpTransports,
+  closeModernMcpHandler,
   setMcpRuntimeFactoryForTooling,
 } from "../../src/server/mcp/transport-router.js";
 import { createMcpToolingRuntime } from "./mcp-conformance-fixtures.js";
@@ -141,9 +142,10 @@ export async function startMcpToolingHarness(): Promise<McpToolingHarness> {
         if (closed) {
           return;
         }
-        closed = true;
-        await closeAllMcpTransports();
-        await closeServer(proxyServer as Server);
+      closed = true;
+      await closeAllMcpTransports();
+      await closeModernMcpHandler().catch(() => {});
+      await closeServer(proxyServer as Server);
         await closeServer(protectedServer);
         restoreRuntimeFactory();
         db.sqlite.close();

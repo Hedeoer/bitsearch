@@ -1,5 +1,11 @@
 import type { Request, Response } from "express";
 import { createHash, randomUUID } from "node:crypto";
+import {
+  createMcpHandler,
+  isJsonContentType,
+  isLegacyRequest,
+} from "@modelcontextprotocol/server";
+import { toNodeHandler, toWebRequest } from "@modelcontextprotocol/node";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { DEFAULT_NEGOTIATED_PROTOCOL_VERSION } from "@modelcontextprotocol/sdk/types.js";
@@ -10,6 +16,7 @@ import {
   isInitializeRequest,
   type McpRuntime,
 } from "./register-tools.js";
+import { createModernMcpRuntime } from "./modern-register-tools.js";
 import { getToolSurfaceSnapshot } from "../services/tool-surface-service.js";
 
 const MCP_SESSION_TTL_MS = 30 * 60 * 1000;
@@ -28,6 +35,37 @@ const sessionClientHints = new Map<string, string>();
 type McpRuntimeFactory = (context: AppContext) => McpRuntime;
 let mcpRuntimeFactory: McpRuntimeFactory = createMcpRuntime;
 
+type ModernRuntimeFactory = (
+  context: AppContext,
+) => ReturnType<typeof createModernMcpRuntime>;
+let modernRuntimeFactory: ModernRuntimeFactory = createModernMcpRuntime;
+let modernHandler: ReturnType<typeof createMcpHandler>;
+let modernNodeHandler: ReturnType<typeof toNodeHandler>;
+let contextForModernFactory: AppContext | null = null;
+
+function buildModernNodeHandler(): void {
+  modernHandler = createMcpHandler(() => {
+    if (!contextForModernFactory) {
+      throw new Error("MCP application context is not initialized");
+    }
+    const runtime = modernRuntimeFactory(contextForModernFactory);
+    runtime.syncToolSurface(getToolSurfaceSnapshot(contextForModernFactory));
+    return runtime.server;
+  }, {
+    legacy: "reject",
+    onerror(error) {
+      console.error("Modern MCP handler error", error);
+    },
+  });
+  modernNodeHandler = toNodeHandler(modernHandler, {
+    onerror(error) {
+      console.error("Modern MCP node adapter error", error);
+    },
+  });
+}
+
+buildModernNodeHandler();
+
 export function setMcpRuntimeFactoryForTooling(
   factory: McpRuntimeFactory,
 ): () => void {
@@ -44,12 +82,47 @@ export function setMcpRuntimeFactoryForTooling(
   };
 }
 
+export function setModernMcpRuntimeFactoryForTooling(
+  factory: ModernRuntimeFactory,
+): () => void {
+  if (transports.size > 0) {
+    throw new Error("Cannot replace the modern MCP runtime factory while sessions are active");
+  }
+  const previousFactory = modernRuntimeFactory;
+  modernRuntimeFactory = factory;
+  buildModernNodeHandler();
+  return () => {
+    if (transports.size > 0) {
+      throw new Error("Cannot restore the modern MCP runtime factory while sessions are active");
+    }
+    modernRuntimeFactory = previousFactory;
+    buildModernNodeHandler();
+  };
+}
+
+export function getModernMcpHandlerForTooling(): typeof modernHandler {
+  return modernHandler;
+}
+
+export function initializeModernMcpContext(context: AppContext): void {
+  contextForModernFactory = context;
+}
+
 export async function closeAllMcpTransports(): Promise<void> {
   const sessions = [...transports.values()];
   transports.clear();
   clientSessionHints.clear();
   sessionClientHints.clear();
   await Promise.allSettled(sessions.map((session) => session.transport.close()));
+}
+
+export async function closeModernMcpHandler(): Promise<void> {
+  await modernHandler.close();
+}
+
+export async function resetModernMcpHandlerForTests(): Promise<void> {
+  await modernHandler.close().catch(() => {});
+  buildModernNodeHandler();
 }
 
 function getClientIp(req: Request, trustProxy: boolean): string {
@@ -235,6 +308,11 @@ export function broadcastToolListChanged(context: AppContext): void {
       console.error(`Failed to broadcast tool list change for session ${sessionId}`, error);
     }
   }
+  try {
+    modernHandler.notify.toolsChanged();
+  } catch (error) {
+    console.error("Failed to publish modern tool list change", error);
+  }
 }
 
 function sendJsonRpcError(
@@ -261,11 +339,33 @@ function sendSessionNotFound(res: Response): void {
   sendJsonRpcError(res, 404, -32001, "Session not found");
 }
 
+async function handleModernSessionOperation(
+  req: Request,
+  res: Response,
+): Promise<boolean> {
+  const protocolVersion = req.header("mcp-protocol-version");
+  const isModern = protocolVersion === "2026-07-28";
+  if (!isModern) {
+    return false;
+  }
+  sendJsonRpcError(res, 405, -32000, "Method Not Allowed");
+  return true;
+}
+
 export async function handleMcpPost(
   context: AppContext,
   req: Request,
   res: Response,
 ): Promise<void> {
+  if (!isJsonContentType(req.header("content-type"))) {
+    sendJsonRpcError(res, 415, -32000, "Unsupported Media Type");
+    return;
+  }
+  const isLegacy = await isLegacyRequest(await toWebRequest(req, req.body));
+  if (!isLegacy) {
+    await modernNodeHandler(req, res, req.body);
+    return;
+  }
   const initializeRequest = isInitializeRequest(req.body);
   let sessionId = req.header("mcp-session-id");
   if (!initializeRequest) {
@@ -301,6 +401,9 @@ export async function handleMcpPost(
 }
 
 export async function handleMcpGet(req: Request, res: Response): Promise<void> {
+  if (await handleModernSessionOperation(req, res)) {
+    return;
+  }
   const sessionId = req.header("mcp-session-id");
   const transport = getExistingTransport(sessionId);
   if (!transport) {
@@ -316,6 +419,9 @@ export async function handleMcpGet(req: Request, res: Response): Promise<void> {
 }
 
 export async function handleMcpDelete(req: Request, res: Response): Promise<void> {
+  if (await handleModernSessionOperation(req, res)) {
+    return;
+  }
   const sessionId = req.header("mcp-session-id");
   const transport = getExistingTransport(sessionId);
   if (!transport) {
