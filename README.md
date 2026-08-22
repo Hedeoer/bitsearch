@@ -122,6 +122,43 @@ Authorization: Bearer <MCP_BEARER_TOKEN>
 
 Detailed setup, reverse proxy examples, and long-form reference material are kept below.
 
+### MCP 调试工具
+
+项目已经接入 3 个 MCP 工具：官方 MCP Inspector、官方 MCP Conformance，以及 MCPJam。
+本地门禁使用隔离的 SQLite 和固定测试 fixture，不会读取或修改 `data/` 中的生产数据；测试代理只监听 `127.0.0.1`，并自动注入 Bearer token。
+
+```bash
+# 官方 MCP Inspector：启动 Web 调试界面
+npm run mcp:inspect
+
+# 官方 MCP Inspector：无界面 CLI 冒烟测试
+npm run mcp:inspect:smoke
+
+# 官方 MCP Conformance：运行项目当前支持的核心协议场景
+npm run mcp:conformance
+
+# MCPJam：检查 MCP 服务连接、初始化和工具发现
+npm run mcpjam:doctor
+
+# CI 使用的本地门禁
+npm run mcp:tooling
+```
+
+`mcp:inspect` 会启动 Inspector 的本地 Web UI，并连接到临时 BitSearch MCP 服务。
+生产服务仍然使用 `/mcp` 的真实认证配置；要调试已部署服务，可直接在 Inspector 中填写服务 URL 和 `Authorization: Bearer <MCP_BEARER_TOKEN>`。
+
+MCPJam 的模型评测需要外部 LLM，因此不进入默认 CI。对测试或预发布服务运行评测时，设置服务地址、MCP token、模型名称和对应的 LLM API key：
+
+```bash
+export MCP_SERVER_URL="http://127.0.0.1:8097/mcp"
+export MCP_BEARER_TOKEN="<MCP_BEARER_TOKEN>"
+export MCPJAM_MODEL="openai/gpt-4o-mini"
+export MCPJAM_LLM_API_KEY="<LLM_API_KEY>"
+npm run mcpjam:eval
+```
+
+可选变量：`MCPJAM_ITERATIONS`（默认 `10`）、`MCPJAM_MIN_ACCURACY`（默认 `0.9`），以及 `MCPJAM_API_KEY`（设置后把结果上报到 MCPJam）。评测脚本覆盖当前 BitSearch 的搜索、抓取、站点发现和结果分页工作流；请确保目标服务已配置相应 provider。
+
 ## Installation & Detailed Setup
 
 ### Prerequisites

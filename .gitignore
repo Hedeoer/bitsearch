@@ -18,6 +18,9 @@ data/
 # Logs
 *.log
 
+# MCP development tool artifacts
+.mcp-results/
+
 # Editor and IDE
 .vscode/
 .idea/

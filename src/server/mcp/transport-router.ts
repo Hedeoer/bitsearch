@@ -5,7 +5,11 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { DEFAULT_NEGOTIATED_PROTOCOL_VERSION } from "@modelcontextprotocol/sdk/types.js";
 import type { AppContext } from "../app-context.js";
 import { parseBearerToken } from "../lib/auth.js";
-import { createMcpRuntime, isInitializeRequest } from "./register-tools.js";
+import {
+  createMcpRuntime,
+  isInitializeRequest,
+  type McpRuntime,
+} from "./register-tools.js";
 import { getToolSurfaceSnapshot } from "../services/tool-surface-service.js";
 
 const MCP_SESSION_TTL_MS = 30 * 60 * 1000;
@@ -21,6 +25,32 @@ interface TransportSession {
 const transports = new Map<string, TransportSession>();
 const clientSessionHints = new Map<string, string>();
 const sessionClientHints = new Map<string, string>();
+type McpRuntimeFactory = (context: AppContext) => McpRuntime;
+let mcpRuntimeFactory: McpRuntimeFactory = createMcpRuntime;
+
+export function setMcpRuntimeFactoryForTooling(
+  factory: McpRuntimeFactory,
+): () => void {
+  if (transports.size > 0) {
+    throw new Error("Cannot replace the MCP runtime factory while sessions are active");
+  }
+  const previousFactory = mcpRuntimeFactory;
+  mcpRuntimeFactory = factory;
+  return () => {
+    if (transports.size > 0) {
+      throw new Error("Cannot restore the MCP runtime factory while sessions are active");
+    }
+    mcpRuntimeFactory = previousFactory;
+  };
+}
+
+export async function closeAllMcpTransports(): Promise<void> {
+  const sessions = [...transports.values()];
+  transports.clear();
+  clientSessionHints.clear();
+  sessionClientHints.clear();
+  await Promise.allSettled(sessions.map((session) => session.transport.close()));
+}
 
 function getClientIp(req: Request, trustProxy: boolean): string {
   if (trustProxy) {
@@ -188,7 +218,7 @@ async function createTransport(context: AppContext) {
       forgetClientSession(sessionId);
     }
   };
-  const runtime = createMcpRuntime(context);
+  const runtime = mcpRuntimeFactory(context);
   server = runtime.server;
   syncToolSurface = runtime.syncToolSurface;
   await server.connect(transport);
