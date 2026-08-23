@@ -13,11 +13,13 @@ metadata:
 
 Use this skill when BitSearch MCP tools are available and the user needs broad search through the configured `search_engine`, real-source retrieval and cross-checking through Tavily or Firecrawl, or multi-step evidence gathering to reduce hallucinations and improve factual grounding.
 
+The MCP server may also provide a concise server-level usage hint through its protocol instructions. Treat that hint as supplemental tool guidance; this skill remains the source for research workflow, evidence, and Planning Engine decisions.
+
 ## Default procedure
 
 1. Confirm which BitSearch tools are currently exposed before planning around them.
 2. Restate the goal in terms of output shape: prose answer, citations, raw source content, or structured JSON.
-3. Decide whether the task needs the Planning Engine first. Upgrade to planning when the query is ambiguous, multi-hop, requires sub-query decomposition, or needs explicit tool mapping and execution order.
+3. Decide whether the task needs the Planning Engine first. Upgrade to planning when the query is ambiguous, multi-hop, requires sub-query decomposition, or needs explicit tool mapping and execution order. For a simple single-lookup question, use the shortest correct retrieval path.
 4. For simple tasks, use the shortest correct path:
    - broad discovery and initial synthesis through `search_engine`: `web_search`
    - source inspection after search: `get_sources`

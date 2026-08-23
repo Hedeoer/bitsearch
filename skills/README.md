@@ -18,4 +18,6 @@ Recommended validation:
 skills-ref validate skills/bitsearch-research
 ```
 
+The MCP server may also expose a concise, advisory usage hint for connected clients. It supplements this Skill with server-specific tool routing and does not replace the Skill or host-owned system and security policies.
+
 See [llmdoc/guides/using-bitsearch-with-agent-skills.md](../llmdoc/guides/using-bitsearch-with-agent-skills.md) for installation guidance and the local snapshot of the Agent Skills standard.

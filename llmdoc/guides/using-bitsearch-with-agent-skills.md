@@ -20,6 +20,8 @@ That is why the repository now distributes one merged skill:
 - Easier maintenance: the main `SKILL.md` stays compact and detailed rules live in `references/`.
 - Better complex-task handling: the same skill can escalate from direct retrieval to the six-phase Planning Engine when the query needs decomposition and execution planning.
 
+MCP server instructions complement this arrangement with a short connection-level hint about the currently exposed tools. They are advisory and client-controlled, so they do not replace the Skill, the fallback prompt, or host-owned system and security policies.
+
 ## Directory layout
 
 ```text
@@ -110,6 +112,8 @@ The current Codex CLI help does not document a separate native `WebFetch` toggle
 - Direct retrieval by default, with Planning Engine as the explicit upgrade path for complex tasks
 - Trigger-oriented description plus bundled trigger-eval queries
 
+The MCP instructions intentionally stay short and server-specific. Keep full research behavior in this Skill so Claude Code, Codex, and other Agent Skills-compatible clients receive the same progressive-disclosure workflow.
+
 ## Local standard snapshot
 
 The BitSearch design was reworked against a local summary snapshot of the first-party `agentskills.io` docs:
@@ -126,3 +130,4 @@ When the BitSearch skill changes:
 2. Update `references/` when routing, evidence, or workflow details change.
 3. Update `trigger-evals.json` when the description or trigger coverage changes.
 4. Re-check the Agent Skills standard snapshot when the upstream spec or best-practices docs change.
+5. Keep the MCP server hint, Skill workflow, and fallback prompt aligned when routing or planning rules change.

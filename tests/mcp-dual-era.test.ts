@@ -16,6 +16,7 @@ import {
   closeModernMcpHandler,
   resetModernMcpHandlerForTests,
 } from "../src/server/mcp/transport-router.js";
+import { MCP_INSTRUCTIONS } from "../src/server/mcp/instructions.js";
 import { getToolSurfaceSnapshot } from "../src/server/services/tool-surface-service.js";
 
 const MODERN_PROTOCOL_VERSION = "2026-07-28";
@@ -148,6 +149,14 @@ async function readJsonRpcResult(response: Response): Promise<any> {
   return (await response.json()).result;
 }
 
+function assertServerInstructions(value: unknown): asserts value is string {
+  assert.equal(value, MCP_INSTRUCTIONS);
+  assert.match(value, /Use the Planning Engine for ambiguous, multi-hop/);
+  assert.doesNotMatch(value, /Planning Workflow \(MANDATORY\)/);
+  assert.doesNotMatch(value, /For any research.*MUST use/s);
+  assert.doesNotMatch(value, /SESSION_SECRET|APP_ENCRYPTION_KEY|MCP_BEARER_TOKEN|API_KEY/i);
+}
+
 test("MCP dual-era routing preserves legacy security and serves strict modern requests", async (t) => {
   const appContext = await startApp();
   t.after(() => appContext.cleanup());
@@ -186,7 +195,7 @@ test("MCP dual-era routing preserves legacy security and serves strict modern re
   const discoverResult = await readJsonRpcResult(modernDiscover);
   assert.equal(modernDiscover.status, 200);
   assert.deepEqual(discoverResult.supportedVersions, [MODERN_PROTOCOL_VERSION]);
-  assert.match(discoverResult.instructions, /BitSearch MCP Server Usage Guide/);
+  assertServerInstructions(discoverResult.instructions);
   assert.ok(discoverResult.capabilities.tools?.listChanged);
 
   const headerMismatch = await fetch(appContext.baseUrl, {
@@ -239,7 +248,7 @@ test("MCP dual-era routing preserves legacy security and serves strict modern re
   const sessionId = legacyInitialize.headers.get("mcp-session-id");
   assert.ok(sessionId);
   const initializeResult = await readJsonRpcResult(legacyInitialize);
-  assert.match(initializeResult.instructions, /BitSearch MCP Server Usage Guide/);
+  assertServerInstructions(initializeResult.instructions);
 
   const notificationResponse = await fetch(appContext.baseUrl, {
     method: "POST",

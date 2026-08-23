@@ -508,6 +508,8 @@ If your client supports the open Agent Skills standard, prefer `skill + mcp` ove
 
 This repository ships one standard BitSearch skill template in `skills/bitsearch-research/`. It merges routing rules, evidence rules, retrieval workflow, and Planning Engine escalation into one coherent skill that can be reused across Agent Skills-compatible clients.
 
+The MCP server also returns a concise protocol-level usage hint. That hint supplements the Skill with server-specific tool routing; it is advisory and client-controlled, so it does not replace the Skill or host-owned system and security policies.
+
 #### Option A: Install via the `skills` CLI (recommended)
 
 The [`skills`](https://github.com/vercel-labs/skills) CLI automatically clones this repo, discovers `skills/bitsearch-research/`, detects installed agents, and writes the skill into the correct directory for each one.
@@ -751,7 +753,7 @@ A scaffold for LLMs to generate structured search strategies for highly complex 
 
 ### Fallback Companion Prompt (for clients without Agent Skills)
 
-If your MCP client does not support Agent Skills, the following companion prompt is a recommended fallback. It preserves the project's evidence and expression standards while adding BitSearch-specific rules for choosing only currently exposed tools and using generic vs. provider-specific tools correctly.
+If your MCP client does not support Agent Skills, the following companion prompt is a compatibility fallback. It preserves the project's evidence and expression standards while adding BitSearch-specific rules for choosing only currently exposed tools and using generic vs. provider-specific tools correctly. Keep it available because clients may ignore or differently place protocol-level server instructions.
 
 <details>
 <summary>Expand the full recommended companion prompt</summary>
@@ -860,6 +862,11 @@ Prefer the shortest correct workflow.
 - If the goal is “read multiple pages from one site with content included”, prefer `tavily_crawl`.
 - If the goal is “scrape multiple known URLs”, prefer `firecrawl_batch_scrape`.
 - If the goal is “extract structured fields as JSON”, prefer `firecrawl_extract`.
+
+### Planning Engine escalation
+
+- Use the Planning Engine for ambiguous, multi-hop, or genuinely complex research tasks.
+- For a simple single-lookup question, use the shortest correct retrieval path.
 
 ### Preferred Patterns
 
