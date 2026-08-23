@@ -8,7 +8,6 @@ import {
   RefreshCw,
   Search,
   Server,
-  X,
 } from "lucide-react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import type {
@@ -17,6 +16,10 @@ import type {
   SystemSettings,
 } from "@shared/contracts";
 import { InlineSpinner } from "./Feedback";
+import { ThemeToggle } from "./ThemeToggle";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 type ConsoleLayoutProps = Readonly<{
   dashboard: DashboardSummary | null;
@@ -107,14 +110,9 @@ export function ConsoleLayout(props: ConsoleLayoutProps) {
   }, [location.pathname]);
 
   return (
+    <TooltipProvider delayDuration={200}>
     <div className="console-shell">
-      <button
-        type="button"
-        aria-label="Close navigation"
-        className={`sidebar-backdrop${mobileOpen ? " sidebar-backdrop-open" : ""}`}
-        onClick={() => setMobileOpen(false)}
-      />
-      <aside className={`console-sidebar${mobileOpen ? " console-sidebar-open" : ""}`}>
+      <aside className="console-sidebar">
         <div className="console-brand">
           <div className="console-brand-mark">
             <Search size={16} />
@@ -123,14 +121,6 @@ export function ConsoleLayout(props: ConsoleLayoutProps) {
             <span className="eyebrow">BitSearch</span>
             <strong>Operations Console</strong>
           </div>
-          <button
-            type="button"
-            className="sidebar-close-button"
-            aria-label="Close navigation"
-            onClick={() => setMobileOpen(false)}
-          >
-            <X size={16} />
-          </button>
         </div>
         <PrimaryNav
           className="sidebar-nav"
@@ -143,14 +133,6 @@ export function ConsoleLayout(props: ConsoleLayoutProps) {
         <header className="console-header">
           <div className="console-header-row">
             <div className="console-topbar-copy">
-              <button
-                type="button"
-                className="sidebar-mobile-toggle"
-                aria-label="Open navigation"
-                onClick={() => setMobileOpen(true)}
-              >
-                <Menu size={18} />
-              </button>
               <div className="console-topbar-mark" aria-hidden="true">
                 <Search size={16} />
               </div>
@@ -176,23 +158,40 @@ export function ConsoleLayout(props: ConsoleLayoutProps) {
                   </>
                 )}
               </span>
-              <button
-                type="button"
-                className="icon-button"
-                title="Refresh"
-                disabled={props.isRefreshing}
-                onClick={props.onRefresh}
-              >
-                <RefreshCw size={15} />
-              </button>
-              <button
-                type="button"
-                className="icon-button"
-                title="Sign out"
-                onClick={props.onLogout}
-              >
-                <LogOut size={15} />
-              </button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button aria-label="Refresh" disabled={props.isRefreshing} size="icon" type="button" variant="ghost" onClick={props.onRefresh}>
+                    <RefreshCw className="size-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Refresh</TooltipContent>
+              </Tooltip>
+              <ThemeToggle />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button aria-label="Sign out" size="icon" type="button" variant="ghost" onClick={props.onLogout}>
+                    <LogOut className="size-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Sign out</TooltipContent>
+              </Tooltip>
+              <Sheet onOpenChange={setMobileOpen} open={mobileOpen}>
+                <Button aria-label="Open navigation" className="lg:hidden" size="icon" type="button" variant="ghost" onClick={() => setMobileOpen(true)}>
+                  <Menu className="size-5" />
+                </Button>
+                <SheetContent className="border-border bg-card" side="left">
+                  <SheetHeader>
+                    <SheetTitle className="flex items-center gap-2 text-base normal-case tracking-normal">
+                      <Search className="size-4" /> BitSearch
+                    </SheetTitle>
+                  </SheetHeader>
+                  <PrimaryNav
+                    className="flex flex-col gap-2 px-4"
+                    linkClassName="mobile-nav-link"
+                    onNavigate={() => setMobileOpen(false)}
+                  />
+                </SheetContent>
+              </Sheet>
             </div>
           </div>
         </header>
@@ -200,6 +199,7 @@ export function ConsoleLayout(props: ConsoleLayoutProps) {
           <Outlet />
         </main>
       </div>
-    </div>
+      </div>
+    </TooltipProvider>
   );
 }

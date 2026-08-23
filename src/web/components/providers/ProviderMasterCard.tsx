@@ -1,6 +1,7 @@
 import type { RemoteProvider, ProviderConfigRecord } from "@shared/contracts";
 import type { ProviderDraft } from "../../types";
 import type { ProviderSaveErrors } from "../../provider-actions";
+import { Badge } from "@/components/ui/badge";
 
 type ProviderMasterCardProps = Readonly<{
   provider: RemoteProvider;
@@ -15,18 +16,18 @@ type ProviderMasterCardProps = Readonly<{
 
 function getStatusBadge(props: ProviderMasterCardProps) {
   if (props.isSaving) {
-    return <span className="text-xs text-amber-400">Saving...</span>;
+    return <Badge variant="warning">Saving...</Badge>;
   }
   if (props.hasError) {
-    return <span className="text-xs text-red-400">Error</span>;
+    return <Badge variant="danger">Error</Badge>;
   }
   if (props.isDirty) {
-    return <span className="text-xs text-amber-400">Unsaved</span>;
+    return <Badge variant="warning">Unsaved</Badge>;
   }
   if (props.draft.enabled) {
-    return <span className="text-xs text-emerald-400">✓ Ready</span>;
+    return <Badge variant="success">Ready</Badge>;
   }
-  return <span className="text-xs text-[color:var(--text-dim)]">Disabled</span>;
+  return <Badge variant="neutral">Disabled</Badge>;
 }
 
 export function ProviderMasterCard(props: ProviderMasterCardProps) {
@@ -52,9 +53,9 @@ export function ProviderMasterCard(props: ProviderMasterCardProps) {
               {props.provider}
             </span>
             {isCore && (
-              <span className="rounded-full bg-cyan-400/20 px-2 py-0.5 text-[10px] font-medium text-cyan-300">
+              <Badge className="text-[10px]" variant="default">
                 Core
-              </span>
+              </Badge>
             )}
           </div>
           <div className="mt-1 text-xs text-[color:var(--text-dim)]">

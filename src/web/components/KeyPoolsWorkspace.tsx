@@ -1,4 +1,4 @@
-import { Upload, Download, Key, Database, Trash2, RefreshCw, FlaskConical, Power, CheckSquare, Square, ChevronDown, ChevronRight, Heart, Activity, CheckCircle, AlertTriangle, Search, XSquare, X } from "lucide-react";
+import { Upload, Download, Key, Database, Trash2, RefreshCw, FlaskConical, Power, CheckSquare, XSquare, Activity, AlertTriangle, Search, X } from "lucide-react";
 import { useState, useEffect } from "react";
 
 const PAGE_SIZE = 16;
@@ -10,6 +10,26 @@ import { KeyInventoryCard } from "./KeyInventoryCard";
 import type { KeyListStatus, KeyPoolSummary, KeyPoolProvider } from "@shared/contracts";
 import { KeyPoolProviderPicker } from "./KeyPoolProviderPicker";
 import { useKeyWorkspace } from "./useKeyWorkspace";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Table, TableBody } from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
 
 function renderSummaryQuota(summary: KeyPoolSummary | null): string {
   if (!summary) return "...";
@@ -184,14 +204,10 @@ export function KeyPoolsWorkspace(props: KeyPoolsWorkspaceProps) {
               </div>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-              <button 
-                className={workspace.summary?.totalKeys === 0 ? "primary-button pulse" : "secondary-button"}
-                onClick={() => setIsImportOpen(true)}
-                style={{ padding: '0.2rem 0.65rem', minHeight: '30px' }}
-              >
-                <Upload size={14} style={{ marginRight: '4px' }} />
+              <Button className="min-h-9 px-3" type="button" onClick={() => setIsImportOpen(true)}>
+                <Upload className="size-3.5" />
                 Manage & Import
-              </button>
+              </Button>
             </div>
           </div>
           
@@ -213,72 +229,66 @@ export function KeyPoolsWorkspace(props: KeyPoolsWorkspaceProps) {
 
           {workspace.selectedIds.length === 0 ? (
             <div className="inventory-filters-single-line">
-              <button className="tiny-icon-btn" title="Select All" onClick={workspace.selectAllVisible} style={{ padding: '0.4rem', background: 'rgba(255,255,255,0.05)' }}>
-                <CheckSquare size={16} />
-              </button>
+              <Button aria-label="Select all visible keys" className="size-8" size="icon" type="button" variant="ghost" onClick={workspace.selectAllVisible}>
+                <CheckSquare className="size-4" />
+              </Button>
               
               <div className="search-container">
                  <Search size={14} color="var(--text-dim)" />
-                 <input
+                 <Input
                     value={workspace.query}
                     onChange={(event) => workspace.setQuery(event.target.value)}
                     placeholder="Search key / fingerprint / note"
-                    style={{ border: "none", background: "transparent", outline: "none", width: "100%", height: "32px", fontSize: "0.85rem", color: "var(--text)" }}
                  />
               </div>
 
-              <select value={workspace.status} onChange={(event) => workspace.setStatus(event.target.value as KeyListStatus)} style={{ height: "32px", fontSize: "0.8rem", borderRadius: "6px", border: "none", background: "rgba(255,255,255,0.05)", outline: 'none', color: 'var(--text)', padding: '0 0.6rem' }}>
-                <option value="all">Status: All</option>
-                <option value="enabled">Status: Enabled</option>
-                <option value="disabled">Status: Disabled</option>
-                <option value="healthy">Status: Healthy</option>
-                <option value="unhealthy">Status: Unhealthy</option>
-              </select>
-
-              <select value={workspace.tag} onChange={(event) => workspace.setTag(event.target.value)} style={{ height: "32px", fontSize: "0.8rem", borderRadius: "6px", border: "none", background: "rgba(255,255,255,0.05)", outline: 'none', color: 'var(--text)', padding: '0 0.6rem' }}>
-                <option value="">Tag: All tags</option>
-                {(workspace.summary?.tags ?? []).map((item) => (
-                  <option key={item} value={item}>Tag: {item}</option>
-                ))}
-              </select>
-
-              <select value={workspace.sortMode} onChange={(event) => workspace.setSortMode(event.target.value as KeySortMode)} style={{ height: "32px", fontSize: "0.8rem", borderRadius: "6px", border: "none", background: "rgba(255,255,255,0.05)", outline: 'none', color: 'var(--text)', padding: '0 0.6rem' }}>
-                <option value="requests_desc">Sort: High Requests</option>
-                <option value="requests_asc">Sort: Low Requests</option>
-                <option value="failures_desc">Sort: High Failures</option>
-                <option value="last_used_desc">Sort: Recently Used</option>
-                <option value="quota_remaining_desc">Sort: High Quota</option>
-              </select>
+              <Select value={workspace.status} onValueChange={(value) => workspace.setStatus(value as KeyListStatus)}>
+                <SelectTrigger aria-label="Filter key status" className="h-8 w-[140px] text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent><SelectItem value="all">Status: All</SelectItem><SelectItem value="enabled">Status: Enabled</SelectItem><SelectItem value="disabled">Status: Disabled</SelectItem><SelectItem value="healthy">Status: Healthy</SelectItem><SelectItem value="unhealthy">Status: Unhealthy</SelectItem></SelectContent>
+              </Select>
+              <Select value={workspace.tag || "all"} onValueChange={(value) => workspace.setTag(value === "all" ? "" : value)}>
+                <SelectTrigger aria-label="Filter key tag" className="h-8 w-[130px] text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tag: All tags</SelectItem>
+                  {(workspace.summary?.tags ?? []).map((item) => (<SelectItem key={item} value={item}>Tag: {item}</SelectItem>))}
+                </SelectContent>
+              </Select>
+              <Select value={workspace.sortMode} onValueChange={(value) => workspace.setSortMode(value as KeySortMode)}>
+                <SelectTrigger aria-label="Sort keys" className="h-8 w-[170px] text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="requests_desc">Sort: High Requests</SelectItem><SelectItem value="requests_asc">Sort: Low Requests</SelectItem><SelectItem value="failures_desc">Sort: High Failures</SelectItem><SelectItem value="last_used_desc">Sort: Recently Used</SelectItem><SelectItem value="quota_remaining_desc">Sort: High Quota</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           ) : (
             <div className="bulk-action-bar">
               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                <button className="tiny-icon-btn" title="Cancel Selection" onClick={workspace.clearSelection} style={{ padding: "0.2rem", background: 'rgba(0, 229, 255, 0.1)', color: 'var(--primary)' }}>
-                  <XSquare size={16} />
-                </button>
+                <Button aria-label="Cancel selection" className="size-7" size="icon" type="button" variant="ghost" onClick={workspace.clearSelection}>
+                  <XSquare className="size-4" />
+                </Button>
                 <span style={{ fontWeight: 600, color: "rgba(0, 229, 255, 0.9)", fontSize: "0.85rem" }}>{workspace.selectedIds.length} Keys Selected</span>
               </div>
 
               <div style={{ flex: 1 }} />
 
               <div style={{ display: "flex", alignItems: "center", gap: "0.45rem", flexWrap: "wrap" }}>
-                <button className="primary-button key-action-button" disabled={workspace.isBatchTesting} onClick={() => void workspace.testSelectedKeys()}>
-                  {workspace.isBatchTesting ? <InlineSpinner label="" /> : <><FlaskConical size={12} /> Test</>}
-                </button>
-                <button className="secondary-button key-action-button" disabled={workspace.isBatchSyncing} onClick={() => void workspace.syncSelectedKeys()}>
-                  {workspace.isBatchSyncing ? <InlineSpinner label="" /> : <><RefreshCw size={12} /> Sync</>}
-                </button>
+                <Button className="min-h-8 px-3 text-xs" disabled={workspace.isBatchTesting} type="button" variant="default" onClick={() => void workspace.testSelectedKeys()}>
+                  {workspace.isBatchTesting ? <InlineSpinner label="" /> : <><FlaskConical className="size-3.5" /> Test</>}
+                </Button>
+                <Button className="min-h-8 px-3 text-xs" disabled={workspace.isBatchSyncing} type="button" variant="secondary" onClick={() => void workspace.syncSelectedKeys()}>
+                  {workspace.isBatchSyncing ? <InlineSpinner label="" /> : <><RefreshCw className="size-3.5" /> Sync</>}
+                </Button>
                 <span className="toolbar-separator" aria-hidden="true" />
-                <button className="secondary-button key-action-button" disabled={workspace.isBulkUpdating} onClick={() => void workspace.enableSelectedKeys()}>
-                  <Power size={12} /> Enable
-                </button>
-                <button className="secondary-button key-action-button" disabled={workspace.isBulkUpdating} onClick={() => void workspace.disableSelectedKeys()}>
-                  <Power size={12} /> Disable
-                </button>
+                <Button className="min-h-8 px-3 text-xs" disabled={workspace.isBulkUpdating} type="button" variant="secondary" onClick={() => void workspace.enableSelectedKeys()}>
+                  <Power className="size-3.5" /> Enable
+                </Button>
+                <Button className="min-h-8 px-3 text-xs" disabled={workspace.isBulkUpdating} type="button" variant="secondary" onClick={() => void workspace.disableSelectedKeys()}>
+                  <Power className="size-3.5" /> Disable
+                </Button>
                 <span className="toolbar-separator" aria-hidden="true" />
-                <button className="danger-button key-action-button" disabled={workspace.isBatchDeleting} onClick={workspace.deleteSelectedKeys}>
-                  {workspace.isBatchDeleting ? <InlineSpinner label="" /> : <><Trash2 size={12} /> Delete</>}
-                </button>
+                <Button className="min-h-8 px-3 text-xs" disabled={workspace.isBatchDeleting} type="button" variant="destructive" onClick={workspace.deleteSelectedKeys}>
+                  {workspace.isBatchDeleting ? <InlineSpinner label="" /> : <><Trash2 className="size-3.5" /> Delete</>}
+                </Button>
               </div>
             </div>
           )}
@@ -292,10 +302,12 @@ export function KeyPoolsWorkspace(props: KeyPoolsWorkspaceProps) {
               title={hasActiveFilters ? "No matching keys" : "No keys imported yet"}
             />
           ) : null}
-          <div className="key-grid">
-            {pagedKeys.map((item) => (
-              <KeyInventoryCard
-                key={item.id}
+          <div>
+            <Table className="table-fixed">
+              <TableBody>
+                {pagedKeys.map((item) => (
+                  <KeyInventoryCard
+                    key={item.id}
                 isCopying={workspace.copyingIds.has(item.id)}
                 isDeleting={workspace.deletingIds.has(item.id)}
                 item={item}
@@ -314,8 +326,10 @@ export function KeyPoolsWorkspace(props: KeyPoolsWorkspaceProps) {
                 onToggleEnabled={(id, enabled) => void workspace.toggleCardEnabled([id], enabled)}
                 onTest={(ids) => void workspace.testCardKeys(ids)}
                 onSyncQuota={(ids) => void workspace.syncCardKeys(ids)}
-              />
-            ))}
+                    />
+                  ))}
+              </TableBody>
+            </Table>
           </div>
           {totalPages > 1 && (
             <div className="key-pagination">
@@ -375,85 +389,37 @@ export function KeyPoolsWorkspace(props: KeyPoolsWorkspaceProps) {
         title={workspace.confirmDelete?.title ?? ""}
       />
 
-      {isImportOpen && (
-        <div className="dialog-backdrop" role="presentation" onClick={() => !workspace.isImporting && setIsImportOpen(false)}>
-          <section
-            className="dialog-card"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="import-dialog-title"
-            onClick={(event) => event.stopPropagation()}
-            style={{ minWidth: '500px' }}
-          >
-            <div className="eyebrow">Key Operations</div>
-            <h3 id="import-dialog-title">Manage & Import Keys</h3>
-            <p className="supporting">Paste your {workspace.provider} API keys below to add them to your pool.</p>
-            
-            <div className="import-panel" style={{ marginTop: '1rem' }}>
-              <label className="field">
-                <span>Import Tags</span>
-                <input
-                  value={workspace.importTags}
-                  onChange={(event) => workspace.setImportTags(event.target.value)}
-                  placeholder="search, production, backup"
-                  disabled={workspace.isImporting}
-                />
-              </label>
-              
-              <label className="field" style={{ marginTop: '1.25rem' }}>
-                <span>Paste Keys</span>
-                <textarea
-                  rows={6}
-                  value={workspace.rawKeys}
-                  onChange={(event) => workspace.setRawKeys(event.target.value)}
-                  placeholder="One API key per line"
-                  disabled={workspace.isImporting}
-                  style={{ fontFamily: 'monospace' }}
-                />
-              </label>
-              
-              <div style={{ marginTop: '1rem' }}>
-                <p className="supporting compact" style={{ margin: 0, fontSize: '0.75rem' }}>
-                  Last quota sync: {formatDateTime(workspace.summary?.quotaSyncedAt ?? null)}
-                </p>
-              </div>
+      <Dialog onOpenChange={(open) => !workspace.isImporting && setIsImportOpen(open)} open={isImportOpen}>
+        <DialogContent className="sm:max-w-[540px]">
+          <DialogHeader>
+            <DialogTitle>Manage & Import Keys</DialogTitle>
+            <DialogDescription>Paste your {workspace.provider} API keys below to add them to your pool.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="import-tags">Import tags</Label>
+              <Input disabled={workspace.isImporting} id="import-tags" placeholder="search, production, backup" value={workspace.importTags} onChange={(event) => workspace.setImportTags(event.target.value)} />
             </div>
-
-            <div className="dialog-actions" style={{ marginTop: '2rem', justifyContent: 'space-between' }}>
-              <div>
-                <a
-                  className="secondary-button"
-                  href={`/api/admin/keys/export.csv?provider=${workspace.provider}`}
-                >
-                  <Download size={14} /> Export CSV
-                </a>
-              </div>
-              <div style={{ display: 'flex', gap: '0.75rem' }}>
-                <button
-                  className="secondary-button"
-                  type="button"
-                  onClick={() => setIsImportOpen(false)}
-                  disabled={workspace.isImporting}
-                >
-                  Cancel
-                </button>
-                <button
-                  className="primary-button"
-                  disabled={workspace.isImporting}
-                  onClick={async () => {
-                    const success = await workspace.importKeys();
-                    if (success) {
-                      setIsImportOpen(false);
-                    }
-                  }}
-                >
-                  {workspace.isImporting ? <InlineSpinner label="Importing" /> : <><Upload size={14} /> Import Keys</>}
-                </button>
-              </div>
+            <div className="grid gap-2">
+              <Label htmlFor="raw-keys">Paste keys</Label>
+              <Textarea className="font-mono" disabled={workspace.isImporting} id="raw-keys" placeholder="One API key per line" rows={6} value={workspace.rawKeys} onChange={(event) => workspace.setRawKeys(event.target.value)} />
             </div>
-          </section>
-        </div>
-      )}
+            <p className="text-xs text-muted-foreground">Last quota sync: {formatDateTime(workspace.summary?.quotaSyncedAt ?? null)}</p>
+          </div>
+          <DialogFooter className="justify-between sm:justify-between">
+            <Button asChild variant="secondary"><a href={`/api/admin/keys/export.csv?provider=${workspace.provider}`}><Download className="size-4" /> Export CSV</a></Button>
+            <div className="flex gap-3">
+              <Button disabled={workspace.isImporting} type="button" variant="ghost" onClick={() => setIsImportOpen(false)}>Cancel</Button>
+              <Button disabled={workspace.isImporting} type="button" onClick={async () => {
+                const success = await workspace.importKeys();
+                if (success) setIsImportOpen(false);
+              }}>
+                {workspace.isImporting ? <InlineSpinner label="Importing" /> : <><Upload className="size-4" /> Import Keys</>}
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

@@ -2,6 +2,9 @@ import { useState } from "react";
 import type { FocusEvent, KeyboardEvent } from "react";
 import { Copy, KeyRound, Save } from "lucide-react";
 import type { McpAccessInfo, McpAccessSecretResponse } from "@shared/contracts";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { apiRequest } from "../api";
 import type { ToastTone } from "./Feedback";
 
@@ -33,24 +36,25 @@ function AccessUrlField(
   }>,
 ) {
   return (
-    <label className="field">
-      <span>MCP Stream HTTP URL</span>
+    <div className="grid gap-2">
+      <Label className="text-sm font-medium">MCP Stream HTTP URL</Label>
       <div className="field-with-action">
-        <input className="mono" readOnly value={props.streamHttpUrl} />
-        <button
-          className="secondary-button"
+        <Input className="font-mono" readOnly value={props.streamHttpUrl} />
+        <Button
+          size="sm"
+          variant="secondary"
           disabled={props.disabled}
           type="button"
           onClick={props.onCopy}
         >
           <Copy size={14} />
           Copy URL
-        </button>
+        </Button>
       </div>
-      <p className="field-note mono">
+      <p className="text-muted-foreground font-mono text-xs">
         Authorization: {props.authScheme} {"<token>"}
       </p>
-    </label>
+    </div>
   );
 }
 
@@ -182,11 +186,11 @@ export function McpAccessFields(props: McpAccessFieldsProps) {
         streamHttpUrl={props.mcpAccess.streamHttpUrl}
         onCopy={() => void copyStreamHttpUrl()}
       />
-      <label className="field">
-        <span>MCP Access Key</span>
+      <div className="grid gap-2">
+        <Label className="text-sm font-medium">MCP Access Key</Label>
         <div className="field-with-action">
-          <input
-            className="mono"
+          <Input
+            className="font-mono"
             disabled={props.loading || isSaving}
             placeholder={tokenPlaceholder}
             readOnly={!isEditing}
@@ -198,8 +202,9 @@ export function McpAccessFields(props: McpAccessFieldsProps) {
             onFocus={beginEditing}
             onKeyDown={handleTokenKeyDown}
           />
-          <button
-            className={isEditing ? "primary-button" : "secondary-button"}
+          <Button
+            size="sm"
+            variant={isEditing ? "default" : "secondary"}
             disabled={tokenActionDisabled}
             type="button"
             onClick={() => {
@@ -212,10 +217,10 @@ export function McpAccessFields(props: McpAccessFieldsProps) {
           >
             {isEditing ? <Save size={14} /> : <Copy size={14} />}
             {tokenActionLabel}
-          </button>
+          </Button>
         </div>
-        <p className="field-note">{tokenNote}</p>
-      </label>
+        <p className="text-muted-foreground text-xs">{tokenNote}</p>
+      </div>
     </>
   );
 }

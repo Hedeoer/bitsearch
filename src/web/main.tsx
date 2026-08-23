@@ -8,6 +8,7 @@ import "./feedback.css";
 import "./activity.css";
 import "./key-pools.css";
 import "./providers.css";
+import "./admin-theme.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

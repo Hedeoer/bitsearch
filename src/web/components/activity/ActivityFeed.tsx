@@ -1,6 +1,9 @@
-import { AlertTriangle, ArrowDownUp, Calendar, Globe, Server, Timer } from "lucide-react";
+import { Server } from "lucide-react";
 import type { ActivityListItem, ActivityListPageResult } from "@shared/contracts";
 import { EmptyState, LoadingOverlay } from "../Feedback";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { formatDateTime, formatDuration, formatNumber, statusTone } from "../../format";
 
 type ActivityFeedProps = {
@@ -41,7 +44,9 @@ function FeedCard(
           </span>
           <span className="text-soft compact">({props.item.finalProvider ?? "no provider"})</span>
         </div>
-        <span className={`status-pill ${tone}`}>{props.item.status}</span>
+        <Badge variant={tone === "success" ? "success" : tone === "danger" ? "danger" : "warning"}>
+          {props.item.status}
+        </Badge>
       </div>
 
       {/* 第二层 */}
@@ -56,9 +61,9 @@ function FeedCard(
       {/* 第三层 */}
       <div className="activity-feed-preview">
         {props.item.status === "success" ? (
-          <span className="text-soft compact">📝 {truncate(props.item.resultPreview ?? "No preview captured", 80)}</span>
+          <span className="compact text-muted-foreground">{truncate(props.item.resultPreview ?? "No preview captured", 80)}</span>
         ) : (
-          <span className="danger compact">⚠️ {truncate(props.item.errorSummary ?? "No error details", 80)}</span>
+          <span className="compact text-destructive">{truncate(props.item.errorSummary ?? "No error details", 80)}</span>
         )}
       </div>
     </button>
@@ -82,11 +87,17 @@ export function ActivityFeed(props: ActivityFeedProps) {
       </div>
 
       <div className="activity-feed-body">
-        {props.loading ? <LoadingOverlay label="Loading activity feed" /> : null}
         {!props.loading && props.error ? (
           <p className="warning-banner">{props.error}</p>
         ) : null}
-        {!props.loading && !props.error && items.length === 0 ? (
+        {props.loading ? (
+          <div className="space-y-3">
+            {[0, 1, 2, 3].map((index) => (
+              <Skeleton className="h-[104px] rounded-2xl" key={index} />
+            ))}
+          </div>
+        ) : null}
+        {!props.loading && items.length === 0 ? (
           <EmptyState
             title="No activity found"
             description={props.hasActiveFilters ? "Adjust the filters to widen the current slice." : "No activity has been recorded yet."}
@@ -104,25 +115,25 @@ export function ActivityFeed(props: ActivityFeedProps) {
 
       {totalPages > 1 ? (
         <div className="activity-feed-footer">
-          <button
-            className="secondary-button"
+          <Button
+            variant="secondary"
             type="button"
             disabled={page === 0}
             onClick={() => props.onPageChange(page - 1)}
           >
             Previous
-          </button>
+          </Button>
           <span className="supporting compact">
             Page {page + 1} / {totalPages}
           </span>
-          <button
-            className="secondary-button"
+          <Button
+            variant="secondary"
             type="button"
             disabled={page >= totalPages - 1}
             onClick={() => props.onPageChange(page + 1)}
           >
             Next
-          </button>
+          </Button>
         </div>
       ) : null}
     </section>

@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/card";
 import type { ProviderDraft } from "../../types";
 import { LoadingOverlay } from "../Feedback";
+import { Input } from "@/components/ui/input";
 import {
   FieldShell,
   PanelBadges,
@@ -57,7 +58,7 @@ export function RemoteProviderPanel(props: RemoteProviderPanelProps) {
           </div>
         ) : null}
         <FieldShell title="Base URL" description="Root endpoint for this provider. Leave blank to use the default.">
-          <input
+          <Input
             className="font-['IBM_Plex_Mono']"
             disabled={props.busy}
             type="text"
@@ -67,7 +68,7 @@ export function RemoteProviderPanel(props: RemoteProviderPanelProps) {
         </FieldShell>
         <FieldShell title="Timeout" description="Applied to provider requests made with managed keys.">
           <div className="relative">
-            <input
+            <Input
               className="pr-11 font-['IBM_Plex_Mono']"
               disabled={props.busy}
               inputMode="numeric"

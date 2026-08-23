@@ -3,6 +3,9 @@ import { AlertTriangle, GitBranch, KeyRound, Server, Timer, Wrench } from "lucid
 import { PayloadToolbar } from "./PayloadToolbar";
 import type { ActivityDetailRecord } from "@shared/contracts";
 import { EmptyState, LoadingOverlay } from "../Feedback";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatDateTime, formatDuration, statusTone } from "../../format";
 
 type ActivityInspectorProps = {
@@ -77,10 +80,10 @@ export function ActivityInspector(props: ActivityInspectorProps) {
             <div className="eyebrow">Inspector</div>
             <h3>Selected request</h3>
           </div>
-          {request ? <span className={`status-pill ${statusTone(request.status)}`}>{request.status}</span> : null}
+          {request ? <Badge variant={statusTone(request.status) === "success" ? "success" : statusTone(request.status) === "danger" ? "danger" : "warning"}>{request.status}</Badge> : null}
         </div>
 
-        {props.loading ? <LoadingOverlay label="Loading request detail" /> : null}
+        {props.loading ? <Skeleton className="h-[220px] rounded-2xl" /> : null}
         {!props.loading && props.error ? <p className="warning-banner">{props.error}</p> : null}
         {!props.loading && request && diagnostics ? (
           <div className="activity-inspector-stack">
@@ -99,9 +102,9 @@ export function ActivityInspector(props: ActivityInspectorProps) {
                 </div>
               </div>
               <div className="activity-diagnostic-chip-row">
-                {diagnostics.isSlow ? <span className="status-pill warning">Slow request</span> : null}
-                {diagnostics.isFallback ? <span className="status-pill neutral">Fallback / retry</span> : null}
-                {diagnostics.primaryErrorType ? <span className="status-pill danger">{diagnostics.primaryErrorType}</span> : null}
+                {diagnostics.isSlow ? <Badge variant="warning">Slow request</Badge> : null}
+                {diagnostics.isFallback ? <Badge variant="neutral">Fallback / retry</Badge> : null}
+                {diagnostics.primaryErrorType ? <Badge variant="danger">{diagnostics.primaryErrorType}</Badge> : null}
               </div>
               <p className="supporting">
                 {diagnostics.failureStageHint ?? "No diagnostic hint was required for this request."}
@@ -116,10 +119,10 @@ export function ActivityInspector(props: ActivityInspectorProps) {
                     <div className="eyebrow">Error Summary</div>
                     <h3>Top-level request error</h3>
                   </div>
-                  <span className="status-pill danger">
+                  <Badge variant="danger">
                     <AlertTriangle size={11} />
                     request
-                  </span>
+                  </Badge>
                 </div>
                 <pre className="activity-code-block">{request.errorSummary}</pre>
               </article>
@@ -136,7 +139,7 @@ export function ActivityInspector(props: ActivityInspectorProps) {
           </div>
         </div>
 
-        {props.loading ? <LoadingOverlay label="Loading request detail" /> : null}
+        {props.loading ? <Skeleton className="h-[260px] rounded-2xl" /> : null}
         {!props.loading && !props.error && props.detail ? (
           <div className="activity-inspector-stack">
             <article className="activity-attempt-panel">
@@ -156,7 +159,7 @@ export function ActivityInspector(props: ActivityInspectorProps) {
                       <div className="activity-attempt-body">
                         <div className="activity-attempt-top">
                           <strong>{attempt.attemptNo}. {attempt.provider}</strong>
-                          <span className={`status-pill ${statusTone(attempt.status)}`}>{attempt.status}</span>
+                          <Badge variant={statusTone(attempt.status) === "success" ? "success" : statusTone(attempt.status) === "danger" ? "danger" : "warning"}>{attempt.status}</Badge>
                         </div>
                         <div className="activity-attempt-meta">
                           <span><Timer size={11} />{formatDuration(attempt.durationMs)}</span>
@@ -181,24 +184,20 @@ export function ActivityInspector(props: ActivityInspectorProps) {
                 wordWrap={wordWrap}
                 onToggleWrap={() => setWordWrap(!wordWrap)}
               />
-              <div className="activity-tab-row activity-payload-tabs" role="tablist" aria-label="Payload inspector tabs">
-                <button type="button" className={`activity-tab${activeTab === "input" ? " activity-tab-active" : ""}`} onClick={() => setActiveTab("input")}>Input</button>
-                <button type="button" className={`activity-tab${activeTab === "output" ? " activity-tab-active" : ""}`} onClick={() => setActiveTab("output")}>Output</button>
-                <button type="button" className={`activity-tab${activeTab === "metadata" ? " activity-tab-active" : ""}`} onClick={() => setActiveTab("metadata")}>Metadata</button>
-                <button type="button" className={`activity-tab${activeTab === "messages" ? " activity-tab-active" : ""}`} onClick={() => setActiveTab("messages")}>Messages</button>
-              </div>
-              {payloadMap?.[activeTab] === "-" ? (
-                <div className="activity-payload-empty">
-                  <p>No content captured for {activeTab}</p>
-                </div>
-              ) : (
-                <pre 
-                  className="activity-code-block"
-                  style={{ whiteSpace: wordWrap ? "pre-wrap" : "pre" }}
-                >
-                  {payloadMap?.[activeTab]}
-                </pre>
-              )}
+              <Tabs onValueChange={(value) => setActiveTab(value as InspectorTab)} value={activeTab}>
+                <TabsList aria-label="Payload inspector tabs" className="w-full justify-start">
+                  <TabsTrigger value="input">Input</TabsTrigger><TabsTrigger value="output">Output</TabsTrigger><TabsTrigger value="metadata">Metadata</TabsTrigger><TabsTrigger value="messages">Messages</TabsTrigger>
+                </TabsList>
+                {(["input", "output", "metadata", "messages"] as const).map((tabName) => (
+                  <TabsContent key={tabName} forceMount value={tabName}>
+                    {activeTab === tabName && payloadMap?.[tabName] === "-" ? (
+                      <div className="activity-payload-empty"><p>No content captured for {tabName}</p></div>
+                    ) : activeTab === tabName ? (
+                      <pre className="activity-code-block" style={{ whiteSpace: wordWrap ? "pre-wrap" : "pre" }}>{payloadMap?.[tabName]}</pre>
+                    ) : null}
+                  </TabsContent>
+                ))}
+              </Tabs>
             </article>
           </div>
         ) : null}

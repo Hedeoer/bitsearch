@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import type { ProviderConfigRecord } from "@shared/contracts";
 import { KeyRound } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 
 export type PanelProps = Readonly<{
   busy: boolean;
@@ -18,19 +19,16 @@ export type ProviderSwitchProps = Readonly<{
 
 export function ProviderSwitch(props: ProviderSwitchProps) {
   return (
-    <button
-      className={`provider-switch${props.checked ? " provider-switch-on" : ""}`}
-      disabled={props.disabled}
-      role="switch"
-      type="button"
-      aria-checked={props.checked}
-      onClick={props.onToggle}
-    >
-      <span className="provider-switch-track">
-        <span className="provider-switch-thumb" />
-      </span>
-      <span className="provider-switch-text">{props.checked ? "Enabled" : "Disabled"}</span>
-    </button>
+    <label className="flex items-center gap-2 text-xs text-muted-foreground">
+      <Switch
+        aria-checked={props.checked}
+        checked={props.checked}
+        className="data-[size=default]:h-5 data-[size=default]:w-9"
+        disabled={props.disabled}
+        onCheckedChange={props.onToggle}
+      />
+      {props.checked ? "Enabled" : "Disabled"}
+    </label>
   );
 }
 

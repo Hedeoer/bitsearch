@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import type {
   ProviderConfigRecord,
   RemoteProvider,
@@ -251,14 +252,13 @@ export function ProvidersWorkspace(props: ProvidersWorkspaceProps) {
             <span className="text-sm">
               {props.dirtyProviders.length} unsaved provider{props.dirtyProviders.length > 1 ? "s" : ""}
             </span>
-            <button
+            <Button
               type="button"
               onClick={props.onSaveAll}
               disabled={props.saving}
-              className="rounded-[12px] bg-cyan-400 px-4 py-2 text-sm font-medium text-black hover:bg-cyan-300 disabled:opacity-50"
             >
               {props.saving ? "Saving..." : "Save All"}
-            </button>
+            </Button>
           </div>
         </div>
       )}

@@ -9,7 +9,6 @@ import {
 import { apiRequest } from "./api";
 import { AppShell } from "./AppShell";
 import { LoginView } from "./LoginView";
-import { ToastViewport } from "./components/Feedback";
 import {
   EMPTY_ADMIN_ACCESS,
   EMPTY_MCP_ACCESS,
@@ -17,8 +16,9 @@ import {
   EMPTY_TOOL_SURFACE,
 } from "./app-defaults";
 import type { AppDataBundle, SessionState } from "./types";
-import { dismissToast, enqueueToast, useToastStore } from "./toast-store";
+import { enqueueToast } from "./toast-store";
 import { useProviderWorkspaceState } from "./use-provider-workspace-state";
+import { Toaster } from "@/components/ui/sonner";
 
 const AUTO_REFRESH_INTERVAL_MS = 30_000;
 
@@ -40,7 +40,6 @@ export function App() {
   const [workspaceRefreshNonce, setWorkspaceRefreshNonce] = useState(0);
   const refreshInFlightRef = useRef(false);
   const dashboardRefreshInFlightRef = useRef(false);
-  const toasts = useToastStore();
   const providerWorkspace = useProviderWorkspaceState({
     onToast: enqueueToast,
     providers,
@@ -219,7 +218,7 @@ export function App() {
 
   return (
     <>
-      <ToastViewport items={toasts} onDismiss={dismissToast} />
+      <Toaster position="bottom-right" richColors />
       <AppShell
         adminAccess={adminAccess}
         dashboard={dashboard}

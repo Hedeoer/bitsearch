@@ -1,5 +1,6 @@
 import { Copy, WrapText } from "lucide-react";
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
 
 type PayloadToolbarProps = {
   activeTab: string;
@@ -27,25 +28,28 @@ export function PayloadToolbar(props: PayloadToolbarProps) {
     <div className="activity-payload-toolbar">
       <span className="eyebrow">{props.activeTab.toUpperCase()} PAYLOAD</span>
       <div className="activity-payload-toolbar-actions">
-        <button
-          className="icon-button activity-payload-toolbar-btn"
+        <Button
+          className="size-8 rounded-lg"
           onClick={props.onToggleWrap}
-          title={props.wordWrap ? "Disable word wrap" : "Enable word wrap"}
+          aria-label={props.wordWrap ? "Disable word wrap" : "Enable word wrap"}
+          size="icon"
           type="button"
+          variant="ghost"
         >
           <WrapText size={14} className={props.wordWrap ? "text-primary" : ""} />
-        </button>
-        <button
-          className="icon-button activity-payload-toolbar-btn"
+        </Button>
+        <Button
+          className="relative size-8 rounded-lg"
           onClick={handleCopy}
-          title="Copy to clipboard"
+          aria-label="Copy to clipboard"
           disabled={!props.payloadContent}
+          size="icon"
           type="button"
-          style={{ position: "relative" }}
+          variant="ghost"
         >
           <Copy size={14} />
           {copied ? <span className="activity-payload-toolbar-copied">✓</span> : null}
-        </button>
+        </Button>
       </div>
     </div>
   );

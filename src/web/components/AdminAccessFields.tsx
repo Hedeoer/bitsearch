@@ -2,6 +2,9 @@ import { useState } from "react";
 import type { FocusEvent, KeyboardEvent } from "react";
 import { Copy, KeyRound, Save } from "lucide-react";
 import type { AdminAccessInfo, McpAccessSecretResponse } from "@shared/contracts";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { apiRequest } from "../api";
 import type { ToastTone } from "./Feedback";
 
@@ -129,11 +132,11 @@ export function AdminAccessFields(props: AdminAccessFieldsProps) {
     <>
       <div className="strategy-divider" />
       <AccessSectionHeader />
-      <label className="field">
-        <span>Admin Authorization Key</span>
+      <div className="grid gap-2">
+        <Label className="text-sm font-medium">Admin Authorization Key</Label>
         <div className="field-with-action">
-          <input
-            className="mono"
+          <Input
+            className="font-mono"
             disabled={props.loading || isSaving}
             placeholder={keyPlaceholder}
             readOnly={!isEditing}
@@ -145,8 +148,9 @@ export function AdminAccessFields(props: AdminAccessFieldsProps) {
             onFocus={beginEditing}
             onKeyDown={handleKeyKeyDown}
           />
-          <button
-            className={isEditing ? "primary-button" : "secondary-button"}
+          <Button
+            size="sm"
+            variant={isEditing ? "default" : "secondary"}
             disabled={keyActionDisabled}
             type="button"
             onClick={() => {
@@ -159,10 +163,10 @@ export function AdminAccessFields(props: AdminAccessFieldsProps) {
           >
             {isEditing ? <Save size={14} /> : <Copy size={14} />}
             {keyActionLabel}
-          </button>
+          </Button>
         </div>
-        <p className="field-note">{keyNote}</p>
-      </label>
+        <p className="text-muted-foreground text-xs">{keyNote}</p>
+      </div>
     </>
   );
 }
