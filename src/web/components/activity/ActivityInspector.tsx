@@ -3,6 +3,10 @@ import { AlertTriangle, GitBranch, KeyRound, Server, Timer, Wrench } from "lucid
 import { PayloadToolbar } from "./PayloadToolbar";
 import type { ActivityDetailRecord } from "@shared/contracts";
 import { EmptyState, LoadingOverlay } from "../Feedback";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatDateTime, formatDuration, statusTone } from "../../format";
 
 type ActivityInspectorProps = {
@@ -31,13 +35,13 @@ function SummaryCard(
   }>,
 ) {
   return (
-    <article className="activity-summary-detail-card">
+    <div className="rounded-xl border border-border/60 bg-muted/20 p-3">
       <span>
         <props.icon size={12} />
         {props.label}
       </span>
       <strong>{props.value}</strong>
-    </article>
+    </div>
   );
 }
 
@@ -61,8 +65,8 @@ export function ActivityInspector(props: ActivityInspectorProps) {
 
   if (!props.loading && !props.error && !props.detail) {
     return (
-      <div className="activity-inspector-shell">
-        <section className="surface-card activity-pane activity-pane-sticky activity-pane-empty">
+      <div className="min-w-0 xl:max-h-[calc(100vh-180px)] xl:overflow-y-auto">
+        <section className="rounded-2xl border border-border/70 bg-card/95 shadow-sm backdrop-blur-xl">
           <EmptyState title="Select a request" description="Choose a request from the feed to inspect attempts, payloads, and diagnostics." />
         </section>
       </div>
@@ -70,100 +74,104 @@ export function ActivityInspector(props: ActivityInspectorProps) {
   }
 
   return (
-    <div className="activity-inspector-shell">
-      <section className="surface-card activity-pane activity-pane-sticky">
-        <div className="section-heading compact">
+    <div className="grid min-w-0 gap-4 xl:max-h-[calc(100vh-180px)] xl:overflow-y-auto">
+      <section className="rounded-2xl border border-border/70 bg-card/95 shadow-sm backdrop-blur-xl">
+        <div className="flex items-center justify-between gap-3 px-4 py-3.5">
           <div>
-            <div className="eyebrow">Inspector</div>
-            <h3>Selected request</h3>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Inspector</p>
+            <h3 className="mt-1 text-base font-semibold tracking-tight">Selected request</h3>
           </div>
-          {request ? <span className={`status-pill ${statusTone(request.status)}`}>{request.status}</span> : null}
+          {request ? <Badge variant={statusTone(request.status) === "success" ? "success" : statusTone(request.status) === "danger" ? "danger" : "warning"}>{request.status}</Badge> : null}
         </div>
 
-        {props.loading ? <LoadingOverlay label="Loading request detail" /> : null}
-        {!props.loading && props.error ? <p className="warning-banner">{props.error}</p> : null}
+        {props.loading ? <Skeleton className="h-[220px] rounded-2xl" /> : null}
+        {!props.loading && props.error ? <p className="m-4 rounded-xl border border-destructive/25 bg-destructive/10 px-3 py-2 text-sm text-destructive">{props.error}</p> : null}
         {!props.loading && request && diagnostics ? (
-          <div className="activity-inspector-stack">
-            <div className="activity-summary-detail-grid">
+          <div className="grid gap-4 p-4">
+            <div className="grid gap-3 sm:grid-cols-2">
               <SummaryCard icon={Wrench} label="Tool" value={request.toolName} />
               <SummaryCard icon={Server} label="Provider" value={request.finalProvider ?? "-"} />
               <SummaryCard icon={GitBranch} label="Attempts" value={String(request.attempts)} />
               <SummaryCard icon={Timer} label="Latency" value={formatDuration(request.durationMs)} />
             </div>
 
-            <article className="activity-diagnostics-card">
-              <div className="section-heading compact">
+            <Card>
+              <CardContent className="grid gap-3 p-4">
+              <div className="flex items-start justify-between gap-3">
                 <div>
-                  <div className="eyebrow">Diagnostics</div>
-                  <h3>Execution summary</h3>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Diagnostics</p>
+                  <h3 className="mt-1 text-base font-semibold tracking-tight">Execution summary</h3>
                 </div>
               </div>
-              <div className="activity-diagnostic-chip-row">
-                {diagnostics.isSlow ? <span className="status-pill warning">Slow request</span> : null}
-                {diagnostics.isFallback ? <span className="status-pill neutral">Fallback / retry</span> : null}
-                {diagnostics.primaryErrorType ? <span className="status-pill danger">{diagnostics.primaryErrorType}</span> : null}
+              <div className="flex flex-wrap gap-2">
+                {diagnostics.isSlow ? <Badge variant="warning">Slow request</Badge> : null}
+                {diagnostics.isFallback ? <Badge variant="neutral">Fallback / retry</Badge> : null}
+                {diagnostics.primaryErrorType ? <Badge variant="danger">{diagnostics.primaryErrorType}</Badge> : null}
               </div>
-              <p className="supporting">
+              <p className="m-0 text-sm text-muted-foreground">
                 {diagnostics.failureStageHint ?? "No diagnostic hint was required for this request."}
               </p>
-              <pre className="activity-code-block">{diagnostics.retryChainLabel}</pre>
-            </article>
+              <pre className="m-0 max-h-52 overflow-auto rounded-xl border border-border/60 bg-background/80 p-3 font-mono text-xs leading-relaxed text-muted-foreground">{diagnostics.retryChainLabel}</pre>
+              </CardContent>
+            </Card>
 
             {request.errorSummary ? (
-              <article className="activity-error-panel">
-                <div className="section-heading compact">
+              <Card className="border-destructive/25">
+                <CardContent className="grid gap-3 p-4">
+                <div className="flex items-start justify-between gap-3">
                   <div>
-                    <div className="eyebrow">Error Summary</div>
-                    <h3>Top-level request error</h3>
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-destructive">Error Summary</p>
+                    <h3 className="mt-1 text-base font-semibold tracking-tight">Top-level request error</h3>
                   </div>
-                  <span className="status-pill danger">
+                  <Badge variant="danger">
                     <AlertTriangle size={11} />
                     request
-                  </span>
+                  </Badge>
                 </div>
-                <pre className="activity-code-block">{request.errorSummary}</pre>
-              </article>
+                <pre className="m-0 max-h-52 overflow-auto rounded-xl border border-destructive/20 bg-destructive/10 p-3 font-mono text-xs leading-relaxed text-destructive">{request.errorSummary}</pre>
+                </CardContent>
+              </Card>
             ) : null}
           </div>
         ) : null}
       </section>
 
-      <section className="surface-card activity-pane activity-pane-sticky">
-        <div className="section-heading compact">
+      <section className="rounded-2xl border border-border/70 bg-card/95 shadow-sm backdrop-blur-xl">
+        <div className="px-4 py-3.5">
           <div>
-            <div className="eyebrow">Timeline</div>
-            <h3>Attempts & payloads</h3>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Timeline</p>
+            <h3 className="mt-1 text-base font-semibold tracking-tight">Attempts & payloads</h3>
           </div>
         </div>
 
-        {props.loading ? <LoadingOverlay label="Loading request detail" /> : null}
+        {props.loading ? <Skeleton className="h-[260px] rounded-2xl" /> : null}
         {!props.loading && !props.error && props.detail ? (
-          <div className="activity-inspector-stack">
-            <article className="activity-attempt-panel">
-              <div className="activity-attempt-timeline">
+          <div className="grid gap-4 p-4">
+            <Card>
+              <CardContent className="grid gap-3 p-4">
                 {props.detail.attempts.length === 0 ? (
-                  <div className="activity-payload-empty">
-                    <GitBranch className="text-dim" size={32} style={{ marginBottom: "1rem", opacity: 0.5 }} />
-                    <h4>Direct / Inline Lifecycle</h4>
-                    <p className="supporting compact">
+                  <div className="grid place-items-center px-6 py-10 text-center text-muted-foreground">
+                    <GitBranch className="mb-4 size-8 opacity-50" />
+                    <h4 className="m-0 mt-4 text-lg font-semibold text-foreground">Direct / Inline Lifecycle</h4>
+                    <p className="m-0 text-xs">
                       This request was handled directly by the service process without generating external retry or multi-attempt step chains.
                     </p>
                   </div>
                 ) : (
                   props.detail.attempts.map((attempt) => (
-                    <article key={attempt.id} className="activity-attempt-item">
-                      <div className="activity-attempt-marker" />
-                      <div className="activity-attempt-body">
-                        <div className="activity-attempt-top">
+                    <article key={attempt.id} className="grid grid-cols-[auto_minmax(0,1fr)] gap-3">
+                      <div aria-hidden="true" className="w-2 rounded-full bg-gradient-to-b from-primary/70 to-primary/10" />
+                      <div className="rounded-2xl border border-border/60 bg-background/60 p-3">
+                        <div className="flex items-center justify-between gap-2">
                           <strong>{attempt.attemptNo}. {attempt.provider}</strong>
-                          <span className={`status-pill ${statusTone(attempt.status)}`}>{attempt.status}</span>
+                          <Badge variant={statusTone(attempt.status) === "success" ? "success" : statusTone(attempt.status) === "danger" ? "danger" : "warning"}>{attempt.status}</Badge>
                         </div>
-                        <div className="activity-attempt-meta">
-                          <span><Timer size={11} />{formatDuration(attempt.durationMs)}</span>
-                          <span><KeyRound size={11} />{attempt.keyFingerprint ?? "-"}</span>
+                        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                          <span className="inline-flex items-center gap-1"><Timer className="size-3" />{formatDuration(attempt.durationMs)}</span>
+                          <span className="inline-flex items-center gap-1"><KeyRound className="size-3" />{attempt.keyFingerprint ?? "-"}</span>
                           <span>{formatDateTime(attempt.createdAt)}</span>
                         </div>
-                        <p className="supporting compact">
+                        <p className="m-0 mt-2 text-xs">
                           {attempt.errorType ? `${attempt.errorType}: ` : ""}
                           {attempt.errorSummary ?? "Completed without an error summary."}
                         </p>
@@ -171,35 +179,31 @@ export function ActivityInspector(props: ActivityInspectorProps) {
                     </article>
                   ))
                 )}
-              </div>
-            </article>
+            </CardContent>
+          </Card>
 
-            <article className="activity-payload-panel">
+            <Card>
               <PayloadToolbar
                 activeTab={activeTab}
                 payloadContent={payloadMap?.[activeTab] !== "-" ? payloadMap?.[activeTab] : null}
                 wordWrap={wordWrap}
                 onToggleWrap={() => setWordWrap(!wordWrap)}
               />
-              <div className="activity-tab-row activity-payload-tabs" role="tablist" aria-label="Payload inspector tabs">
-                <button type="button" className={`activity-tab${activeTab === "input" ? " activity-tab-active" : ""}`} onClick={() => setActiveTab("input")}>Input</button>
-                <button type="button" className={`activity-tab${activeTab === "output" ? " activity-tab-active" : ""}`} onClick={() => setActiveTab("output")}>Output</button>
-                <button type="button" className={`activity-tab${activeTab === "metadata" ? " activity-tab-active" : ""}`} onClick={() => setActiveTab("metadata")}>Metadata</button>
-                <button type="button" className={`activity-tab${activeTab === "messages" ? " activity-tab-active" : ""}`} onClick={() => setActiveTab("messages")}>Messages</button>
-              </div>
-              {payloadMap?.[activeTab] === "-" ? (
-                <div className="activity-payload-empty">
-                  <p>No content captured for {activeTab}</p>
-                </div>
-              ) : (
-                <pre 
-                  className="activity-code-block"
-                  style={{ whiteSpace: wordWrap ? "pre-wrap" : "pre" }}
-                >
-                  {payloadMap?.[activeTab]}
-                </pre>
-              )}
-            </article>
+              <Tabs className="px-3.5 pb-3.5" onValueChange={(value) => setActiveTab(value as InspectorTab)} value={activeTab}>
+                <TabsList aria-label="Payload inspector tabs" className="w-full justify-start">
+                  <TabsTrigger value="input">Input</TabsTrigger><TabsTrigger value="output">Output</TabsTrigger><TabsTrigger value="metadata">Metadata</TabsTrigger><TabsTrigger value="messages">Messages</TabsTrigger>
+                </TabsList>
+                {(["input", "output", "metadata", "messages"] as const).map((tabName) => (
+                  <TabsContent key={tabName} forceMount value={tabName}>
+                    {activeTab === tabName && payloadMap?.[tabName] === "-" ? (
+                      <div className="grid min-h-56 place-items-center px-6 py-8 text-center text-sm text-muted-foreground"><p className="m-0">No content captured for {tabName}</p></div>
+                    ) : activeTab === tabName ? (
+                      <pre className={`m-0 max-h-96 overflow-auto rounded-xl border border-border/60 bg-background/80 p-3 font-mono text-xs leading-relaxed text-muted-foreground ${wordWrap ? "whitespace-pre-wrap break-words" : "whitespace-pre"}`}>{payloadMap?.[tabName]}</pre>
+                    ) : null}
+                  </TabsContent>
+                ))}
+              </Tabs>
+            </Card>
           </div>
         ) : null}
       </section>

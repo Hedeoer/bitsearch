@@ -198,7 +198,7 @@ export function ActivityWorkbench() {
   }
 
   return (
-    <section className="activity-workspace">
+    <section className="grid gap-4">
       <ActivityFiltersBar
         facets={facets}
         filters={filters}
@@ -210,7 +210,7 @@ export function ActivityWorkbench() {
         onRefresh={() => setRefreshTick((value) => value + 1)}
       />
       <ActivitySummaryRail loading={listLoading} summary={summary} />
-      <div className="activity-main-grid">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,0.85fr)_minmax(1.15fr,0)]">
         <ActivityFeed
           error={listError}
           hasActiveFilters={hasActiveActivityFilters(filters)}

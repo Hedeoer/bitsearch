@@ -1,6 +1,7 @@
 import type { RemoteProvider, ProviderConfigRecord } from "@shared/contracts";
 import type { ProviderDraft } from "../../types";
 import type { ProviderSaveErrors } from "../../provider-actions";
+import { Badge } from "@/components/ui/badge";
 
 type ProviderMasterCardProps = Readonly<{
   provider: RemoteProvider;
@@ -15,18 +16,18 @@ type ProviderMasterCardProps = Readonly<{
 
 function getStatusBadge(props: ProviderMasterCardProps) {
   if (props.isSaving) {
-    return <span className="text-xs text-amber-400">Saving...</span>;
+    return <Badge variant="warning">Saving...</Badge>;
   }
   if (props.hasError) {
-    return <span className="text-xs text-red-400">Error</span>;
+    return <Badge variant="danger">Error</Badge>;
   }
   if (props.isDirty) {
-    return <span className="text-xs text-amber-400">Unsaved</span>;
+    return <Badge variant="warning">Unsaved</Badge>;
   }
   if (props.draft.enabled) {
-    return <span className="text-xs text-emerald-400">✓ Ready</span>;
+    return <Badge variant="success">Ready</Badge>;
   }
-  return <span className="text-xs text-[color:var(--text-dim)]">Disabled</span>;
+  return <Badge variant="neutral">Disabled</Badge>;
 }
 
 export function ProviderMasterCard(props: ProviderMasterCardProps) {
@@ -39,10 +40,10 @@ export function ProviderMasterCard(props: ProviderMasterCardProps) {
       className={`
         w-full rounded-[16px] border p-3 text-left transition-all
         ${props.isSelected
-          ? "border-cyan-400/40 bg-cyan-400/10"
-          : "border-white/8 bg-white/4 hover:border-white/16 hover:bg-white/6"
+          ? "border-primary/40 bg-primary/10"
+          : "border-border/70 bg-card/95 hover:border-primary/25 hover:bg-accent/20"
         }
-        ${isCore ? "border-l-4 border-l-cyan-400" : ""}
+        ${isCore ? "border-l-4 border-l-primary" : ""}
       `}
     >
       <div className="flex items-start justify-between gap-2">
@@ -52,12 +53,12 @@ export function ProviderMasterCard(props: ProviderMasterCardProps) {
               {props.provider}
             </span>
             {isCore && (
-              <span className="rounded-full bg-cyan-400/20 px-2 py-0.5 text-[10px] font-medium text-cyan-300">
+              <Badge className="text-[10px]" variant="default">
                 Core
-              </span>
+              </Badge>
             )}
           </div>
-          <div className="mt-1 text-xs text-[color:var(--text-dim)]">
+          <div className="mt-1 text-xs text-muted-foreground">
             {props.provider === "search_engine" ? "Search Layer" : "Provider Runtime"}
           </div>
         </div>
@@ -65,7 +66,7 @@ export function ProviderMasterCard(props: ProviderMasterCardProps) {
       </div>
 
       {props.draft.enabled && (
-        <div className="mt-2 text-xs text-[color:var(--text-soft)]">
+        <div className="mt-2 text-xs text-muted-foreground">
           {props.provider === "search_engine"
             ? `${props.draft.apiKey ? "API key saved" : "No key"}`
             : `${props.providerRecord.keyCount} key(s)`

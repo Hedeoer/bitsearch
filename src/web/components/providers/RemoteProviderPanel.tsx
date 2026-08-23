@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/card";
 import type { ProviderDraft } from "../../types";
 import { LoadingOverlay } from "../Feedback";
+import { Input } from "@/components/ui/input";
 import {
   FieldShell,
   PanelBadges,
@@ -30,7 +31,7 @@ export function RemoteProviderPanel(props: RemoteProviderPanelProps) {
       <CardHeader className="pb-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <div className="eyebrow">Provider Runtime</div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Provider Runtime</p>
             <CardTitle className="mt-2">{props.provider.provider}</CardTitle>
             <CardDescription className="mt-2">
               Keys stay in Key Pools. This card only controls provider availability and network
@@ -52,12 +53,12 @@ export function RemoteProviderPanel(props: RemoteProviderPanelProps) {
       </CardHeader>
       <CardContent className="grid gap-4">
         {props.error ? (
-          <div className="rounded-[20px] border border-rose-300/18 bg-rose-300/10 px-4 py-3 text-sm text-[color:var(--danger)]">
+          <div className="rounded-[20px] border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
             {props.error}
           </div>
         ) : null}
         <FieldShell title="Base URL" description="Root endpoint for this provider. Leave blank to use the default.">
-          <input
+          <Input
             className="font-['IBM_Plex_Mono']"
             disabled={props.busy}
             type="text"
@@ -67,7 +68,7 @@ export function RemoteProviderPanel(props: RemoteProviderPanelProps) {
         </FieldShell>
         <FieldShell title="Timeout" description="Applied to provider requests made with managed keys.">
           <div className="relative">
-            <input
+            <Input
               className="pr-11 font-['IBM_Plex_Mono']"
               disabled={props.busy}
               inputMode="numeric"
@@ -79,16 +80,16 @@ export function RemoteProviderPanel(props: RemoteProviderPanelProps) {
                 })
               }
             />
-            <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs text-[color:var(--text-dim)]">
+              <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
               ms
             </span>
           </div>
         </FieldShell>
-        <div className="rounded-[22px] border border-white/8 bg-[color:var(--ui-card-soft)] p-4">
-          <div className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--text-dim)]">
+        <div className="rounded-[22px] border border-border/70 bg-muted/20 p-4">
+          <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
             Key Management
           </div>
-          <p className="mt-3 text-sm leading-6 text-[color:var(--text-soft)]">
+          <p className="mt-3 text-sm leading-6 text-muted-foreground">
             Credential inventory, enable/disable, health, and rotation all live in Key Pools for
             {` ${props.provider.provider}`}.
           </p>

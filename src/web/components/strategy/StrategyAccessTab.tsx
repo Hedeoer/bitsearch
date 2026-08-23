@@ -9,8 +9,8 @@ export function StrategyAccessTab(
   >,
 ) {
   return (
-    <div className="strategy-access-embedded grid gap-4">
-      <div className="rounded-[22px] border border-white/8 bg-[color:var(--ui-card-soft)] p-4">
+    <div className="grid gap-4">
+      <div className="rounded-[22px] border border-border/70 bg-card/95 p-4 shadow-sm backdrop-blur-xl">
         <AdminAccessFields
           adminAccess={props.adminAccess}
           loading={props.loading}
@@ -18,7 +18,7 @@ export function StrategyAccessTab(
           onToast={props.onToast}
         />
       </div>
-      <div className="rounded-[22px] border border-white/8 bg-[color:var(--ui-card-soft)] p-4">
+      <div className="rounded-[22px] border border-border/70 bg-card/95 p-4 shadow-sm backdrop-blur-xl">
         <McpAccessFields
           loading={props.loading}
           mcpAccess={props.mcpAccess}

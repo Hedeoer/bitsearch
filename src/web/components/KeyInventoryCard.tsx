@@ -1,5 +1,32 @@
 import { useEffect, useState } from "react";
-import { Eye, EyeOff, Copy, Trash2, FlaskConical, RefreshCw, Power, MoreHorizontal, Edit2, CheckCircle, AlertCircle, XCircle, Activity, Clock, Database } from "lucide-react";
+import {
+  Activity,
+  AlertCircle,
+  CheckCircle,
+  Clock,
+  Copy,
+  Database,
+  Edit2,
+  Eye,
+  EyeOff,
+  FlaskConical,
+  MoreHorizontal,
+  Power,
+  RefreshCw,
+  Trash2,
+  XCircle,
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { TableRow, TableCell } from "@/components/ui/table";
 import type {
   FirecrawlHistoricalQuotaSnapshot,
   FirecrawlTeamQuotaSnapshot,
@@ -80,19 +107,10 @@ function MetaSep() {
   return <span className="meta-sep" aria-hidden="true">·</span>;
 }
 
-function MetaItem(props: { label: string; value: string }) {
-  return (
-    <>
-      <span className="meta-label">{props.label}</span>
-      <span className="meta-value">{props.value}</span>
-    </>
-  );
-}
 
 export function KeyInventoryCard(props: KeyCardProps) {
   const [noteDraft, setNoteDraft] = useState(props.item.note);
   const [isNoteOpen, setIsNoteOpen] = useState(false);
-  const [isMoreActionsOpen, setIsMoreActionsOpen] = useState(false);
 
   useEffect(() => {
     setNoteDraft(props.item.note);
@@ -107,116 +125,90 @@ export function KeyInventoryCard(props: KeyCardProps) {
       );
 
   return (
-    <article 
-      className={`compact-key-card ${props.selected ? "key-card-selected" : ""}`}
+    <TableRow
+      aria-selected={props.selected}
+      className={props.selected ? "bg-primary/8" : undefined}
+      data-state={props.selected ? "selected" : undefined}
       onClick={() => props.onToggleSelected(props.item.id)}
-      style={{ cursor: 'pointer' }}
     >
-      {/* Row 1: Status, Key, Inline Icons */}
-      <div className="compact-row-upper">
-        
+      <TableCell className="min-w-[220px] max-w-[320px] align-top">
         {(() => {
-          if (!props.item.enabled) {
-            return <span className="status-pill danger" style={{ padding: '0.15rem 0.5rem', borderRadius: '12px', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><XCircle size={12}/> Disabled</span>;
-          }
-          if (props.item.healthStatus === "unhealthy") {
-            return <span className="status-pill danger" style={{ padding: '0.15rem 0.5rem', borderRadius: '12px', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={12}/> Error</span>;
-          }
-          return <span className="status-pill positive" style={{ padding: '0.15rem 0.5rem', borderRadius: '12px', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'rgba(56, 178, 102, 0.15)', color: '#4ADE80', border: 'none' }}><CheckCircle size={12}/> Active</span>;
+          if (!props.item.enabled) return <Badge variant="danger"><XCircle size={12} /> Disabled</Badge>;
+          if (props.item.healthStatus === "unhealthy") return <Badge variant="danger"><AlertCircle size={12} /> Error</Badge>;
+          return <Badge variant="success"><CheckCircle size={12} /> Active</Badge>;
         })()}
-
-        <span className="compact-key-string" title={`Fingerprint: ${props.item.fingerprint}`}>
+        <p className="mt-2 truncate font-mono text-xs text-muted-foreground" title={`Fingerprint: ${props.item.fingerprint}`}>
           {props.revealedValue ?? props.item.maskedValue}
-        </span>
-
-        <div style={{ display: 'flex', gap: '0.15rem' }}>
-          <button className="tiny-icon-btn" title="Edit Note" onClick={(e) => { e.stopPropagation(); setIsNoteOpen(!isNoteOpen); }}>
-             <Edit2 size={13} />
-          </button>
-          <button className="tiny-icon-btn" disabled={props.isRevealing} title={props.revealedValue ? "Hide Key" : "Reveal Key"} onClick={(e) => { e.stopPropagation(); props.onToggleReveal(props.item.id); }}>
-             {props.isRevealing ? <InlineSpinner label=""/> : props.revealedValue ? <EyeOff size={13} /> : <Eye size={13} />}
-          </button>
-          <button className="tiny-icon-btn" disabled={props.isCopying || props.isRevealing} title="Copy Key" onClick={(e) => { e.stopPropagation(); props.onCopy(props.item.id); }}>
-             {props.isCopying ? <InlineSpinner label=""/> : <Copy size={13} />}
-          </button>
-        </div>
-      </div>
-
-      {/* Row 2: Metrics OR Note Editor */}
-      <div className="compact-row-lower">
-        {isNoteOpen ? (
-          <div style={{ display: 'flex', gap: '0.4rem', width: '100%', alignItems: 'center' }} onClick={(e) => e.stopPropagation()}>
-            <input
-              style={{ flex: 1, padding: '0.2rem 0.5rem', fontSize: '0.8rem', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)' }}
-              value={noteDraft}
-              onChange={(e) => setNoteDraft(e.target.value)}
-              placeholder="Add note... (Press Enter to save)"
-              autoFocus
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !props.isSavingNote) {
-                  props.onSaveNote(props.item.id, noteDraft);
-                  setIsNoteOpen(false);
-                } else if (e.key === 'Escape') {
-                  setNoteDraft(props.item.note);
-                  setIsNoteOpen(false);
-                }
-              }}
-            />
-            <button className="text-action-link primary" disabled={props.isSavingNote} onClick={(e) => { e.stopPropagation(); props.onSaveNote(props.item.id, noteDraft); setIsNoteOpen(false); }}>Save</button>
-            <button className="text-action-link neutral" onClick={(e) => { e.stopPropagation(); setNoteDraft(props.item.note); setIsNoteOpen(false); }}>Cancel</button>
-          </div>
-        ) : (
-          <>
-            <div style={{ display: 'flex', gap: '0.85rem', alignItems: 'center', flexWrap: 'wrap' }}>
-              <span title="Requests" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                <Activity size={12} /> <strong>{formatNumber(props.item.requestCount)}</strong>
-              </span>
-              <span title="Failures" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: props.item.failureCount > 0 ? 'var(--danger)' : 'inherit' }}>
-                <AlertCircle size={12} /> <strong>{formatNumber(props.item.failureCount)}</strong>
-              </span>
-              <span title={`Used (Created: ${formatDateTime(props.item.createdAt)})`} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                <Clock size={12} /> {formatDateTime(props.item.lastUsedAt)}
-              </span>
-              <span
-                title={props.item.provider === "firecrawl" ? "Used / Remaining" : "Quota"}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-              >
-                <Database size={12} /> {quotaText}
-              </span>
-              {props.item.note && (
-                <>
-                   <span style={{ color: 'var(--border)', userSelect: 'none' }}>|</span>
-                   <span style={{ color: 'rgba(0, 229, 255, 0.8)', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '3px' }}><Edit2 size={10}/> {props.item.note}</span>
-                </>
-              )}
-            </div>
-            <div style={{ flex: 1 }} />
-            
-            <div style={{ display: 'flex', gap: '0.1rem' }}>
-              {!isMoreActionsOpen ? (
-                <button className="text-action-link neutral" onClick={(e) => { e.stopPropagation(); setIsMoreActionsOpen(true); }} style={{ padding: '0 0.2rem' }}>
-                  <MoreHorizontal size={14} />
-                </button>
-              ) : (
-                <>
-                   <button className="text-action-link primary" disabled={props.isTesting} onClick={(e) => { e.stopPropagation(); props.onTest([props.item.id]); }}>Test</button>
-                   <button className="text-action-link neutral" disabled={props.isSyncing} onClick={(e) => { e.stopPropagation(); props.onSyncQuota([props.item.id]); }}>Sync</button>
-                   <button className="text-action-link neutral" disabled={props.isTogglingEnabled} onClick={(e) => { e.stopPropagation(); props.onToggleEnabled(props.item.id, !props.item.enabled); }}>{props.item.enabled ? "Disable" : "Enable"}</button>
-                   <button className="text-action-link danger" disabled={props.isDeleting} onClick={(e) => { e.stopPropagation(); props.onDelete([props.item.id]); }}>Delete</button>
-                   <button className="text-action-link neutral" onClick={(e) => { e.stopPropagation(); setIsMoreActionsOpen(false); }}>Less</button>
-                </>
-              )}
-            </div>
-          </>
-        )}
-      </div>
-
-      {/* Row 3 (Optional Error Context) */}
-      {(props.item.lastError || props.item.lastCheckError) && !isNoteOpen && (
-        <p className="supporting compact key-card-error" style={{ padding: '0.2rem 0.5rem', margin: '0', fontSize: '0.75rem' }}>
-          {props.item.lastCheckError ?? props.item.lastError}
         </p>
-      )}
-    </article>
+      </TableCell>
+      <TableCell className="align-top">
+        {isNoteOpen ? (
+          <Input
+            autoFocus
+            className="h-8 font-mono text-xs"
+            value={noteDraft}
+            onChange={(event) => setNoteDraft(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && !props.isSavingNote) {
+                props.onSaveNote(props.item.id, noteDraft);
+                setIsNoteOpen(false);
+              } else if (event.key === "Escape") {
+                setNoteDraft(props.item.note);
+                setIsNoteOpen(false);
+              }
+            }}
+            placeholder="Add note... (Press Enter to save)"
+          />
+        ) : (
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+            <span title="Requests" className="inline-flex items-center gap-1"><Activity size={12} /><strong>{formatNumber(props.item.requestCount)}</strong></span>
+            <span title="Failures" className={props.item.failureCount > 0 ? "text-destructive inline-flex items-center gap-1" : "inline-flex items-center gap-1"}>
+              <AlertCircle size={12} /><strong>{formatNumber(props.item.failureCount)}</strong>
+            </span>
+            <span title="Last used" className="inline-flex items-center gap-1"><Clock size={12} />{formatDateTime(props.item.lastUsedAt)}</span>
+            <span title="Quota" className="inline-flex items-center gap-1"><Database size={12} />{quotaText}</span>
+            {props.item.note ? <span className="inline-flex items-center gap-1 text-primary"><Edit2 size={10} />{props.item.note}</span> : null}
+          </div>
+        )}
+        {(props.item.lastError || props.item.lastCheckError) && !isNoteOpen ? (
+          <p className="mt-2 text-xs text-destructive">{props.item.lastCheckError ?? props.item.lastError}</p>
+        ) : null}
+      </TableCell>
+      <TableCell className="w-[168px] align-top">
+        <div className="flex items-center justify-end gap-1" onClick={(event) => event.stopPropagation()}>
+          <Button aria-label="Edit note" className="size-7" size="icon" type="button" variant="ghost" onClick={() => setIsNoteOpen(!isNoteOpen)}>
+            <Edit2 className="size-3.5" />
+          </Button>
+          <Button aria-label={props.revealedValue ? "Hide key" : "Reveal key"} className="size-7" disabled={props.isRevealing} size="icon" type="button" variant="ghost" onClick={() => props.onToggleReveal(props.item.id)}>
+            {props.isRevealing ? <InlineSpinner label="" /> : props.revealedValue ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+          </Button>
+          <Button aria-label="Copy key" className="size-7" disabled={props.isCopying || props.isRevealing} size="icon" type="button" variant="ghost" onClick={() => props.onCopy(props.item.id)}>
+            {props.isCopying ? <InlineSpinner label="" /> : <Copy className="size-3.5" />}
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button aria-label="Key actions" className="size-7" size="icon" type="button" variant="ghost">
+                <MoreHorizontal className="size-3.5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem disabled={props.isTesting} onSelect={() => props.onTest([props.item.id])}>
+                <FlaskConical className="size-3.5" /> Test
+              </DropdownMenuItem>
+              <DropdownMenuItem disabled={props.isSyncing} onSelect={() => props.onSyncQuota([props.item.id])}>
+                <RefreshCw className="size-3.5" /> Sync
+              </DropdownMenuItem>
+              <DropdownMenuItem disabled={props.isTogglingEnabled} onSelect={() => props.onToggleEnabled(props.item.id, !props.item.enabled)}>
+                <Power className="size-3.5" /> {props.item.enabled ? "Disable" : "Enable"}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem disabled={props.isDeleting} variant="destructive" onSelect={() => props.onDelete([props.item.id])}>
+                <Trash2 className="size-3.5" /> Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </TableCell>
+    </TableRow>
   );
 }

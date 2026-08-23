@@ -2,6 +2,9 @@ import { useState } from "react";
 import type { FocusEvent, KeyboardEvent } from "react";
 import { Copy, KeyRound, Save } from "lucide-react";
 import type { McpAccessInfo, McpAccessSecretResponse } from "@shared/contracts";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { apiRequest } from "../api";
 import type { ToastTone } from "./Feedback";
 
@@ -14,12 +17,12 @@ type McpAccessFieldsProps = Readonly<{
 
 function AccessSectionHeader() {
   return (
-    <div className="section-heading compact">
+    <div className="flex items-start justify-between gap-3">
       <div>
-        <div className="eyebrow">MCP Access</div>
-        <h3>Stream HTTP</h3>
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">MCP Access</p>
+        <h3 className="mt-1 text-base font-semibold tracking-tight">Stream HTTP</h3>
       </div>
-      <KeyRound size={16} className="section-icon" />
+      <KeyRound className="size-4 text-primary" />
     </div>
   );
 }
@@ -33,24 +36,25 @@ function AccessUrlField(
   }>,
 ) {
   return (
-    <label className="field">
-      <span>MCP Stream HTTP URL</span>
-      <div className="field-with-action">
-        <input className="mono" readOnly value={props.streamHttpUrl} />
-        <button
-          className="secondary-button"
+    <div className="grid gap-2">
+      <Label className="text-sm font-medium">MCP Stream HTTP URL</Label>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <Input className="font-mono" readOnly value={props.streamHttpUrl} />
+        <Button
+          size="sm"
+          variant="secondary"
           disabled={props.disabled}
           type="button"
           onClick={props.onCopy}
         >
           <Copy size={14} />
           Copy URL
-        </button>
+        </Button>
       </div>
-      <p className="field-note mono">
+      <p className="text-muted-foreground font-mono text-xs">
         Authorization: {props.authScheme} {"<token>"}
       </p>
-    </label>
+    </div>
   );
 }
 
@@ -174,7 +178,6 @@ export function McpAccessFields(props: McpAccessFieldsProps) {
 
   return (
     <>
-      <div className="strategy-divider" />
       <AccessSectionHeader />
       <AccessUrlField
         authScheme={props.mcpAccess.authScheme}
@@ -182,11 +185,11 @@ export function McpAccessFields(props: McpAccessFieldsProps) {
         streamHttpUrl={props.mcpAccess.streamHttpUrl}
         onCopy={() => void copyStreamHttpUrl()}
       />
-      <label className="field">
-        <span>MCP Access Key</span>
-        <div className="field-with-action">
-          <input
-            className="mono"
+      <div className="grid gap-2">
+        <Label className="text-sm font-medium">MCP Access Key</Label>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <Input
+            className="font-mono"
             disabled={props.loading || isSaving}
             placeholder={tokenPlaceholder}
             readOnly={!isEditing}
@@ -198,8 +201,9 @@ export function McpAccessFields(props: McpAccessFieldsProps) {
             onFocus={beginEditing}
             onKeyDown={handleTokenKeyDown}
           />
-          <button
-            className={isEditing ? "primary-button" : "secondary-button"}
+          <Button
+            size="sm"
+            variant={isEditing ? "default" : "secondary"}
             disabled={tokenActionDisabled}
             type="button"
             onClick={() => {
@@ -212,10 +216,10 @@ export function McpAccessFields(props: McpAccessFieldsProps) {
           >
             {isEditing ? <Save size={14} /> : <Copy size={14} />}
             {tokenActionLabel}
-          </button>
+          </Button>
         </div>
-        <p className="field-note">{tokenNote}</p>
-      </label>
+        <p className="text-muted-foreground text-xs">{tokenNote}</p>
+      </div>
     </>
   );
 }

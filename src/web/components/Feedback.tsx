@@ -1,3 +1,15 @@
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+
 export type ToastTone = "success" | "error" | "warning" | "info";
 
 export type ToastItem = {
@@ -30,60 +42,33 @@ type EmptyStateProps = {
   onAction?: () => void;
 };
 
-export function ToastViewport(props: ToastViewportProps) {
-  if (props.items.length === 0) {
-    return null;
-  }
-  return (
-    <aside className="toast-viewport" aria-live="polite" aria-atomic="true">
-      {props.items.map((item) => (
-        <section key={item.id} className={`toast-card toast-${item.type}`}>
-          <p>{item.message}</p>
-          <button
-            className="text-button"
-            type="button"
-            onClick={() => props.onDismiss(item.id)}
-          >
-            Close
-          </button>
-        </section>
-      ))}
-    </aside>
-  );
-}
-
 export function ConfirmDialog(props: ConfirmDialogProps) {
-  if (!props.open) {
-    return null;
-  }
   return (
-    <div className="dialog-backdrop" role="presentation" onClick={props.onCancel}>
-      <section
-        className="dialog-card"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="confirm-dialog-title"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="eyebrow">Confirm action</div>
-        <h3 id="confirm-dialog-title">{props.title}</h3>
-        <p className="supporting">{props.description}</p>
-        <div className="dialog-actions">
-          <button className="secondary-button" type="button" onClick={props.onCancel}>
-            {props.cancelLabel ?? "Cancel"}
-          </button>
-          <button
-            className={props.danger ? "danger-button" : "primary-button"}
-            disabled={props.pending}
-            type="button"
-            onClick={props.onConfirm}
-          >
-            {props.pending ? <InlineSpinner label="Working" /> : null}
-            {props.confirmLabel}
-          </button>
-        </div>
-      </section>
-    </div>
+    <AlertDialog open={props.open}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{props.title}</AlertDialogTitle>
+          <AlertDialogDescription>{props.description}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel asChild>
+            <Button variant="outline" onClick={props.onCancel}>
+              {props.cancelLabel ?? "Cancel"}
+            </Button>
+          </AlertDialogCancel>
+          <AlertDialogAction asChild>
+            <Button
+              disabled={props.pending}
+              variant={props.danger ? "destructive" : "default"}
+              onClick={props.onConfirm}
+            >
+              {props.pending ? <InlineSpinner label="Working" /> : null}
+              {props.confirmLabel}
+            </Button>
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 
@@ -108,14 +93,14 @@ export function InlineSpinner({ label }: { label: string }) {
 
 export function EmptyState(props: EmptyStateProps) {
   return (
-    <section className="empty-state">
-      <div className="eyebrow">Empty state</div>
-      <h4>{props.title}</h4>
-      <p className="supporting">{props.description}</p>
+    <section className="grid place-items-center gap-2 rounded-2xl border border-border/60 bg-muted/20 px-6 py-10 text-center">
+      <p className="m-0 text-xs font-semibold uppercase tracking-[0.16em] text-primary">Empty state</p>
+      <h4 className="m-0 mt-1 text-lg font-semibold tracking-tight">{props.title}</h4>
+      <p className="m-0 max-w-md text-sm text-muted-foreground">{props.description}</p>
       {props.actionLabel && props.onAction ? (
-        <button className="secondary-button" type="button" onClick={props.onAction}>
+        <Button type="button" variant="secondary" onClick={props.onAction}>
           {props.actionLabel}
-        </button>
+        </Button>
       ) : null}
     </section>
   );

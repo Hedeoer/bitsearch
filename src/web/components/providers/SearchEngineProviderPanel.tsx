@@ -7,6 +7,14 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Eye, EyeOff, KeyRound, RefreshCw } from "lucide-react";
 import type { ProviderDraft } from "../../types";
 import { InlineSpinner, LoadingOverlay } from "../Feedback";
@@ -53,7 +61,7 @@ export function SearchEngineProviderPanel(props: SearchEngineProviderPanelProps)
       <CardHeader className="pb-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <div className="eyebrow">Search Layer</div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Search Layer</p>
             <CardTitle className="mt-2">search_engine</CardTitle>
             <CardDescription className="mt-2 max-w-2xl">
               Configure the generic search endpoint, local credential, and default model used by
@@ -78,13 +86,13 @@ export function SearchEngineProviderPanel(props: SearchEngineProviderPanelProps)
       </CardHeader>
       <CardContent className="grid gap-4">
         {props.error ? (
-          <div className="rounded-[20px] border border-rose-300/18 bg-rose-300/10 px-4 py-3 text-sm text-[color:var(--danger)]">
+          <div className="rounded-[20px] border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
             {props.error}
           </div>
         ) : null}
         <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_220px]">
           <FieldShell title="Base URL">
-            <input
+            <Input
               className="font-['IBM_Plex_Mono']"
               disabled={props.busy}
               type="text"
@@ -94,7 +102,7 @@ export function SearchEngineProviderPanel(props: SearchEngineProviderPanelProps)
           </FieldShell>
           <FieldShell title="Timeout">
             <div className="relative">
-              <input
+              <Input
                 className="pr-11 font-['IBM_Plex_Mono']"
                 disabled={props.busy}
                 inputMode="numeric"
@@ -106,7 +114,7 @@ export function SearchEngineProviderPanel(props: SearchEngineProviderPanelProps)
                   })
                 }
               />
-              <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs text-[color:var(--text-dim)]">
+              <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
                 ms
               </span>
             </div>
@@ -116,19 +124,21 @@ export function SearchEngineProviderPanel(props: SearchEngineProviderPanelProps)
           title="API Format"
           description="Choose the upstream protocol for this search_engine endpoint."
         >
-          <select
-            className="font-['IBM_Plex_Mono']"
+          <Select
             disabled={props.busy}
             value={props.draft.apiFormat}
-            onChange={(event) =>
-              props.onDraftChange({ apiFormat: event.target.value as ProviderDraft["apiFormat"] })
+            onValueChange={(value) =>
+              props.onDraftChange({ apiFormat: value as ProviderDraft["apiFormat"] })
             }
           >
-            <option value="openai_chat_completions">OpenAI Chat Completions</option>
-            <option value="openai_responses">OpenAI Responses</option>
-            <option value="anthropic_messages">Anthropic Messages</option>
-            <option value="google_gemini">Google Gemini API</option>
-          </select>
+            <SelectTrigger className="w-full font-mono"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="openai_chat_completions">OpenAI Chat Completions</SelectItem>
+              <SelectItem value="openai_responses">OpenAI Responses</SelectItem>
+              <SelectItem value="anthropic_messages">Anthropic Messages</SelectItem>
+              <SelectItem value="google_gemini">Google Gemini API</SelectItem>
+            </SelectContent>
+          </Select>
         </FieldShell>
         <FieldShell
           title="API Key"
@@ -139,7 +149,7 @@ export function SearchEngineProviderPanel(props: SearchEngineProviderPanelProps)
           }
         >
           <div className="flex items-center gap-3">
-            <input
+            <Input
               className="font-['IBM_Plex_Mono']"
               disabled={props.busy}
               type={props.apiKeyInputType}
@@ -168,7 +178,7 @@ export function SearchEngineProviderPanel(props: SearchEngineProviderPanelProps)
           description={getSearchModelDescription(props.draft.apiFormat)}
         >
           <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto_auto]">
-            <input
+            <Input
               className="font-['IBM_Plex_Mono']"
               disabled={props.busy}
               placeholder="Type or probe a default model name"

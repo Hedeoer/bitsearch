@@ -38,29 +38,29 @@ type MetricCardProps = Readonly<{
 
 function getMetricToneClass(tone: MetricCardProps["tone"]) {
   if (tone === "success") {
-    return "border-emerald-400/16 bg-emerald-400/8";
+    return "border-success/20 bg-success/8";
   }
   if (tone === "warning") {
-    return "border-amber-300/16 bg-amber-300/8";
+    return "border-warning/20 bg-warning/8";
   }
   if (tone === "danger") {
-    return "border-rose-300/16 bg-rose-300/8";
+    return "border-destructive/20 bg-destructive/8";
   }
-  return "border-cyan-300/16 bg-cyan-400/8";
+  return "border-primary/20 bg-primary/8";
 }
 
 function MetricCard(props: MetricCardProps) {
   return (
     <div
-      className={`overview-subtle-card rounded-[22px] border p-4 ${getMetricToneClass(props.tone)}`}
+      className={`rounded-[22px] border bg-card/95 p-4 shadow-sm backdrop-blur-xl ${getMetricToneClass(props.tone)}`}
     >
-      <div className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--text-dim)]">
+      <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
         {props.label}
       </div>
-      <div className="mt-3 font-['Space_Grotesk'] text-[1.9rem] font-semibold tracking-[-0.04em] text-[color:var(--text)]">
+      <div className="mt-3 font-['Space_Grotesk'] text-[1.9rem] font-semibold tracking-[-0.04em]">
         {props.value}
       </div>
-      <div className="mt-2 text-sm leading-6 text-[color:var(--text-soft)]">
+      <div className="mt-2 text-sm leading-6 text-muted-foreground">
         {props.supporting}
       </div>
     </div>
@@ -69,11 +69,11 @@ function MetricCard(props: MetricCardProps) {
 
 function CompactFact(props: Readonly<{ label: string; value: string }>) {
   return (
-    <div className="rounded-[18px] border border-white/8 bg-white/4 px-4 py-3">
-      <div className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--text-dim)]">
+    <div className="rounded-[18px] border border-border/70 bg-muted/20 px-4 py-3">
+      <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
         {props.label}
       </div>
-      <div className="mt-2 text-sm font-medium text-[color:var(--text)]">{props.value}</div>
+      <div className="mt-2 text-sm font-medium">{props.value}</div>
     </div>
   );
 }
@@ -84,12 +84,12 @@ function PostureCard(props: Readonly<{
   supporting: string;
 }>) {
   return (
-    <div className="rounded-[18px] border border-white/8 bg-black/10 px-4 py-3">
-      <div className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--text-dim)]">
+    <div className="rounded-[18px] border border-border/70 bg-background/60 px-4 py-3">
+      <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
         {props.label}
       </div>
-      <div className="mt-2 text-sm font-medium text-[color:var(--text)]">{props.value}</div>
-      <div className="mt-1 text-xs leading-5 text-[color:var(--text-dim)]">
+      <div className="mt-2 text-sm font-medium">{props.value}</div>
+      <div className="mt-1 text-xs leading-5 text-muted-foreground">
         {props.supporting}
       </div>
     </div>
@@ -173,11 +173,10 @@ export function OverviewPulsePanel(props: OverviewPulsePanelProps) {
   return (
     <Card className="relative overflow-hidden">
       {props.loading ? <LoadingOverlay label="Refreshing overview" /> : null}
-      <div className="overview-grid-line absolute inset-0 opacity-35" aria-hidden="true" />
       <CardHeader className="relative pb-4">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="max-w-3xl">
-            <div className="eyebrow">Operations Snapshot</div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Operations Snapshot</p>
             <CardTitle className="mt-2 text-2xl">Operational overview</CardTitle>
             <CardDescription className="mt-3 max-w-2xl">
               Health, throughput, and routing state stay visible without repeating control details.
@@ -230,8 +229,8 @@ export function OverviewPulsePanel(props: OverviewPulsePanelProps) {
             </div>
           </div>
 
-          <div className="overview-subtle-card rounded-[24px] border border-white/8 bg-[color:var(--ui-card-soft)] p-5">
-            <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-[color:var(--text-dim)]">
+          <div className="grid gap-4 rounded-[24px] border border-border/70 bg-card/95 p-5 shadow-sm backdrop-blur-xl">
+            <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
               <Activity className="size-3.5" />
               System posture
             </div>

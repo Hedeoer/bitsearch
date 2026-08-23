@@ -3,11 +3,7 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import { App } from "./App";
 import "./app.css";
-import "./styles.css";
-import "./feedback.css";
-import "./activity.css";
-import "./key-pools.css";
-import "./providers.css";
+import "./admin-theme.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

@@ -1,5 +1,5 @@
 import * as React from "react";
-import * as TabsPrimitive from "@radix-ui/react-tabs";
+import { Tabs as TabsPrimitive } from "radix-ui";
 import { cn } from "@/lib/utils";
 
 const Tabs = TabsPrimitive.Root;
@@ -11,7 +11,7 @@ const TabsList = React.forwardRef<
   <TabsPrimitive.List
     ref={ref}
     className={cn(
-      "inline-flex h-auto w-full flex-wrap items-center gap-2 rounded-2xl border border-white/8 bg-white/4 p-2",
+      "inline-flex h-auto w-full flex-wrap items-center gap-2 rounded-2xl border border-border bg-muted p-2",
       className,
     )}
     {...props}
@@ -26,7 +26,7 @@ const TabsTrigger = React.forwardRef<
   <TabsPrimitive.Trigger
     ref={ref}
     className={cn(
-      "inline-flex min-h-9 items-center justify-center rounded-xl border border-transparent px-3 py-2 text-sm font-medium text-[color:var(--text-soft)] transition-all outline-none hover:text-[color:var(--text)] data-[state=active]:border-white/10 data-[state=active]:bg-white/8 data-[state=active]:text-[color:var(--text)] data-[state=active]:shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] focus-visible:ring-2 focus-visible:ring-[color:var(--ui-ring)]",
+      "inline-flex min-h-9 items-center justify-center rounded-xl border border-transparent px-3 py-2 text-sm font-medium text-muted-foreground transition-all outline-none hover:text-foreground data-[state=active]:border-border data-[state=active]:bg-background data-[state=active]:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50",
       className,
     )}
     {...props}

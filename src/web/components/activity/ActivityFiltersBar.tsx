@@ -1,5 +1,16 @@
 import { useState } from "react";
 import { ChevronUp, Clock, Download, Filter, RefreshCw, Search, SlidersHorizontal, X } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { ActivityFacets } from "@shared/contracts";
 import type { ActivityFilterState } from "./activity-utils";
 
@@ -47,170 +58,172 @@ export function ActivityFiltersBar(props: ActivityFiltersBarProps) {
   }
 
   return (
-    <section className="surface-card activity-command-card">
-      <div className="section-heading compact">
+    <section className="rounded-2xl border border-border/70 bg-card/95 p-4 shadow-sm backdrop-blur-xl sm:p-5">
+      <div className="flex items-start justify-between gap-3">
         <div>
-          <div className="eyebrow">Activity Command</div>
-          <h3>Trace, filter, and isolate slow or failing requests.</h3>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Activity Command</p>
+          <h3 className="mt-1 text-base font-semibold tracking-tight">Trace, filter, and isolate slow or failing requests.</h3>
         </div>
       </div>
 
-      <div className="activity-primary-filters">
-        <label className="activity-command-search">
-          <div className="activity-search-shell">
-            <Search size={14} />
-            <input
+      <div className="mt-4 grid items-center gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_190px_170px_auto]">
+        <div className="relative sm:col-span-2 lg:col-span-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
               type="search"
               value={props.filters.q}
               placeholder="tool, URL, provider, error, preview"
+              className="pl-9"
               onChange={(event) => props.onPatch({ q: event.target.value })}
             />
           </div>
-        </label>
 
-        <label className="field">
-          <div className="activity-select-with-icon">
-            <Clock size={13} />
-            <select
+        <div className="min-w-0">
+            <Select
               value={props.filters.timePreset}
-              onChange={(event) => props.onPatch({ timePreset: event.target.value as ActivityFilterState["timePreset"] })}
+              onValueChange={(value) => props.onPatch({ timePreset: value as ActivityFilterState["timePreset"] })}
             >
-              <option value="all">All time</option>
-              <option value="today">Today</option>
-              <option value="last_hour">Last hour</option>
-              <option value="last_24_hours">Last 24 hours</option>
-              <option value="custom">Custom range</option>
-            </select>
+              <SelectTrigger className="w-full">
+                <Clock className="size-4 text-muted-foreground" />
+                <SelectValue placeholder="All time" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All time</SelectItem>
+                <SelectItem value="today">Today</SelectItem>
+                <SelectItem value="last_hour">Last hour</SelectItem>
+                <SelectItem value="last_24_hours">Last 24 hours</SelectItem>
+                <SelectItem value="custom">Custom range</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-        </label>
 
-        <label className="field">
-          <select
+        <div className="min-w-0">
+          <Select
             value={props.filters.status}
-            onChange={(event) => props.onPatch({ status: event.target.value as ActivityFilterState["status"] })}
+            onValueChange={(value) => props.onPatch({ status: value === "all" ? "" : value as ActivityFilterState["status"] })}
           >
-            <option value="">All statuses</option>
-            <option value="success">Success</option>
-            <option value="failed">Failed</option>
-          </select>
-        </label>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="All statuses" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All statuses</SelectItem>
+              <SelectItem value="success">Success</SelectItem>
+              <SelectItem value="failed">Failed</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
-        <div className="activity-command-actions">
-          <button
-            className={`secondary-button activity-advanced-toggle${advancedCount > 0 ? " activity-advanced-toggle-active" : ""}`}
-            type="button"
-            onClick={() => setShowAdvanced(!showAdvanced)}
-          >
+        <div className="flex items-center justify-end gap-1.5 sm:col-span-2 lg:col-span-1">
+          <Button type="button" size="sm" variant={advancedCount > 0 ? "default" : "secondary"} onClick={() => setShowAdvanced(!showAdvanced)}>
             {showAdvanced ? <ChevronUp size={14} /> : <Filter size={14} />}
             <span>{advancedCount > 0 ? `Filters (${advancedCount})` : "More Filters"}</span>
-          </button>
-          <button className="icon-button" type="button" onClick={props.onRefresh} disabled={props.loading} title="Refresh">
+          </Button>
+          <Button aria-label="Refresh activity" className="size-8" disabled={props.loading} size="icon" type="button" variant="ghost" onClick={props.onRefresh}>
             <RefreshCw size={14} />
-          </button>
-          <button className="icon-button" type="button" onClick={props.onExport} title="Export CSV">
+          </Button>
+          <Button aria-label="Export activity CSV" className="size-8" size="icon" type="button" variant="ghost" onClick={props.onExport}>
             <Download size={14} />
-          </button>
+          </Button>
         </div>
       </div>
 
-      <div className="activity-segmented-row">
-        <div className="activity-segmented-control" role="tablist">
-          <button type="button" role="tab" aria-selected={activeTab === "all"} className={activeTab === "all" ? "active" : ""} onClick={() => handleTabChange("all")}>All views</button>
-          <button type="button" role="tab" aria-selected={activeTab === "failed"} className={activeTab === "failed" ? "active" : ""} onClick={() => handleTabChange("failed")}>
-            <span className="dot dot-danger" /> Failed
-          </button>
-          <button type="button" role="tab" aria-selected={activeTab === "slow"} className={activeTab === "slow" ? "active" : ""} onClick={() => handleTabChange("slow")}>
-            <span className="dot dot-warning" /> Slow
-          </button>
-          <button type="button" role="tab" aria-selected={activeTab === "fallback"} className={activeTab === "fallback" ? "active" : ""} onClick={() => handleTabChange("fallback")}>
-            Fallback
-          </button>
-        </div>
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+        <Tabs onValueChange={handleTabChange} value={activeTab}>
+          <TabsList aria-label="Activity views">
+            <TabsTrigger value="all">All views</TabsTrigger>
+            <TabsTrigger value="failed"><span aria-hidden="true" className="size-1.5 rounded-full bg-destructive" /> Failed</TabsTrigger>
+            <TabsTrigger value="slow"><span aria-hidden="true" className="size-1.5 rounded-full bg-warning" /> Slow</TabsTrigger>
+            <TabsTrigger value="fallback">Fallback</TabsTrigger>
+          </TabsList>
+        </Tabs>
 
         {props.hasActiveFilters ? (
-          <button className="text-button" type="button" onClick={props.onReset}>
+          <Button size="sm" type="button" variant="ghost" onClick={props.onReset}>
             <X size={14} />
             Clear filters
-          </button>
+          </Button>
         ) : null}
       </div>
 
       {props.filters.timePreset === "custom" ? (
-        <div className="activity-custom-range-row">
-          <label className="field">
-            <span>From</span>
-            <input
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-2">
+            <Label className="text-sm font-medium">From</Label>
+            <Input
               type="datetime-local"
               value={props.filters.customStart}
               onChange={(event) => props.onPatch({ customStart: event.target.value })}
             />
-          </label>
-          <label className="field">
-            <span>To</span>
-            <input
+          </div>
+          <div className="grid gap-2">
+            <Label className="text-sm font-medium">To</Label>
+            <Input
               type="datetime-local"
               value={props.filters.customEnd}
               onChange={(event) => props.onPatch({ customEnd: event.target.value })}
             />
-          </label>
+          </div>
         </div>
       ) : null}
 
       {showAdvanced ? (
-        <div className="activity-advanced-filters">
-          <label className="field">
-            <select
+        <div className="mt-4 grid gap-3 rounded-2xl border border-border/60 bg-muted/20 p-3 md:grid-cols-2 xl:grid-cols-[repeat(3,minmax(0,1fr))_220px_200px]">
+          <div className="min-w-0">
+            <Select
               value={props.filters.toolName}
-              onChange={(event) => props.onPatch({ toolName: event.target.value })}
+              onValueChange={(value) => props.onPatch({ toolName: value === "all" ? "" : value })}
             >
-              <option value="">All tools</option>
-              {toolOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.value} ({option.count})
-                </option>
-              ))}
-            </select>
-          </label>
+              <SelectTrigger className="w-full"><SelectValue placeholder="All tools" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All tools</SelectItem>
+                {toolOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>{option.value} ({option.count})</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-          <label className="field">
-            <select
+          <div className="min-w-0">
+            <Select
               value={props.filters.provider}
-              onChange={(event) => props.onPatch({ provider: event.target.value as ActivityFilterState["provider"] })}
+              onValueChange={(value) => props.onPatch({ provider: (value === "all" ? "" : value) as ActivityFilterState["provider"] })}
             >
-              <option value="">All providers</option>
-              {providerOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.value} ({option.count})
-                </option>
-              ))}
-            </select>
-          </label>
+              <SelectTrigger className="w-full"><SelectValue placeholder="All providers" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All providers</SelectItem>
+                {providerOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>{option.value} ({option.count})</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-          <label className="field">
-            <select
+          <div className="min-w-0">
+            <Select
               value={props.filters.errorType}
-              onChange={(event) => props.onPatch({ errorType: event.target.value })}
+              onValueChange={(value) => props.onPatch({ errorType: value === "all" ? "" : value })}
             >
-              <option value="">All error types</option>
-              {errorOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.value} ({option.count})
-                </option>
-              ))}
-            </select>
-          </label>
+              <SelectTrigger className="w-full"><SelectValue placeholder="All error types" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All error types</SelectItem>
+                {errorOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>{option.value} ({option.count})</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-          <label className="field activity-latency-field">
-            <div className="activity-latency-combo">
-              <input
+          <div className="grid content-center gap-2">
+            <div className="flex items-center gap-2">
+              <Input
                 type="number"
                 min="0"
                 placeholder="Min ms"
                 value={props.filters.minDurationMs}
                 onChange={(event) => props.onPatch({ minDurationMs: event.target.value })}
               />
-              <span className="latency-divider">-</span>
-              <input
+              <span className="text-muted-foreground">-</span>
+              <Input
                 type="number"
                 min="0"
                 placeholder="Max ms"
@@ -218,28 +231,31 @@ export function ActivityFiltersBar(props: ActivityFiltersBarProps) {
                 onChange={(event) => props.onPatch({ maxDurationMs: event.target.value })}
               />
             </div>
-          </label>
+          </div>
 
-          <label className="field activity-sort-field">
-            <div className="activity-sort-row">
-              <select
+          <div className="grid content-center gap-2">
+            <div className="flex items-center gap-2">
+              <Select
                 value={props.filters.sortBy}
-                onChange={(event) => props.onPatch({ sortBy: event.target.value as ActivityFilterState["sortBy"] })}
+                onValueChange={(value) => props.onPatch({ sortBy: value as ActivityFilterState["sortBy"] })}
               >
-                {SORT_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
-                ))}
-              </select>
-              <button
-                className="secondary-button activity-sort-direction"
+                <SelectTrigger className="w-full"><SelectValue placeholder="Sort by" /></SelectTrigger>
+                <SelectContent>
+                  {SORT_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
                 type="button"
+                variant="outline"
                 onClick={() => props.onPatch({ sortDir: props.filters.sortDir === "desc" ? "asc" : "desc" })}
               >
                 <SlidersHorizontal size={14} />
                 {props.filters.sortDir === "desc" ? "Desc" : "Asc"}
-              </button>
+              </Button>
             </div>
-          </label>
+          </div>
         </div>
       ) : null}
     </section>

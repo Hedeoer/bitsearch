@@ -8,7 +8,7 @@ type KeysWorkspaceProps = Readonly<{
 
 export function KeysWorkspace(props: KeysWorkspaceProps) {
   return (
-    <div className="workspace-stack">
+    <div className="grid gap-4">
       <KeyPoolsWorkspace
         onToast={props.onToast}
         refreshNonce={props.refreshNonce}

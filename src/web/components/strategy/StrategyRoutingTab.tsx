@@ -3,6 +3,8 @@ import { Save } from "lucide-react";
 import type { KeyPoolProvider, SystemSettings } from "@shared/contracts";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import type { StrategyPanelProps } from "./strategy-types";
 
 const MAX_RESULT_BUDGET_CHARS = 1_000_000;
@@ -92,8 +94,8 @@ export function StrategyRoutingTab(props: StrategyPanelProps) {
 
   return (
     <div className="grid gap-4">
-      <div className="rounded-[20px] border border-white/8 bg-white/4 p-4">
-        <div className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--text-dim)]">
+      <div className="rounded-[20px] border border-border/70 bg-muted/20 p-4">
+        <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
           Affected tools
         </div>
         <div className="mt-3 flex flex-wrap gap-2">
@@ -104,20 +106,20 @@ export function StrategyRoutingTab(props: StrategyPanelProps) {
           ))}
         </div>
         {!canUseFailover ? (
-          <div className="mt-3 text-sm text-[color:var(--text-soft)]">
+          <div className="mt-3 text-sm text-muted-foreground">
             Only one provider is ready, so failover is currently locked.
           </div>
         ) : null}
       </div>
 
       <div className="grid gap-3 xl:grid-cols-2">
-        <label className="field">
-          <span>Routing Mode</span>
-          <select
+        <div className="grid gap-2">
+          <Label className="text-sm font-medium">Routing Mode</Label>
+          <Select
             disabled={props.loading}
             value={props.system.genericRoutingMode}
-            onChange={(event) => {
-              const nextMode = event.target.value as SystemSettings["genericRoutingMode"];
+            onValueChange={(value) => {
+              const nextMode = value as SystemSettings["genericRoutingMode"];
               props.setSystem((current) => ({
                 ...current,
                 genericRoutingMode: nextMode,
@@ -131,35 +133,45 @@ export function StrategyRoutingTab(props: StrategyPanelProps) {
               }));
             }}
           >
-            <option value="single_provider">single_provider</option>
-            <option value="ordered_failover" disabled={!canUseFailover}>
-              ordered_failover
-            </option>
-          </select>
-        </label>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select routing mode" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="single_provider">single_provider</SelectItem>
+              <SelectItem disabled={!canUseFailover} value="ordered_failover">
+                ordered_failover
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
-        <label className="field">
-          <span>Primary Provider</span>
-          <select
+        <div className="grid gap-2">
+          <Label className="text-sm font-medium">Primary Provider</Label>
+          <Select
             disabled={props.loading}
             value={selectedPrimary}
-            onChange={(event) => {
-              const primary = event.target.value as KeyPoolProvider;
+            onValueChange={(value) => {
+              const primary = value as KeyPoolProvider;
               props.setSystem((current) => ({
                 ...current,
                 genericProviderOrder: selectRoutingOrder(current, primary),
               }));
             }}
           >
-            <option value="tavily">tavily</option>
-            <option value="firecrawl">firecrawl</option>
-          </select>
-        </label>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select primary provider" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="tavily">tavily</SelectItem>
+              <SelectItem value="firecrawl">firecrawl</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
-      <label className="field">
-        <span>Fallback Provider</span>
-        <input
+      <div className="grid gap-2">
+        <Label className="text-sm font-medium">Fallback Provider</Label>
+        <Input
           disabled
           readOnly
           value={
@@ -168,17 +180,17 @@ export function StrategyRoutingTab(props: StrategyPanelProps) {
               : "not used"
           }
         />
-      </label>
+      </div>
 
-      <div className="rounded-[20px] border border-white/8 bg-white/4 p-4">
-        <div className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--text-dim)]">
+      <div className="rounded-[20px] border border-border/70 bg-muted/20 p-4">
+        <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
           MCP result budget
         </div>
         <div className="mt-3 grid gap-3 xl:grid-cols-3">
-          <label className="field">
-            <span>First Response Chars</span>
-            <input
-              className="font-['IBM_Plex_Mono']"
+          <div className="grid gap-2">
+            <Label className="text-sm font-medium">First Response Chars</Label>
+            <Input
+              className="font-mono"
               disabled={props.loading}
               inputMode="numeric"
               max={MAX_RESULT_BUDGET_CHARS}
@@ -195,13 +207,13 @@ export function StrategyRoutingTab(props: StrategyPanelProps) {
                 })
               }
             />
-            <p className="field-note">Initial preview size.</p>
-          </label>
+            <p className="text-muted-foreground text-xs">Initial preview size.</p>
+          </div>
 
-          <label className="field">
-            <span>Page Chars</span>
-            <input
-              className="font-['IBM_Plex_Mono']"
+          <div className="grid gap-2">
+            <Label className="text-sm font-medium">Page Chars</Label>
+            <Input
+              className="font-mono"
               disabled={props.loading}
               inputMode="numeric"
               max={MAX_RESULT_BUDGET_CHARS}
@@ -215,13 +227,13 @@ export function StrategyRoutingTab(props: StrategyPanelProps) {
                 })
               }
             />
-            <p className="field-note">Follow-up page size.</p>
-          </label>
+            <p className="text-muted-foreground text-xs">Follow-up page size.</p>
+          </div>
 
-          <label className="field">
-            <span>Hard Response Chars</span>
-            <input
-              className="font-['IBM_Plex_Mono']"
+          <div className="grid gap-2">
+            <Label className="text-sm font-medium">Hard Response Chars</Label>
+            <Input
+              className="font-mono"
               disabled={props.loading}
               inputMode="numeric"
               max={MAX_RESULT_BUDGET_CHARS}
@@ -238,8 +250,8 @@ export function StrategyRoutingTab(props: StrategyPanelProps) {
                 })
               }
             />
-            <p className="field-note">Absolute response cap.</p>
-          </label>
+            <p className="text-xs text-muted-foreground">Absolute response cap.</p>
+          </div>
         </div>
       </div>
 
@@ -252,3 +264,10 @@ export function StrategyRoutingTab(props: StrategyPanelProps) {
     </div>
   );
 }
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";

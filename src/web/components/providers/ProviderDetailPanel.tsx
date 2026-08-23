@@ -29,7 +29,7 @@ export function ProviderDetailPanel(props: ProviderDetailPanelProps) {
   if (!props.selectedProviderRecord) {
     return (
       <div className="flex h-full items-center justify-center">
-        <p className="text-sm text-[color:var(--text-soft)]">
+        <p className="text-sm text-muted-foreground">
           Select a provider to view configuration
         </p>
       </div>
