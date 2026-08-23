@@ -309,3 +309,90 @@ test("admin tool surface changes notify both eras and refresh conditional tools"
     tool.name === "firecrawl_batch_scrape"
   )));
 });
+
+test("Firecrawl batch scrape normalizes scrape options before provider execution", async (t) => {
+  const appContext = await startApp();
+  t.after(() => appContext.cleanup());
+
+  enableFirecrawl(appContext.context);
+  const executedInputs: unknown[] = [];
+  let requestCount = 0;
+  const originalFetch = globalThis.fetch;
+  t.mock.method(globalThis, "fetch", async (input: any, init?: any) => {
+    const url = String(input);
+    if (!url.includes("api.firecrawl.dev/v2/batch/scrape")) {
+      return originalFetch(input, init);
+    }
+    requestCount += 1;
+    executedInputs.push(JSON.parse(init.body));
+    return new Response(JSON.stringify({
+      success: true,
+      id: `fc-${requestCount}`,
+    }), { status: 200, headers: { "content-type": "application/json" } });
+  });
+
+  const legacyInitialize = await fetch(appContext.baseUrl, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${appContext.bearerToken}`,
+      accept: "application/json, text/event-stream",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "initialize",
+      params: {
+        protocolVersion: "2025-03-26",
+        capabilities: {},
+        clientInfo: { name: "firecrawl-options-test", version: "1.0.0" },
+      },
+    }),
+  });
+  const sessionId = legacyInitialize.headers.get("mcp-session-id");
+  assert.ok(sessionId);
+  await legacyInitialize.text();
+  await fetch(appContext.baseUrl, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${appContext.bearerToken}`,
+      accept: "application/json, text/event-stream",
+      "content-type": "application/json",
+      "mcp-session-id": sessionId,
+    },
+    body: JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }),
+  });
+
+  const call = await fetch(appContext.baseUrl, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${appContext.bearerToken}`,
+      accept: "application/json, text/event-stream",
+      "content-type": "application/json",
+      "mcp-session-id": sessionId,
+      "mcp-protocol-version": "2025-03-26",
+    },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: 2,
+      method: "tools/call",
+      params: {
+        name: "firecrawl_batch_scrape",
+        arguments: {
+          urls: ["https://example.com/"],
+          formats: ["markdown"],
+          only_main_content: true,
+          scrape_options: { max_age: 1000, only_clean_content: false },
+        },
+      },
+    }),
+  });
+  assert.equal(call.status, 200, await call.clone().text());
+  const result = await readJsonRpcResult(call);
+  assert.equal(result.structuredContent.success, true);
+  assert.equal(executedInputs[0].formats?.[0], "markdown");
+  assert.equal(executedInputs[0].onlyMainContent, true);
+  assert.equal(executedInputs[0].maxAge, 1000);
+  assert.equal(executedInputs[0].onlyCleanContent, false);
+  assert.equal("scrapeOptions" in executedInputs[0], false);
+});

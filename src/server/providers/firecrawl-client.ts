@@ -31,8 +31,6 @@ export interface FirecrawlHistoricalCreditUsageResponse {
   }>;
 }
 
-export type FirecrawlFormatOption = string | Record<string, unknown>;
-
 export interface FirecrawlCrawlInput {
   url: string;
   prompt?: string;
@@ -58,7 +56,7 @@ export interface FirecrawlBatchScrapeInput {
   webhook?: Record<string, unknown>;
   maxConcurrency?: number;
   ignoreInvalidURLs?: boolean;
-  formats?: FirecrawlFormatOption[];
+  formats?: string[];
   onlyMainContent?: boolean;
   includeTags?: string[];
   excludeTags?: string[];
@@ -77,6 +75,7 @@ export interface FirecrawlBatchScrapeInput {
   proxy?: "basic" | "enhanced" | "auto";
   storeInCache?: boolean;
   profile?: Record<string, unknown>;
+  [key: string]: unknown;
   zeroDataRetention?: boolean;
 }
 
@@ -231,29 +230,11 @@ export async function firecrawlBatchScrape(
     {
       headers: { Authorization: `Bearer ${config.apiKey}` },
       body: {
+        ...input,
         urls: input.urls,
         webhook: input.webhook,
         maxConcurrency: input.maxConcurrency,
         ignoreInvalidURLs: input.ignoreInvalidURLs,
-        formats: input.formats,
-        onlyMainContent: input.onlyMainContent,
-        includeTags: input.includeTags,
-        excludeTags: input.excludeTags,
-        maxAge: input.maxAge,
-        minAge: input.minAge,
-        headers: input.headers,
-        waitFor: input.waitFor,
-        mobile: input.mobile,
-        skipTlsVerification: input.skipTlsVerification,
-        timeout: input.timeout,
-        parsers: input.parsers,
-        actions: input.actions,
-        location: input.location,
-        removeBase64Images: input.removeBase64Images,
-        blockAds: input.blockAds,
-        proxy: input.proxy,
-        storeInCache: input.storeInCache,
-        profile: input.profile,
         zeroDataRetention: input.zeroDataRetention,
       },
       timeoutMs: Math.max(config.timeoutMs, 60000),

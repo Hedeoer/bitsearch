@@ -53,6 +53,57 @@ const FIRECRAWL_BINDING_MISSING_KEY = "firecrawl_job_binding_missing_key";
 const FIRECRAWL_BINDING_TOOL_MISMATCH = "firecrawl_job_binding_tool_mismatch";
 const FIRECRAWL_PROVIDER_CONFIG_MISSING = "firecrawl_provider_config_missing";
 
+const FIRECRAWL_SCRAPE_OPTION_ALIASES: Record<string, string> = {
+  formats: "formats",
+  headers: "headers",
+  include_tags: "includeTags",
+  exclude_tags: "excludeTags",
+  max_age: "maxAge",
+  min_age: "minAge",
+  wait_for: "waitFor",
+  mobile: "mobile",
+  only_main_content: "onlyMainContent",
+  only_clean_content: "onlyCleanContent",
+  remove_base64_images: "removeBase64Images",
+  block_ads: "blockAds",
+  skip_tls_verification: "skipTlsVerification",
+  timeout: "timeout",
+  parsers: "parsers",
+  actions: "actions",
+  location: "location",
+  proxy: "proxy",
+  store_in_cache: "storeInCache",
+  profile: "profile",
+};
+
+type NormalizedFirecrawlScrapeOptions = Record<string, unknown> | undefined;
+
+function normalizeFirecrawlScrapeOptions(
+  input?: Record<string, unknown>,
+): { options: NormalizedFirecrawlScrapeOptions; error?: string } {
+  if (!input) {
+    return { options: undefined };
+  }
+  const normalized: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(input)) {
+    const mappedKey = FIRECRAWL_SCRAPE_OPTION_ALIASES[key];
+    if (!mappedKey) {
+      return {
+        options: undefined,
+        error: `unsupported Firecrawl scrape option: ${key}`,
+      };
+    }
+    normalized[mappedKey] = value;
+  }
+  return { options: normalized };
+}
+
+function compactFirecrawlBody(input: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(input).filter(([, value]) => value !== undefined),
+  );
+}
+
 function createBoundStatusMetadata(
   input: {
     jobId: string;
@@ -837,6 +888,13 @@ export function registerProviderTools(
       }),
       },
       async (input) => {
+      const normalized = normalizeFirecrawlScrapeOptions(
+        input.scrape_options,
+      );
+      if (normalized.error) {
+        return failureResult("firecrawl", normalized.error);
+      }
+      const scrapeOptions = normalized.options;
       const mapped: FirecrawlCrawlInput = {
         url: input.url,
         prompt: input.prompt,
@@ -853,7 +911,7 @@ export function registerProviderTools(
         delay: input.delay,
         maxConcurrency: input.max_concurrency,
         webhook: input.webhook,
-        scrapeOptions: input.scrape_options,
+        scrapeOptions,
         zeroDataRetention: input.zero_data_retention,
       };
       const result = await runWithProviderKeys(context, {
@@ -939,17 +997,20 @@ export function registerProviderTools(
         proxy: z.enum(["basic", "enhanced", "auto"]).optional().default("auto"),
         store_in_cache: z.boolean().optional().default(true),
         profile: objectSchema.optional(),
+        scrape_options: objectSchema.optional(),
         zero_data_retention: z.boolean().optional().default(false),
       }),
       },
       async (input) => {
-      const mapped: FirecrawlBatchScrapeInput = {
-        urls: input.urls,
-        webhook: input.webhook,
-        maxConcurrency: input.max_concurrency,
-        ignoreInvalidURLs: input.ignore_invalid_urls,
-        formats: input.formats,
+      const normalizedInputOptions = normalizeFirecrawlScrapeOptions(
+        input.scrape_options,
+      );
+      if (normalizedInputOptions.error) {
+        return failureResult("firecrawl", normalizedInputOptions.error);
+      }
+      const batchScrapeOptions: Record<string, unknown> = compactFirecrawlBody({
         onlyMainContent: input.only_main_content,
+        formats: input.formats,
         includeTags: input.include_tags,
         excludeTags: input.exclude_tags,
         maxAge: input.max_age,
@@ -967,6 +1028,14 @@ export function registerProviderTools(
         proxy: input.proxy,
         storeInCache: input.store_in_cache,
         profile: input.profile,
+        ...normalizedInputOptions.options,
+      });
+      const mapped: FirecrawlBatchScrapeInput = {
+        urls: input.urls,
+        webhook: input.webhook,
+        maxConcurrency: input.max_concurrency,
+        ignoreInvalidURLs: input.ignore_invalid_urls,
+        ...batchScrapeOptions,
         zeroDataRetention: input.zero_data_retention,
       };
       const result = await runWithProviderKeys(context, {
@@ -978,8 +1047,10 @@ export function registerProviderTools(
         metadata: {
           async: true,
           urlCount: input.urls.length,
-          formatCount: input.formats.length,
-          onlyMainContent: input.only_main_content,
+          formatCount: Array.isArray(batchScrapeOptions.formats)
+            ? batchScrapeOptions.formats.length
+            : 1,
+          onlyMainContent: batchScrapeOptions.onlyMainContent ?? true,
         },
         execute: firecrawlBatchScrape,
       });
