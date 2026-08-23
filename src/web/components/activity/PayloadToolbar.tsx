@@ -25,9 +25,9 @@ export function PayloadToolbar(props: PayloadToolbarProps) {
   };
 
   return (
-    <div className="activity-payload-toolbar">
-      <span className="eyebrow">{props.activeTab.toUpperCase()} PAYLOAD</span>
-      <div className="activity-payload-toolbar-actions">
+    <div className="flex items-center justify-between border-b border-border/60 px-3.5 py-2.5">
+      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">{props.activeTab.toUpperCase()} PAYLOAD</span>
+      <div className="flex items-center gap-1.5">
         <Button
           className="size-8 rounded-lg"
           onClick={props.onToggleWrap}
@@ -48,7 +48,7 @@ export function PayloadToolbar(props: PayloadToolbarProps) {
           variant="ghost"
         >
           <Copy size={14} />
-          {copied ? <span className="activity-payload-toolbar-copied">✓</span> : null}
+          {copied ? <span className="absolute -top-7 right-0 rounded-md bg-primary px-2 py-1 text-xs font-semibold text-primary-foreground">✓</span> : null}
         </Button>
       </div>
     </div>

@@ -19,7 +19,7 @@ export function StrategyPanel(props: StrategyPanelProps) {
       <CardHeader className="pb-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <div className="eyebrow">Configuration</div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Configuration</p>
             <CardTitle className="mt-2">Configuration & Access</CardTitle>
             <CardDescription className="mt-2 max-w-xl">
               Edit routing and manage access without repeating the overview state.

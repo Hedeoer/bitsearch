@@ -1,8 +1,9 @@
 import { Server } from "lucide-react";
 import type { ActivityListItem, ActivityListPageResult } from "@shared/contracts";
-import { EmptyState, LoadingOverlay } from "../Feedback";
+import { EmptyState } from "../Feedback";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDateTime, formatDuration, formatNumber, statusTone } from "../../format";
 
@@ -30,43 +31,50 @@ function FeedCard(
 ) {
   const tone = statusTone(props.item.status);
   return (
-    <button
-      type="button"
-      className={`activity-feed-card interactive-card${props.selected ? " activity-feed-card-selected" : ""}`}
+    <Card
+      aria-selected={props.selected}
+      className={`cursor-pointer border-border/60 transition-colors hover:border-primary/30 hover:bg-accent/20 ${props.selected ? "border-primary/45 bg-primary/8" : ""}`}
       onClick={props.onSelect}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          props.onSelect();
+        }
+      }}
+      role="button"
+      tabIndex={0}
     >
-      {/* 第一层 */}
-      <div className="activity-feed-header">
-        <div className="activity-feed-tool">
-          <span className="chip primary-chip">
-            <Server size={12} />
-            {props.item.toolName}
-          </span>
-          <span className="text-soft compact">({props.item.finalProvider ?? "no provider"})</span>
+      <CardContent className="grid gap-2 p-3.5">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <Badge className="gap-1 px-2 py-0.5" variant="default">
+              <Server className="size-3" />
+              {props.item.toolName}
+            </Badge>
+            <span className="truncate text-xs text-muted-foreground">({props.item.finalProvider ?? "no provider"})</span>
+          </div>
+          <Badge variant={tone === "success" ? "success" : tone === "danger" ? "danger" : "warning"}>
+            {props.item.status}
+          </Badge>
         </div>
-        <Badge variant={tone === "success" ? "success" : tone === "danger" ? "danger" : "warning"}>
-          {props.item.status}
-        </Badge>
-      </div>
 
-      {/* 第二层 */}
-      <div className="activity-feed-meta">
-        <span>⏱️ {props.item.durationMs}ms</span>
-        <span>•</span>
-        <span>{props.item.attempts} Attempt{props.item.attempts > 1 ? "s" : ""}</span>
-        <span>•</span>
-        <span>{formatDateTime(props.item.createdAt)}</span>
-      </div>
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+          <span>{formatDuration(props.item.durationMs)}</span>
+          <span aria-hidden="true">•</span>
+          <span>{props.item.attempts} Attempt{props.item.attempts > 1 ? "s" : ""}</span>
+          <span aria-hidden="true">•</span>
+          <span>{formatDateTime(props.item.createdAt)}</span>
+        </div>
 
-      {/* 第三层 */}
-      <div className="activity-feed-preview">
+        <p className="m-0 line-clamp-2 text-xs leading-relaxed">
         {props.item.status === "success" ? (
-          <span className="compact text-muted-foreground">{truncate(props.item.resultPreview ?? "No preview captured", 80)}</span>
+          <span className="text-muted-foreground">{truncate(props.item.resultPreview ?? "No preview captured", 80)}</span>
         ) : (
-          <span className="compact text-destructive">{truncate(props.item.errorSummary ?? "No error details", 80)}</span>
+          <span className="text-destructive">{truncate(props.item.errorSummary ?? "No error details", 80)}</span>
         )}
-      </div>
-    </button>
+        </p>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -77,18 +85,18 @@ export function ActivityFeed(props: ActivityFeedProps) {
   const totalPages = Math.max(1, Math.ceil(total / Math.max(props.result?.pageSize ?? 25, 1)));
 
   return (
-    <section className="surface-card activity-pane">
-      <div className="section-heading compact">
+    <section className="overflow-hidden rounded-2xl border border-border/70 bg-card/95 shadow-sm backdrop-blur-xl">
+      <div className="flex items-center justify-between gap-3 border-b border-border/60 px-4 py-3.5">
         <div>
-          <div className="eyebrow">Feed</div>
-          <h3>Request feed</h3>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Feed</p>
+          <h3 className="mt-1 text-base font-semibold tracking-tight">Request feed</h3>
         </div>
-        <span className="chip neutral-chip">{formatNumber(total)} total</span>
+        <Badge variant="neutral">{formatNumber(total)} total</Badge>
       </div>
 
-      <div className="activity-feed-body">
+      <div className="grid max-h-[calc(100vh-360px)] gap-3 overflow-y-auto p-4">
         {!props.loading && props.error ? (
-          <p className="warning-banner">{props.error}</p>
+          <p className="m-0 rounded-xl border border-destructive/25 bg-destructive/10 px-3 py-2 text-sm text-destructive">{props.error}</p>
         ) : null}
         {props.loading ? (
           <div className="space-y-3">
@@ -114,7 +122,7 @@ export function ActivityFeed(props: ActivityFeedProps) {
       </div>
 
       {totalPages > 1 ? (
-        <div className="activity-feed-footer">
+        <div className="flex items-center justify-between gap-3 border-t border-border/60 px-4 py-3">
           <Button
             variant="secondary"
             type="button"
@@ -123,7 +131,7 @@ export function ActivityFeed(props: ActivityFeedProps) {
           >
             Previous
           </Button>
-          <span className="supporting compact">
+          <span className="text-xs text-muted-foreground">
             Page {page + 1} / {totalPages}
           </span>
           <Button

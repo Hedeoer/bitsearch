@@ -75,19 +75,22 @@ function getActiveRoute(pathname: string): NavItem {
 
 function PrimaryNav(
   props: Readonly<{
-    className: string;
-    linkClassName: string;
+    className?: string;
     onNavigate: () => void;
   }>,
 ) {
   return (
-    <nav className={props.className} aria-label="Console navigation">
+    <nav className={props.className ?? "flex items-center gap-1 overflow-x-auto rounded-2xl border border-border/70 bg-muted/30 p-1"} aria-label="Console navigation">
       {NAV_ITEMS.map((item) => (
         <NavLink
           key={item.href}
           to={item.href}
           className={({ isActive }) =>
-            `${props.linkClassName}${isActive ? ` ${props.linkClassName}-active` : ""}`
+            `inline-flex min-h-10 shrink-0 items-center gap-2 rounded-xl border px-3.5 py-2 text-sm font-medium transition-colors ${
+              isActive
+                ? "border-primary/25 bg-primary/10 text-primary"
+                : "border-transparent text-muted-foreground hover:border-primary/20 hover:bg-primary/5 hover:text-foreground"
+            }`
           }
           onClick={props.onNavigate}
         >
@@ -111,49 +114,47 @@ export function ConsoleLayout(props: ConsoleLayoutProps) {
 
   return (
     <TooltipProvider delayDuration={200}>
-    <div className="console-shell">
-      <aside className="console-sidebar">
-        <div className="console-brand">
-          <div className="console-brand-mark">
-            <Search size={16} />
+    <div className="min-h-screen bg-background text-foreground">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-border/70 bg-card/80 p-4 backdrop-blur-xl lg:block">
+        <div className="flex items-center gap-3 px-2 py-2">
+          <div className="grid size-10 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/20">
+            <Search className="size-4" aria-hidden="true" />
           </div>
-          <div className="console-brand-copy">
-            <span className="eyebrow">BitSearch</span>
-            <strong>Operations Console</strong>
+          <div className="grid gap-0.5">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">BitSearch</span>
+            <strong className="font-sans text-sm tracking-tight">Operations Console</strong>
           </div>
         </div>
         <PrimaryNav
-          className="sidebar-nav"
-          linkClassName="sidebar-nav-link"
+          className="mt-6 grid gap-1"
           onNavigate={() => setMobileOpen(false)}
         />
       </aside>
 
-      <div className="console-workspace">
-        <header className="console-header">
-          <div className="console-header-row">
-            <div className="console-topbar-copy">
-              <div className="console-topbar-mark" aria-hidden="true">
-                <Search size={16} />
+      <div className="min-w-0 lg:pl-64">
+        <header className="sticky top-0 z-20 border-b border-border/70 bg-background/85 px-4 py-3 backdrop-blur-xl sm:px-6">
+          <div className="mx-auto grid w-full max-w-[1760px] gap-3 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:items-center">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground shadow-md shadow-primary/20">
+                <Search className="size-4" aria-hidden="true" />
               </div>
-              <div className="console-topbar-text">
-                <div className="eyebrow">{activeRoute.label}</div>
-                <h1>{activeRoute.title}</h1>
-                <p className="supporting">{activeRoute.description}</p>
+              <div className="min-w-0">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">{activeRoute.label}</div>
+                <h1 className="truncate text-base font-semibold tracking-tight sm:text-lg">{activeRoute.title}</h1>
+                <p className="mt-0.5 hidden max-w-2xl truncate text-sm text-muted-foreground sm:block">{activeRoute.description}</p>
               </div>
             </div>
             <PrimaryNav
-              className="top-nav"
-              linkClassName="top-nav-link"
+              className="hidden justify-self-center lg:flex"
               onNavigate={() => setMobileOpen(false)}
             />
-            <div className="console-topbar-actions">
-              <span className="header-status">
+            <div className="flex items-center justify-end gap-1.5">
+              <span className="hidden items-center gap-2 rounded-full border border-border/70 bg-muted/30 px-3 py-2 text-xs text-muted-foreground sm:inline-flex">
                 {props.isRefreshing ? (
                   <InlineSpinner label="Refreshing" />
                 ) : (
                   <>
-                    <span className="status-dot" aria-hidden="true" />
+                    <span className="size-2 rounded-full bg-emerald-400 shadow-[0_0_0_4px_color-mix(in_oklch,var(--success),transparent_88%)]" aria-hidden="true" />
                     {isOverviewRoute ? "Live · 30s" : "Ready"}
                   </>
                 )}
@@ -187,7 +188,6 @@ export function ConsoleLayout(props: ConsoleLayoutProps) {
                   </SheetHeader>
                   <PrimaryNav
                     className="flex flex-col gap-2 px-4"
-                    linkClassName="mobile-nav-link"
                     onNavigate={() => setMobileOpen(false)}
                   />
                 </SheetContent>
@@ -195,7 +195,7 @@ export function ConsoleLayout(props: ConsoleLayoutProps) {
             </div>
           </div>
         </header>
-        <main className="console-main">
+        <main className="mx-auto w-full max-w-[1760px] overflow-x-hidden p-4 sm:p-6">
           <Outlet />
         </main>
       </div>

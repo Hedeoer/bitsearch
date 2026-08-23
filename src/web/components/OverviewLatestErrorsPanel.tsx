@@ -21,10 +21,10 @@ const ERROR_PAGE_SIZE = 3;
 
 function ErrorEmptyState() {
   return (
-    <div className="grid min-h-[220px] place-items-center rounded-[22px] border border-emerald-400/14 bg-emerald-400/6 p-6 text-center">
+    <div className="grid min-h-[220px] place-items-center rounded-[22px] border border-success/20 bg-success/8 p-6 text-center">
       <div className="grid gap-3">
-        <ShieldCheck className="mx-auto size-8 text-[color:var(--success)]" />
-        <div className="text-sm text-[color:var(--text-soft)]">
+        <ShieldCheck className="mx-auto size-8 text-success" />
+        <div className="text-sm text-muted-foreground">
           No recent failures were recorded in the rolling 24 hour window.
         </div>
       </div>
@@ -40,19 +40,19 @@ function ErrorFeedItem(props: Readonly<{
   const summary = props.error.errorSummary ?? props.error.resultPreview ?? "No summary";
 
   return (
-    <div className="rounded-[20px] border border-rose-300/12 bg-[rgba(255,142,125,0.06)] p-4">
+    <div className="rounded-[20px] border border-destructive/15 bg-destructive/8 p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="text-sm font-semibold text-[color:var(--text)]">
+          <div className="text-sm font-semibold">
             {props.error.toolName}
           </div>
-          <div className="mt-1 break-words text-xs leading-5 text-[color:var(--text-dim)]">
+          <div className="mt-1 break-words text-xs leading-5 text-muted-foreground">
             {providerLabel} · {targetLabel}
           </div>
         </div>
         <Badge variant="danger">{formatDateTime(props.error.createdAt)}</Badge>
       </div>
-      <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-6 text-[color:var(--text-soft)]">
+      <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-6 text-muted-foreground">
         {summary}
       </p>
     </div>
@@ -67,7 +67,7 @@ function PaginationSummary(props: Readonly<{
   const start = props.currentPage * ERROR_PAGE_SIZE + 1;
   const end = Math.min(props.totalItems, start + ERROR_PAGE_SIZE - 1);
   return (
-    <span className="text-xs text-[color:var(--text-dim)]">
+    <span className="text-xs text-muted-foreground">
       {start}-{end} / {props.totalItems}
     </span>
   );
@@ -90,7 +90,7 @@ export function OverviewLatestErrorsPanel(props: OverviewLatestErrorsPanelProps)
       <CardHeader className="pb-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <div className="eyebrow">Exceptions</div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Exceptions</p>
             <CardTitle className="mt-2">Latest errors</CardTitle>
             <CardDescription className="mt-2">
               Recent failures stay compact and scannable instead of stretching into a long console dump.

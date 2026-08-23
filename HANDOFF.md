@@ -1,193 +1,253 @@
-# BitSearch Admin UI 重构 — Handoff 文档
+# BitSearch Admin UI 迁移 — Agent Handoff
 
-## 项目背景
+> 生成时间：2026-08-23  
+> 来源会话：`01a02d29-7bd0-78b1-89de-8549ec0c51cb`（续作 `01a02d12-9954-71f1-afb4-d78126c13015`）  
+> 状态：**未完成**。Phase 1–5 代码已落地，Phase 6 做到一半被中断。请先修 P0，再做最终验收，不要直接合并。
 
-BitSearch 管理后台前端 UI 改造，目标是从手写暗色主题 + 自定义 CSS 组件迁移到 shadcn/ui + tweakcn 主题 + lucide-react 的标准化方案。
+## 1. 任务目标
 
-- **主仓库**: `/home/hedeoer/Projects/bitsearch`（`main` 分支）
-- **工作分支**: `feature-admin-ui-rework`
-- **Worktree 路径**: `/home/hedeoer/Projects/bitsearch-admin-ui`
-- **技术栈**: React 19 + Vite + Tailwind CSS v4 + TypeScript strict
+将管理后台完整迁移到 **Tailwind CSS v4 + shadcn/ui + tweakcn 主题**，最终移除旧手写 CSS。
 
-### 用户需求
+- 策略：渐进式逐页迁移；每页完成控件、布局、状态样式后立即浏览器验证。
+- 终态：只保留 `admin-theme.css` 与必要全局 base；业务组件不再引用旧变量和旧布局类。
+- **不改后端 API、数据结构、路由。**
+- 主题来源：`https://tweakcn.com/r/themes/cmdght103000n04lh3e2ae93r`
 
-1. 使用 tweakcn 生成的主题统一管理后台视觉（明暗两套）
-2. 引入 shadcn/ui 标准组件替换手写 UI
-3. lucide-react 图标作为 Action 提示或状态标识穿插使用
-4. 在独立 worktree 中工作，保留原管理后台方便对比
-5. 后续合并回 main
+## 2. 仓库与运行环境
 
-## 已完成
+| 项 | 值 |
+|----|----|
+| 工作目录 | `/home/hedeoer/Projects/bitsearch-admin-ui` |
+| 主仓库 | `/home/hedeoer/Projects/bitsearch`（`main`） |
+| 分支 | `feature-admin-ui-rework` @ `b593f79`（`feat(admin-ui): 固化 Tailwind shadcn 迁移基线`） |
+| 本 worktree 端口 | 后端 `8098`，前端 `5176` |
+| 主仓库端口 | 后端 `8097`（避免冲突） |
+| 技术栈 | React 19 + Vite + Tailwind CSS v4 + TypeScript strict |
 
-### Phase 1: 主题接入 ✅
-
-**tweakcn 主题**: `https://tweakcn.com/r/themes/cmdght103000n04lh3e2ae93r`
-
-| 文件 | 说明 |
-|------|------|
-| `src/web/admin-theme.css` | 完整双主题变量（`:root` 亮色 + `.dark` 暗色），OKLCH 格式 |
-| `index.html` | `<html class="dark">` 默认暗色；加载 Outfit + Geist Mono 字体 |
-| `main.tsx` | `admin-theme.css` 在所有旧 CSS 之后导入以覆盖样式 |
-
-关键设计：
-- **旧变量桥接**: `--bg`→`var(--background)`、`--text`→`var(--foreground)`、`--surface`→`var(--card)` 等 30+ 映射，确保未迁移页面不崩
-- **@theme inline 块**: 将 CSS 变量注册为 Tailwind v4 工具类（`bg-background`、`text-muted-foreground` 等）
-
-### Phase 2: 明暗切换 ✅
-
-| 文件 | 说明 |
-|------|------|
-| `src/web/hooks/use-theme.ts` | `useState` + `useEffect` 管理 theme 状态，读写 `localStorage("admin-theme")`，跟随系统偏好初始化 |
-| `src/web/components/ThemeToggle.tsx` | lucide `Sun/Moon` 图标按钮，嵌入 `ConsoleChrome.tsx` 顶栏 |
-
-### Phase 3: shadcn 组件安装 ✅（24 个组件）
-
-```
-alert-dialog, badge, breadcrumb, button, card, checkbox, collapsible,
-dialog, dropdown-menu, input, label, popover, progress, scroll-area,
-select, separator, sheet, skeleton, sonner, switch, table, tabs, textarea, tooltip
-```
-
-新增依赖：`sonner@2.0.8`, `next-themes@0.4.6`
-
-**重要改动**: `button.tsx` 增加了 `asChild` 支持（Radix Slot），这是 shadcn 标准模式，AlertDialogAction/Cancel 需要。
-
-### Phase 4: 核心组件迁移 ✅
-
-| 迁移前 | 迁移后 | 文件 |
-|--------|--------|------|
-| 自研 ToastViewport + toast-store 状态机 | sonner Toaster | `App.tsx`, `toast-store.ts`, `components/ui/sonner.tsx` |
-| 手写 ConfirmDialog | shadcn AlertDialog | `Feedback.tsx` |
-| ProbeModelsDialog (手写 overlay) | shadcn Dialog + Button | `providers/ProbeModelsDialog.tsx` |
-| SearchEngineRequestTestDialog (同上) | shadcn Dialog + Badge + lucide 状态图标 | `providers/SearchEngineRequestTestDialog.tsx` |
-| KeyPoolProviderPicker (手写下拉) | Popover + lucide ChevronsUpDown/Check | `KeyPoolProviderPicker.tsx` |
-
-### Phase 5: 表单控件迁移 ✅
-
-| 组件文件 | 迁移内容 |
-|----------|----------|
-| `AdminAccessFields.tsx` | Input + Button + Label |
-| `McpAccessFields.tsx` | Input + Button + Label |
-| `StrategyRoutingTab.tsx` | Select × 2 (Routing Mode / Primary Provider) + Input × 4 (Fallback / Result Budget) |
-| `ActivityFiltersBar.tsx` | Input (搜索) + Select × 6 (时间/状态/工具/Provider/错误类型/排序) |
-
-**Select 迁移要点**: Radix Select 用 `onValueChange` 替代原生 `onChange`；"All" 选项用 `value="all"` 并在回调中转换为空字符串以兼容现有过滤逻辑。
-
-## 验证结果
-
-每次迁移后均通过：
-- `npm run check` → TypeScript 类型检查 ✅
-- `npm run build:web` → Vite 构建 ✅（103KB CSS / 891KB JS）
-- 用户已通过 `npm run dev:web` 视觉验证两批迁移效果
-
-## 未完成任务
-
-以下按优先级排列：
-
-### P0: 高频组件迁移
-
-#### 1. KeyPoolsWorkspace.tsx
-- 当前有 20 个原生控件（input/select/button）
-- 密钥列表需要迁移到 shadcn `Table` + `Badge`(状态) + `DropdownMenu`(操作)
-- 删除确认已由 AlertDialog 处理，但触发按钮还是旧的
-
-#### 2. KeyInventoryCard.tsx
-- 12 个原生控件
-- 同样需要 Table 化密钥展示
-
-#### 3. ConsoleChrome.tsx
-- 5 个原生按钮（导航/刷新/登出）
-- 移动端侧边栏需要迁移到 shadcn `Sheet`
-- 导航链接可加 `Tooltip`
-
-#### 4. ActivityInspector.tsx / ActivityFeed.tsx
-- 日志详情面板和 feed 列表
-- 可折叠区域用 shadcn `Collapsible`
-- 加载态用 shadcn `Skeleton`
-
-#### 5. SearchEngineProviderPanel.tsx
-- 5 个原生表单控件
-- Provider 配置表单迁移到 Input + Select + Switch
-
-### P1: 辅助组件迁移
-
-| 文件 | 控件数 | 建议 |
-|------|--------|------|
-| `RemoteProviderPanel.tsx` | 2 | Input/Button |
-| `PayloadToolbar.tsx` | 2 | Button/DropdownMenu |
-| `ProvidersWorkspace.tsx` | 1 | Button |
-| `provider-panel-shared.tsx` | 1 | Button |
-| `ProviderMasterCard.tsx` | 1 | Badge/Button |
-
-### P2: 清理与收尾
-
-- [ ] 删除不再引用的旧 CSS 文件：`activity.css`, `activity-layout.css`, `activity-panels.css`, `key-pools.css`, `providers.css`, `feedback.css`
-- [ ] 删除 `theme.css`（当所有硬编码颜色被替换后）
-- [ ] 移除 `admin-theme.css` 底部的旧变量桥接段（当所有页面迁移完成）
-- [ ] 从 `package.json` 移除 `next-themes`（sonner 已改用自定义 useTheme hook）
-- [ ] 代码分割优化：当前 JS bundle 866KB，可对 Recharts/lucide 做 manualChunks
-- [ ] 合并到 `main` 分支
-
-### P3: 可选增强
-
-- Breadcrumb 面包屑导航（组件已安装但未使用）
-- Tooltip 用于图标按钮提示（已安装未使用）
-- Progress 用于长任务进度条（已安装未使用）
-- Skeleton 替换现有 shimmer 加载动画
-
-## 技术注意事项
-
-### 给接手 agent 的提示
-
-1. **不要覆盖现有自定义 Button/Card/Badge** — 它们已经适配了项目的主题变量体系。如需更新，先对比差异。
-2. **Radix Select 不支持空字符串 value** — "All" 类选项必须用非空值如 `"all"`，在回调中转换。
-3. **Badge variant 枚举不同** — 这个项目的 Badge 用 `"success" | "danger"` 而不是标准的 `"secondary" | "destructive"`。
-4. **sonner 已适配自定义主题 hook** — `components/ui/sonner.tsx` 导入的是 `@/web/hooks/use-theme`，不是 `next-themes`。
-5. **旧 CSS 变量桥接是临时的** — 新代码应直接使用 shadcn 标准类名 (`bg-card`, `text-muted-foreground`)，不要再引用 `--bg`, `--text` 等旧变量。
-6. **worktree 共享 node_modules 符号链接** — `/home/hedeoer/Projects/bitsearch-admin-ui/node_modules` 指向主仓库的依赖目录，安装新依赖时会同步影响两个仓库。
-
-### 常用命令
+当前 HEAD 之后有 **大量未提交改动**（约 43 文件，`+465 / -3425`），全部是本会话 Phase 1–6 的迁移结果。`.workflow/` 未跟踪，不要当业务代码提交。
 
 ```bash
 cd /home/hedeoer/Projects/bitsearch-admin-ui
+git status --short
+# 不要先 commit，除非用户明确要求。建议先修 P0 并完成浏览器验收。
+```
 
-# 类型检查
+## 3. 阶段完成情况
+
+| Phase | 内容 | 状态 | 验证 |
+|-------|------|------|------|
+| 0 | 基线提交 `b593f79` | ✅ | 已提交 |
+| 1 | Login + Console 布局 | ✅ 代码完成 | 仅 Phase 2 时顺带看过 Login / Sheet |
+| 2 | Key Pools 收尾，删除 `key-pools.css` | ✅ | `check` + `build:web` + 真实浏览器四页冒烟 |
+| 3 | Activity 全链路 Tailwind/shadcn，删除 3 份 activity CSS | ✅ 代码完成 | 仅 `check` + `build:web`，**无浏览器验收** |
+| 4 | Overview / Strategy 去旧类、语义色、最后一个原生数字输入 | ✅ 代码完成 | 仅 `check`，**无浏览器验收** |
+| 5 | Providers 去旧变量 / 硬编码色，删除 `providers.css` | ✅ 代码完成 | 仅代码扫描，**无浏览器验收** |
+| 6 | 主题清理 + Vite `manualChunks` | ⚠️ 做到一半被中断 | 第一次拆包有 circular chunk 警告；第二次规则已改，构建被 abort，需重跑 |
+
+**本会话中断点：** 正在修 `vite.config.ts` 的 React/vendor 循环 chunk，随后用户要求写 handoff，多次 turn 因 429 / invalid_request 失败，文档未写出。
+
+## 4. 已完成的具体改动
+
+### 已删除的旧 CSS
+
+- `src/web/key-pools.css`
+- `src/web/activity.css`
+- `src/web/activity-layout.css`
+- `src/web/activity-panels.css`
+- `src/web/providers.css`
+- `src/web/feedback.css`
+- `src/web/styles.css`
+- `src/web/theme.css`
+
+### 当前 CSS 入口
+
+`src/web/main.tsx` 只剩：
+
+```ts
+import "./app.css";
+import "./admin-theme.css";
+```
+
+- `src/web/app.css`：仅 `@import "tailwindcss";` + `@import "tw-animate-css";`
+- `src/web/admin-theme.css`：tweakcn 双主题 + `@theme inline` + 全局 base。**旧变量桥段已删除。**
+
+### 已迁移的主要页面/组件
+
+- Login：`src/web/LoginView.tsx` → Card + Label + Input + Button
+- Console：`src/web/components/ConsoleChrome.tsx` → 桌面固定侧栏 + 移动端 Sheet + Button/Badge
+- Key Pools：`KeyPoolsWorkspace.tsx` Summary/Table/分页/筛选/批量操作改 Tailwind + shadcn
+- Activity：Filters / Feed / SummaryRail / Inspector / Workbench
+- Overview：Pulse / LatestErrors / RequestTrend
+- Strategy：Routing / Access / Surface
+- Providers：Master list/card、Detail、Remote、SearchEngine、ToolSurface、shared
+
+### Vite chunk 拆分（已写入，未最终确认）
+
+`vite.config.ts` 当前规则：
+
+- `charts`：recharts / d3- / victory-vendor
+- `radix`：radix-ui / @radix-ui
+- `react`：`/react/`、`/react-dom/`、`/react-router`、`/scheduler/`
+- 其余 node_modules → `vendor`
+
+第一版用 `id.includes("react")` 把 `react-*` 也打进 react chunk，出现 **Circular chunk: react ↔ vendor**。第二版已收窄匹配，但 `npm run build:web` 在中断前未拿到干净日志。`dist/public/assets/` 里已有 `charts-*.js` / `radix-*.js` / `react-*.js` / `vendor-*.js`，不能当作验收通过。
+
+## 5. 未完成任务（按优先级）
+
+### P0 — 必须先做，否则页面可能已经视觉损坏
+
+旧变量桥接已从 `admin-theme.css` 删除，但 shadcn 底层组件仍引用这些变量。亮色主题下尤其会丢颜色。
+
+仍在使用的已删除变量：
+
+| 变量 | 出现位置 |
+|------|----------|
+| `--text` | `src/components/ui/button.tsx`, `card.tsx`, `tabs.tsx` |
+| `--text-soft` | `button.tsx`, `badge.tsx`, `card.tsx`, `tabs.tsx` |
+| `--danger` | `button.tsx`, `badge.tsx` |
+| `--ui-ring` | `button.tsx`, `tabs.tsx` |
+| `--primary-strong` | `button.tsx`, `badge.tsx` |
+
+`--success` / `--warning` 仍在 `:root` / `.dark` 中定义，但 **未进入 `@theme inline`**，且 `badge.tsx` 直接 `var(--success)`。
+
+**建议修法（二选一，推荐 A）：**
+
+- **A. 把 primitives 改到语义 token**（终态正确）  
+  `--text` → `text-foreground`  
+  `--text-soft` → `text-muted-foreground`  
+  `--danger` → `text-destructive`  
+  `--ui-ring` → `ring-ring` / `var(--ring)`  
+  `--primary-strong` → `text-primary` 或 `color-mix`  
+  同时去掉 `Card` 上已失效的 `overview-shell-card overview-glow`，以及暗色写死的 `border-white/10`、`bg-[linear-gradient(180deg,rgba(24,28,34,0.94),...)]`、`font-['Space_Grotesk']`。这些在亮色主题会明显出错。
+- **B. 临时把桥接变量加回 `admin-theme.css`**，先恢复视觉，再做 A。只适合救急，不是完成定义。
+
+做完后立刻：
+
+```bash
 npm run check
-
-# 构建
 npm run build:web
-
-# 开发服务器
-npm run dev:web        # 仅前端 http://localhost:5176
-npm run dev            # 前端+后端
-
-# 添加新 shadcn 组件（不覆盖已有的）
-printf 'n\n' | npx shadcn@latest add <component-name>
+# 确认没有 Circular chunk 警告
 ```
 
-### Git 操作
+然后真实浏览器验收（见第 7 节）。这是本会话最大缺口：Phase 3 之后再也没有跑过浏览器。
 
-当前所有变更已暂存但未提交。接手后建议先提交一次作为快照点：
+### P1 — Phase 6 主题残留
 
-```bash
-git commit -m "feat(admin-ui): 引入 shadcn 双主题系统和核心组件迁移"
+1. **`src/web/components/RequestTrendPanel.tsx`**  
+   主题 token 是 **oklch**，代码却写成：
+   ```ts
+   const SUCCESS_COLOR = "hsl(var(--success))";
+   const DANGER_COLOR = "hsl(var(--destructive))";
+   const GRID_COLOR = "hsl(var(--border) / 0.6)";
+   const AXIS_COLOR = "hsl(var(--muted-foreground))";
+   ```
+   这会让 Recharts 轴线/折线颜色无效或错误。应改为直接 `var(--success)` 等，或读计算后的 CSS 颜色。点描边仍写死 `rgba(10,14,20,0.94)`，亮色主题需改。
+
+2. **`src/components/ui/{button,badge,card,tabs}.tsx`**  
+   仍是暗色专用样式（`white/10`、`cyan-300`、固定深色渐变）。即使补回变量，亮色主题也不成立。需要改成 `bg-card` / `text-foreground` / `border-border` / `bg-primary` 这一套。
+
+3. **`ProviderMasterCard.tsx:37`**  
+   业务层唯一剩余原生 `<button>`。方案允许它作为可访问性控件，但更干净的做法是 `Button asChild` 或可点击 `Card`。不要改交互：选中态、Core 左边框、onClick 打开详情。
+
+4. **把 `--success` / `--warning` 登记进 `@theme inline`**，以便 `text-success` / `bg-success` 可用。
+
+### P2 — 依赖与构建清理
+
+- `package.json` 同时有 `radix-ui` 和零散的 `@radix-ui/react-scroll-area` / `separator` / `tabs`。确认 shadcn 组件实际 import 路径后，删除未使用的重复包。
+- `next-themes` 已不在依赖里，无需再删。
+- `sonner` 走 `@/web/hooks/use-theme`，不要改回 `next-themes`。
+- 构建拆分确认无循环后再考虑是否还要把 lucide 单独 chunk。当前 JS 在 Phase 2 时约 925 kB，拆包后应看到 charts/radix/react/vendor 分文件。
+
+### P3 — Git / 合并（用户未要求前不要做）
+
+建议提交信息：
+
+```text
+feat(admin-ui): 完成 Tailwind/shadcn 页面迁移并清理旧 CSS
 ```
 
-后续合并流程：
+合并回 main：
+
 ```bash
-git checkout feature-admin-ui-rework
-git add -A && git commit
 cd /home/hedeoer/Projects/bitsearch
-git merge feature-admin-ui-rework --no-ff -m "merge: admin UI 重构"
+git merge feature-admin-ui-rework --no-ff
 ```
 
-## 关键文件索引
+合并前必须完成 P0 浏览器验收。
+
+### 可选增强（非完成定义）
+
+- Breadcrumb、更多 Tooltip、长任务 Progress
+- Skeleton 替换残留自定义 loading
+- 这些组件已安装，未要求上线
+
+## 6. 给接手 agent 的硬约束
+
+1. **不要覆盖** `src/components/ui/button.tsx` / `card.tsx` / `badge.tsx` 的 variant 枚举。Badge 是 `default | neutral | success | warning | danger`，**不是** shadcn 默认的 `secondary | destructive`。业务大量依赖 `variant="danger"` / `"success"`。
+2. **Radix Select 不支持空字符串 value。** `"All"` 必须用 `"all"`，在 `onValueChange` 里转成 `""` 以兼容过滤逻辑。见 `ActivityFiltersBar.tsx`。
+3. **新代码只用语义类名**：`bg-card`、`text-muted-foreground`、`border-border`。不要再引入 `--bg` / `--text` / `--surface`。
+4. **不要改后端。** 范围仅 `src/web/**`、`src/components/ui/**`、`vite.config.ts`、主题 CSS。
+5. **端口**：本 worktree 用 `5176` / `8098`。`npm run dev:web` 已在 `vite.config.ts` 写死 5176。
+6. **验证命令**：`npm run check` 然后 `npm run build:web`。没有前端单测框架，不要为这次迁移新加测试 runner。
+7. 回复使用简体中文；代码、路径、命令保持英文。
+8. 先 `maestro search` / `maestro load --type spec --category ui` 再改文件（项目 AGENTS.md 要求）。UI 约定在 `.workflow/specs/ui-conventions.md`。
+
+## 7. 验收清单（完成定义）
+
+- [ ] 业务 TSX 无应用层原生 `<input>` / `<select>` / `<textarea>`（当前扫描已通过）
+- [ ] 原生 `<button>` 仅限 shadcn 内部，或 `ProviderMasterCard` 这类明确的可访问性控件
+- [ ] `main.tsx` 只导入必要全局 CSS（已满足）
+- [ ] 旧 CSS 文件全部删除（已满足）
+- [ ] `src/components/ui/*` 不再引用已删除的 `--text` / `--text-soft` / `--danger` / `--ui-ring` / `--primary-strong`
+- [ ] `npm run check` 通过
+- [ ] `npm run build:web` 通过，且 **无 Circular chunk 警告**，charts/radix/react/vendor 分文件存在
+- [ ] 真实浏览器：`/login`、`/overview`、`/providers`、`/keys`、`/activity`
+- [ ] 明暗主题切换无视觉回归（Card/Button/Badge 在亮色下必须可读）
+- [ ] 桌面 + 移动端（Sheet 导航）
+- [ ] 控制台无未捕获错误
+- [ ] 冒烟：登录、导航、筛选、弹窗、表格操作、表单编辑、保存/取消、主题切换
+
+浏览器建议：
+
+```bash
+cd /home/hedeoer/Projects/bitsearch-admin-ui
+npm run dev          # 或分别 npm run dev:server / npm run dev:web
+# 前端 http://localhost:5176
+# 后端 http://127.0.0.1:8098
+```
+
+本地默认管理密钥从现有 env / 数据目录读取，不要把密钥写进文档或提交。
+
+## 8. 建议执行顺序
+
+1. 修复 `src/components/ui/{button,badge,card,tabs}.tsx` 的失效 CSS 变量和暗色写死样式（P0）。
+2. 修复 `RequestTrendPanel.tsx` 的 `hsl(var(--oklch-token))`（P1）。
+3. `npm run check && npm run build:web`，确认无 circular chunk。
+4. 真实浏览器四页 + 明暗 + 移动端冒烟。
+5. 视情况清理重复 Radix 依赖。
+6. 向用户报告结果；**等用户指示再 commit / merge。**
+
+## 9. 关键文件索引
 
 | 文件 | 角色 |
 |------|------|
-| `src/web/admin-theme.css` | tweakcn 双主题变量 + 旧变量桥接 |
-| `src/web/hooks/use-theme.ts` | 主题状态管理 |
-| `src/web/components/ThemeToggle.tsx` | 明暗切换按钮 |
-| `src/components/ui/*.tsx` | shadcn 组件库（24 个） |
-| `src/web/toast-store.ts` | Toast API 兼容层（调用 sonner） |
-| `src/web/components/Feedback.tsx` | ConfirmDialog (AlertDialog) + LoadingOverlay + EmptyState |
+| `src/web/admin-theme.css` | tweakcn 双主题，桥接已删 |
+| `src/web/app.css` | 仅 Tailwind / tw-animate 入口 |
+| `src/web/hooks/use-theme.ts` | `localStorage("admin-theme")` |
+| `src/web/components/ThemeToggle.tsx` | 明暗切换 |
+| `src/components/ui/*.tsx` | shadcn 组件；**P0 修复点** |
+| `src/web/LoginView.tsx` | 已迁移登录页 |
+| `src/web/components/ConsoleChrome.tsx` | 已迁移壳层 |
+| `src/web/components/KeyPoolsWorkspace.tsx` | 已迁移 |
+| `src/web/components/activity/*` | 已迁移 |
+| `src/web/components/RequestTrendPanel.tsx` | **P1 图表颜色** |
+| `src/web/components/providers/ProviderMasterCard.tsx` | 残留原生 button |
+| `vite.config.ts` | manualChunks，需重跑构建确认 |
+| `.workflow/specs/ui-conventions.md` | UI spec |
+
+## 10. 会话时间线（供核对）
+
+1. `01a02d12-9954-71f1-afb4-d78126c13015`：用户给出完整 6-phase 方案；完成 Phase 0 提交与 Phase 1 大部分；Phase 2 做到一半，API 中断。
+2. `01a02d29-7bd0-78b1-89de-8549ec0c51cb`：续作。完成 Key Pools 并浏览器验收；接着做完 Activity / Overview / Strategy / Providers 代码迁移；开始 Phase 6，删除旧 CSS 和变量桥接，加入 manualChunks；修 circular chunk 时被打断；handoff 多次请求失败。
+
+旧版 `HANDOFF.md` 描述的是 `b593f79` 基线（“还要迁 KeyPools/Activity”），**已过时，已被本文替换。**

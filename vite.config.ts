@@ -8,6 +8,24 @@ export default defineConfig({
   build: {
     outDir: "dist/public",
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes("node_modules")) return undefined;
+          if (id.includes("recharts") || id.includes("d3-") || id.includes("victory-vendor")) return "charts";
+          if (id.includes("radix-ui") || id.includes("@radix-ui")) return "radix";
+          if (
+            id.includes("node_modules/react/") ||
+            id.includes("node_modules/react-dom/") ||
+            id.includes("node_modules/react-router") ||
+            id.includes("node_modules/scheduler/")
+          ) {
+            return "react";
+          }
+          return "vendor";
+        },
+      },
+    },
   },
   server: {
     port: 5176,

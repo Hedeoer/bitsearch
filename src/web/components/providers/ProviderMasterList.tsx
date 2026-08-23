@@ -20,7 +20,7 @@ export function ProviderMasterList(props: ProviderMasterListProps) {
 
   return (
     <div className="flex h-full flex-col gap-3 overflow-y-auto pr-2">
-      <div className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--text-dim)]">
+      <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
         Providers
       </div>
 

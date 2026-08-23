@@ -1,5 +1,4 @@
 /* tweakcn theme: cmdght103000n04lh3e2ae93r */
-/* This file MUST be imported last in main.tsx so it overrides all legacy styles */
 
 @custom-variant dark (&:is(.dark *));
 
@@ -36,6 +35,8 @@
   --sidebar-accent-foreground: oklch(0.3250 0 0);
   --sidebar-border: oklch(0.9401 0 0);
   --sidebar-ring: oklch(0.7731 0 0);
+  /* 字体的权威定义放这里（勿放进 @theme inline：自引用会使变量失效）。
+     @theme 块中的同名字体会被 v4 tree-shaking 摇掉（如未被工具类静态引用的 --font-mono）。 */
   --font-sans: Outfit, sans-serif;
   --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
   --font-mono: Geist Mono, ui-monospace, monospace;
@@ -51,37 +52,8 @@
 
   color-scheme: light;
 
-  /* ── Legacy bridge ─────────────────────────────────────────── */
-  --bg: var(--background);
-  --bg-level-0: var(--background);
-  --bg-level-1: var(--card);
-  --bg-level-2: var(--muted);
-  --bg-level-3: var(--accent);
-  --shell: var(--background);
-  --surface: var(--card);
-  --surface-raised: var(--card);
-  --surface-bright: var(--muted);
-  --surface-soft: var(--muted);
-  --text: var(--foreground);
-  --text-soft: var(--muted-foreground);
-  --text-dim: var(--muted-foreground);
-  --border-strong: var(--input);
-  --primary-strong: color-mix(in oklch, var(--primary), white 30%);
-  --primary-soft: color-mix(in oklch, var(--primary), transparent 88%);
-  --primary-glow: color-mix(in oklch, var(--primary), transparent 82%);
   --success: oklch(0.6272 0.1694 149.2134);
-  --success-soft: color-mix(in oklch, var(--success), transparent 88%);
   --warning: oklch(0.7694 0.1579 70.0554);
-  --warning-soft: color-mix(in oklch, var(--warning), transparent 86%);
-  --danger: var(--destructive);
-  --danger-soft: color-mix(in oklch, var(--destructive), transparent 88%);
-  --input-bg: var(--input);
-  --ui-card: var(--card);
-  --ui-card-strong: var(--card);
-  --ui-card-soft: var(--muted);
-  --ui-ring: color-mix(in oklch, var(--ring), transparent 75%);
-  --ui-shadow: var(--shadow-md);
-  --ui-shadow-soft: var(--shadow-sm);
 }
 
 .dark {
@@ -120,37 +92,8 @@
 
   color-scheme: dark;
 
-  /* ── Legacy bridge ─────────────────────────────────────────── */
-  --bg: var(--background);
-  --bg-level-0: var(--background);
-  --bg-level-1: var(--card);
-  --bg-level-2: var(--muted);
-  --bg-level-3: var(--accent);
-  --shell: var(--background);
-  --surface: var(--card);
-  --surface-raised: var(--card);
-  --surface-bright: var(--muted);
-  --surface-soft: var(--muted);
-  --text: var(--foreground);
-  --text-soft: var(--muted-foreground);
-  --text-dim: var(--muted-foreground);
-  --border-strong: var(--input);
-  --primary-strong: color-mix(in oklch, var(--primary), white 20%);
-  --primary-soft: color-mix(in oklch, var(--primary), transparent 84%);
-  --primary-glow: color-mix(in oklch, var(--primary), transparent 78%);
   --success: oklch(0.7226 0.1919 149.5789);
-  --success-soft: color-mix(in oklch, var(--success), transparent 84%);
   --warning: oklch(0.8285 0.1383 74.6641);
-  --warning-soft: color-mix(in oklch, var(--warning), transparent 82%);
-  --danger: var(--destructive);
-  --danger-soft: color-mix(in oklch, var(--destructive), transparent 84%);
-  --input-bg: color-mix(in oklch, var(--input), transparent 50%);
-  --ui-card: var(--card);
-  --ui-card-strong: var(--card);
-  --ui-card-soft: var(--muted);
-  --ui-ring: color-mix(in oklch, var(--ring), transparent 75%);
-  --ui-shadow: var(--shadow-lg);
-  --ui-shadow-soft: var(--shadow-md);
 }
 
 /* Shadow scale shared across modes */
@@ -163,6 +106,14 @@
   --shadow-lg: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 4px 6px -1px hsl(0 0% 0% / 0.10);
   --shadow-xl: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 8px 10px -1px hsl(0 0% 0% / 0.10);
   --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
+}
+
+/* 字体不能放进 @theme inline：`--font-sans: var(--font-sans)` 自引用会使变量失效，
+   页面会跌回浏览器默认衬线字体。普通 @theme 会把值发射到 :root 并供 font-* 工具类使用。 */
+@theme {
+  --font-sans: Outfit, sans-serif;
+  --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+  --font-mono: Geist Mono, ui-monospace, monospace;
 }
 
 @theme inline {
@@ -182,6 +133,8 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -198,9 +151,6 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-mono);
-  --font-serif: var(--font-serif);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);

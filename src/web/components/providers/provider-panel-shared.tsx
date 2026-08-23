@@ -53,12 +53,12 @@ export function FieldShell(props: Readonly<{
   title: string;
 }>) {
   return (
-    <div className="rounded-[22px] border border-white/8 bg-[color:var(--ui-card-soft)] p-4">
-      <div className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--text-dim)]">
+    <div className="rounded-[22px] border border-border/70 bg-muted/20 p-4">
+      <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
         {props.title}
       </div>
       {props.description ? (
-        <p className="mt-1 text-xs leading-5 text-[color:var(--text-soft)]">{props.description}</p>
+        <p className="mt-1 text-xs leading-5 text-muted-foreground">{props.description}</p>
       ) : null}
       <div className="mt-3">{props.children}</div>
     </div>

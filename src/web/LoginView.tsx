@@ -1,6 +1,10 @@
 import type { FormEvent } from "react";
 import { KeyRound, Search } from "lucide-react";
 import { InlineSpinner } from "./components/Feedback";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 type LoginViewProps = {
   authKey: string;
@@ -17,51 +21,62 @@ export function LoginView(props: LoginViewProps) {
   }
 
   return (
-    <main className="login-shell">
-      <section className="login-card surface-card">
-        <div className="login-brand">
-          <div className="console-brand-mark">
-            <Search size={16} />
+    <main className="grid min-h-screen place-items-center bg-background px-4 py-8 text-foreground sm:px-6">
+      <Card className="w-full max-w-md overflow-hidden border-border/70 bg-card/95 shadow-2xl backdrop-blur-xl">
+        <CardHeader className="gap-4 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="grid size-11 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/20">
+              <Search className="size-5" aria-hidden="true" />
+            </div>
+            <div className="grid gap-1">
+              <CardDescription className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+                BitSearch
+              </CardDescription>
+              <CardTitle className="text-lg">Operations Console</CardTitle>
+            </div>
           </div>
-          <div className="login-brand-copy">
-            <span className="eyebrow">BitSearch</span>
-            <strong>Operations Console</strong>
-          </div>
-        </div>
-        <p className="supporting">
+          <CardDescription className="max-w-sm leading-6">
           Enter the admin authorization key to access the operator console.
-        </p>
-        <form className="login-form" onSubmit={handleSubmit} style={{ display: "grid", gap: "0.85rem", marginTop: "1rem" }}>
-          <label className="field" htmlFor="auth-key-input">
-            <span>Authorization Key</span>
-            <input
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form className="grid gap-5" onSubmit={handleSubmit}>
+            <div className="grid gap-2">
+              <Label htmlFor="auth-key-input">Authorization Key</Label>
+              <Input
               id="auth-key-input"
               name="authKey"
               type="password"
               value={props.authKey}
               onChange={(event) => props.onAuthKeyChange(event.target.value)}
               placeholder="Paste admin authorization key"
+              autoComplete="current-password"
+              aria-describedby={props.message ? "login-error" : undefined}
+              autoFocus
             />
-          </label>
-          <div className="action-row">
-            <button
-              type="submit"
-              className="primary-button login-submit"
-              disabled={props.pending}
-            >
+            </div>
+            <Button type="submit" className="w-full" disabled={props.pending}>
               {props.pending ? (
                 <InlineSpinner label="Verifying" />
               ) : (
                 <>
-                  <KeyRound size={15} />
+                  <KeyRound className="size-4" aria-hidden="true" />
                   Enter Console
                 </>
               )}
-            </button>
-          </div>
-        </form>
-        {props.message ? <p className="warning-banner">{props.message}</p> : null}
-      </section>
+            </Button>
+          </form>
+          {props.message ? (
+            <p
+              id="login-error"
+              role="alert"
+              className="mt-4 rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive-foreground"
+            >
+              {props.message}
+            </p>
+          ) : null}
+        </CardContent>
+      </Card>
     </main>
   );
 }

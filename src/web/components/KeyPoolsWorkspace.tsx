@@ -10,6 +10,7 @@ import { KeyInventoryCard } from "./KeyInventoryCard";
 import type { KeyListStatus, KeyPoolSummary, KeyPoolProvider } from "@shared/contracts";
 import { KeyPoolProviderPicker } from "./KeyPoolProviderPicker";
 import { useKeyWorkspace } from "./useKeyWorkspace";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -28,7 +29,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Table, TableBody } from "@/components/ui/table";
+import { Progress } from "@/components/ui/progress";
+import { Table, TableBody, TableHead, TableHeader } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 
 function renderSummaryQuota(summary: KeyPoolSummary | null): string {
@@ -67,22 +69,7 @@ function computeQuotaPercentage(summary: KeyPoolSummary | null): number | null {
 function QuotaBar({ percentage }: { percentage: number | null }) {
   if (percentage === null) return null;
   const p = Math.max(0, Math.min(100, percentage * 100)); // clamp to 0-100
-  const isDanger = p >= 85;
-  const isWarning = p >= 70 && p < 85;
-
-  const barColor = isDanger ? 'var(--danger)' : isWarning ? 'var(--warning)' : '#00e5ff';
-
-  return (
-    <div style={{ height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden', marginTop: '0.6rem', width: '100%', border: '1px solid rgba(255,255,255,0.05)' }}>
-      <div style={{
-        height: '100%',
-        width: `${p}%`,
-        background: barColor,
-        boxShadow: `0 0 10px ${barColor}44`,
-        transition: 'width 0.4s ease-out'
-      }} />
-    </div>
-  );
+  return <Progress aria-label={`Quota used ${p.toFixed(1)}%`} className="mt-2" value={p} />;
 }
 
 function SummaryCards(props: { summary: KeyPoolSummary | null; loading: boolean }) {
@@ -92,68 +79,50 @@ function SummaryCards(props: { summary: KeyPoolSummary | null; loading: boolean 
   
   const issues = (s?.totalKeys ?? 0) - (s?.healthyKeys ?? 0);
   const quotaPercent = computeQuotaPercentage(s);
+  const quotaVariant = quotaPercent !== null && quotaPercent >= 0.85
+    ? "danger"
+    : quotaPercent !== null && quotaPercent >= 0.7
+      ? "warning"
+      : "default";
   
   return (
-    <div className="key-summary-grid">
-      {/* 1. Consolidated Keys Card */}
-      <div className="key-summary-card">
-        <div className="stat-icon-tile" style={{ color: '#00e5ff' }}>
-          <Key size={20} />
-        </div>
-        <div className="stat-content">
-          <span>Total Keys</span>
-          <strong>{loading ? "..." : formatNumber(s?.totalKeys ?? 0)}</strong>
-          {!loading && (
-            <div className="stat-subtext">
-              <span className="highlight">{formatNumber(s?.healthyKeys ?? 0)} Healthy</span>
-              <span className={issues > 0 ? "danger" : ""}>{formatNumber(issues)} Issues</span>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* 2. Req / Fail Card */}
-      <div className="key-summary-card">
-        <div className="stat-icon-tile" style={{ color: '#ffcc00' }}>
-          <Activity size={20} />
-        </div>
-        <div className="stat-content">
-          <span>Req / Fail</span>
-          <strong>{loading ? "..." : `${formatNumber(s?.totalRequests ?? 0)} / ${formatNumber(s?.totalFailures ?? 0)}`}</strong>
-          {!loading && s?.totalRequests ? (
-            <div className="stat-subtext">
-              Success Rate: <span className="highlight">{((1 - (s.totalFailures / s.totalRequests)) * 100).toFixed(1)}%</span>
-            </div>
-          ) : null}
-        </div>
-      </div>
-
-      {/* 3. Quota Card */}
-      <div className="key-summary-card">
-        <div className="stat-icon-tile" style={{ color: '#a855f7' }}>
-          <Database size={20} />
-        </div>
-        <div className="stat-content">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-            <span>Quota</span>
-            {quotaPercent !== null && !loading && (
-              <span style={{ fontSize: '0.7rem', color: '#a855f7', fontWeight: 700 }}>
-                {(quotaPercent * 100).toFixed(1)}% Used
-              </span>
-            )}
+    <div className="grid gap-3 md:grid-cols-3">
+      <div className="rounded-2xl border border-border/70 bg-muted/20 p-4">
+        <div className="flex items-start gap-3">
+          <div className="grid size-10 place-items-center rounded-xl bg-primary/10 text-primary"><Key className="size-5" /></div>
+          <div className="min-w-0">
+            <span className="text-xs font-medium text-muted-foreground">Total Keys</span>
+            <strong className="mt-1 block text-xl font-semibold">{loading ? "..." : formatNumber(s?.totalKeys ?? 0)}</strong>
+            {!loading ? <div className="mt-1 flex gap-2 text-xs"><Badge className="px-2 py-0.5" variant="success">{formatNumber(s?.healthyKeys ?? 0)} Healthy</Badge><Badge className="px-2 py-0.5" variant={issues > 0 ? "danger" : "neutral"}>{formatNumber(issues)} Issues</Badge></div> : null}
           </div>
-          <strong style={{ fontSize: '0.85rem' }}>{loading ? "..." : renderSummaryQuota(s)}</strong>
-          {!loading && <QuotaBar percentage={quotaPercent} />}
+        </div>
+      </div>
+      <div className="rounded-2xl border border-border/70 bg-muted/20 p-4">
+        <div className="flex items-start gap-3">
+          <div className="grid size-10 place-items-center rounded-xl bg-warning/10 text-warning"><Activity className="size-5" /></div>
+          <div className="min-w-0">
+            <span className="text-xs font-medium text-muted-foreground">Req / Fail</span>
+            <strong className="mt-1 block text-xl font-semibold">{loading ? "..." : `${formatNumber(s?.totalRequests ?? 0)} / ${formatNumber(s?.totalFailures ?? 0)}`}</strong>
+            {!loading && s?.totalRequests ? <p className="mt-1 text-xs text-muted-foreground">Success rate <span className="font-semibold text-primary">{((1 - (s.totalFailures / s.totalRequests)) * 100).toFixed(1)}%</span></p> : null}
+          </div>
+        </div>
+      </div>
+      <div className="rounded-2xl border border-border/70 bg-muted/20 p-4">
+        <div className="flex items-start gap-3">
+          <div className="grid size-10 place-items-center rounded-xl bg-accent text-accent-foreground"><Database className="size-5" /></div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center justify-between gap-2"><span className="text-xs font-medium text-muted-foreground">Quota</span>{quotaPercent !== null && !loading ? <Badge className="px-2 py-0.5" variant={quotaVariant}>{(quotaPercent * 100).toFixed(1)}% used</Badge> : null}</div>
+            <strong className="mt-1 block truncate text-sm font-semibold">{loading ? "..." : renderSummaryQuota(s)}</strong>
+            {!loading ? <QuotaBar percentage={quotaPercent} /> : null}
+          </div>
         </div>
       </div>
 
       {s?.quotaNote && !isAlertClosed ? (
-        <div className="key-summary-note info-alert">
-          <AlertTriangle size={16} style={{ color: 'var(--primary-strong)' }} />
-          <p style={{ margin: 0, paddingRight: '1.5rem' }}>{s.quotaNote}</p>
-          <button className="alert-close" onClick={() => setIsAlertClosed(true)} title="Close">
-            <X size={14} />
-          </button>
+        <div className="relative col-span-full flex items-center gap-3 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2.5 text-sm text-muted-foreground">
+          <AlertTriangle className="size-4 shrink-0 text-primary" />
+          <p className="m-0 pr-8">{s.quotaNote}</p>
+          <Button aria-label="Close quota notice" className="absolute right-2 top-1/2 size-7 -translate-y-1/2" size="icon" type="button" variant="ghost" onClick={() => setIsAlertClosed(true)}><X className="size-3.5" /></Button>
         </div>
       ) : null}
     </div>
@@ -180,19 +149,19 @@ export function KeyPoolsWorkspace(props: KeyPoolsWorkspaceProps) {
 
   return (
     <>
-      <section className="page-panel">
-        <article className="surface-card key-inventory-panel" id="keys">
+      <section className="grid gap-4">
+        <article className="relative grid gap-4 rounded-2xl border border-border/70 bg-card/95 p-4 shadow-sm backdrop-blur-xl sm:p-5" id="keys">
           {workspace.loading ? <LoadingOverlay label="Refreshing workspace" /> : null}
 
           {/* 1. Combined Header & Overview */}
-          <div className="section-heading" style={{ marginBottom: '1rem', alignItems: 'flex-start' }}>
-            <div style={{ display: 'flex', gap: '0.85rem', alignItems: 'center' }}>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="flex flex-wrap items-center gap-3">
               <div>
-                <div className="eyebrow">Key Pools</div>
-                <h3>{workspace.provider} Workspace</h3>
+                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Key Pools</div>
+                <h2 className="mt-1 text-lg font-semibold tracking-tight">{workspace.provider} Workspace</h2>
               </div>
-              <div className="key-pool-provider-inline-picker">
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)', fontWeight: 500 }}>Provider:</span>
+              <div className="flex items-center gap-2 rounded-xl border border-border/70 bg-muted/20 px-2.5 py-1.5">
+                <span className="text-xs font-medium text-muted-foreground">Provider:</span>
                 <KeyPoolProviderPicker
                   value={workspace.provider as KeyPoolProvider}
                   onChange={(provider) => workspace.setProvider(provider)}
@@ -203,7 +172,7 @@ export function KeyPoolsWorkspace(props: KeyPoolsWorkspaceProps) {
                 */}
               </div>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+            <div className="flex items-center gap-3">
               <Button className="min-h-9 px-3" type="button" onClick={() => setIsImportOpen(true)}>
                 <Upload className="size-3.5" />
                 Manage & Import
@@ -215,31 +184,32 @@ export function KeyPoolsWorkspace(props: KeyPoolsWorkspaceProps) {
 
 
 
-          <div style={{ paddingBottom: '1.25rem' }} />
+          <div className="h-1" />
 
           {/* 3. Key Inventory */}
-          <div className="section-heading" style={{ marginBottom: '0.5rem' }}>
+          <div className="flex items-center justify-between gap-3">
             <div>
-              <h3>Key Inventory</h3>
+              <h2 className="text-base font-semibold tracking-tight">Key Inventory</h2>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              <Database size={16} className="section-icon" />
+            <div className="grid size-8 place-items-center rounded-lg bg-primary/10 text-primary">
+              <Database className="size-4" />
             </div>
           </div>
 
           {workspace.selectedIds.length === 0 ? (
-            <div className="inventory-filters-single-line">
+            <div className="flex flex-wrap items-center gap-2">
               <Button aria-label="Select all visible keys" className="size-8" size="icon" type="button" variant="ghost" onClick={workspace.selectAllVisible}>
                 <CheckSquare className="size-4" />
               </Button>
               
-              <div className="search-container">
-                 <Search size={14} color="var(--text-dim)" />
-                 <Input
-                    value={workspace.query}
-                    onChange={(event) => workspace.setQuery(event.target.value)}
-                    placeholder="Search key / fingerprint / note"
-                 />
+              <div className="relative min-w-[220px] flex-1 sm:max-w-xs">
+                <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={workspace.query}
+                  onChange={(event) => workspace.setQuery(event.target.value)}
+                  placeholder="Search key / fingerprint / note"
+                  className="pl-9"
+                />
               </div>
 
               <Select value={workspace.status} onValueChange={(value) => workspace.setStatus(value as KeyListStatus)}>
@@ -261,31 +231,29 @@ export function KeyPoolsWorkspace(props: KeyPoolsWorkspaceProps) {
               </Select>
             </div>
           ) : (
-            <div className="bulk-action-bar">
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/20 bg-primary/5 px-3 py-2">
+              <div className="flex items-center gap-2">
                 <Button aria-label="Cancel selection" className="size-7" size="icon" type="button" variant="ghost" onClick={workspace.clearSelection}>
                   <XSquare className="size-4" />
                 </Button>
-                <span style={{ fontWeight: 600, color: "rgba(0, 229, 255, 0.9)", fontSize: "0.85rem" }}>{workspace.selectedIds.length} Keys Selected</span>
+                <span className="text-sm font-semibold text-primary">{workspace.selectedIds.length} Keys Selected</span>
               </div>
 
-              <div style={{ flex: 1 }} />
-
-              <div style={{ display: "flex", alignItems: "center", gap: "0.45rem", flexWrap: "wrap" }}>
+              <div className="flex flex-wrap items-center gap-1.5">
                 <Button className="min-h-8 px-3 text-xs" disabled={workspace.isBatchTesting} type="button" variant="default" onClick={() => void workspace.testSelectedKeys()}>
                   {workspace.isBatchTesting ? <InlineSpinner label="" /> : <><FlaskConical className="size-3.5" /> Test</>}
                 </Button>
                 <Button className="min-h-8 px-3 text-xs" disabled={workspace.isBatchSyncing} type="button" variant="secondary" onClick={() => void workspace.syncSelectedKeys()}>
                   {workspace.isBatchSyncing ? <InlineSpinner label="" /> : <><RefreshCw className="size-3.5" /> Sync</>}
                 </Button>
-                <span className="toolbar-separator" aria-hidden="true" />
+                <span aria-hidden="true" className="h-6 w-px bg-border/70" />
                 <Button className="min-h-8 px-3 text-xs" disabled={workspace.isBulkUpdating} type="button" variant="secondary" onClick={() => void workspace.enableSelectedKeys()}>
                   <Power className="size-3.5" /> Enable
                 </Button>
                 <Button className="min-h-8 px-3 text-xs" disabled={workspace.isBulkUpdating} type="button" variant="secondary" onClick={() => void workspace.disableSelectedKeys()}>
                   <Power className="size-3.5" /> Disable
                 </Button>
-                <span className="toolbar-separator" aria-hidden="true" />
+                <span aria-hidden="true" className="h-6 w-px bg-border/70" />
                 <Button className="min-h-8 px-3 text-xs" disabled={workspace.isBatchDeleting} type="button" variant="destructive" onClick={workspace.deleteSelectedKeys}>
                   {workspace.isBatchDeleting ? <InlineSpinner label="" /> : <><Trash2 className="size-3.5" /> Delete</>}
                 </Button>
@@ -302,8 +270,15 @@ export function KeyPoolsWorkspace(props: KeyPoolsWorkspaceProps) {
               title={hasActiveFilters ? "No matching keys" : "No keys imported yet"}
             />
           ) : null}
-          <div>
+          <div className="overflow-hidden rounded-2xl border border-border/70">
             <Table className="table-fixed">
+              <TableHeader>
+                <tr className="bg-muted/20">
+                  <TableHead className="w-[30%]">Key</TableHead>
+                  <TableHead>Usage & quota</TableHead>
+                  <TableHead className="w-[168px] text-right">Actions</TableHead>
+                </tr>
+              </TableHeader>
               <TableBody>
                 {pagedKeys.map((item) => (
                   <KeyInventoryCard
@@ -332,18 +307,22 @@ export function KeyPoolsWorkspace(props: KeyPoolsWorkspaceProps) {
             </Table>
           </div>
           {totalPages > 1 && (
-            <div className="key-pagination">
-              <span className="key-pagination-info">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/70 pt-3">
+              <span className="text-xs text-muted-foreground">
                 {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, workspace.keys.length)} of {workspace.keys.length}
               </span>
-              <div className="key-pagination-controls">
-                <button
-                  className="key-pagination-btn"
+              <div className="flex items-center gap-1">
+                <Button
+                  aria-label="Previous page"
+                  className="size-8"
+                  size="icon"
+                  type="button"
+                  variant="outline"
                   disabled={currentPage === 1}
                   onClick={() => setCurrentPage(p => p - 1)}
                 >
                   ‹
-                </button>
+                </Button>
                 {Array.from({ length: totalPages }, (_, i) => i + 1)
                   .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
                   .reduce<(number | string)[]>((acc, p, idx, arr) => {
@@ -353,25 +332,33 @@ export function KeyPoolsWorkspace(props: KeyPoolsWorkspaceProps) {
                   }, [])
                   .map((item) =>
                     typeof item === "string" ? (
-                      <span key={item} className="key-pagination-ellipsis">…</span>
+                      <span key={item} className="px-1 text-sm text-muted-foreground">…</span>
                     ) : (
-                      <button
+                      <Button
                         key={item}
-                        className={`key-pagination-btn${item === currentPage ? " key-pagination-btn--active" : ""}`}
+                        aria-label={`Page ${item}`}
+                        className="size-8"
+                        size="icon"
+                        type="button"
+                        variant={item === currentPage ? "secondary" : "outline"}
                         onClick={() => setCurrentPage(item)}
                       >
                         {item}
-                      </button>
+                      </Button>
                     )
                   )
                 }
-                <button
-                  className="key-pagination-btn"
+                <Button
+                  aria-label="Next page"
+                  className="size-8"
+                  size="icon"
+                  type="button"
+                  variant="outline"
                   disabled={currentPage === totalPages}
                   onClick={() => setCurrentPage(p => p + 1)}
                 >
                   ›
-                </button>
+                </Button>
               </div>
             </div>
           )}

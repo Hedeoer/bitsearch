@@ -1,5 +1,7 @@
 import { Activity, AlertTriangle, CheckCircle, Gauge, GitBranch, ServerCrash, Timer } from "lucide-react";
 import type { ActivitySummary } from "@shared/contracts";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { formatDecimal, formatDuration, formatNumber, formatPercentage } from "../../format";
 
 type ActivitySummaryRailProps = {
@@ -11,76 +13,42 @@ function SummaryCard(
   props: Readonly<{
     icon: typeof Activity;
     label: string;
+    loading: boolean;
     tone?: "primary" | "danger" | "warning" | "success";
     value: string;
     supporting: string;
   }>,
 ) {
   return (
-    <article className={`metric-card activity-summary-card${props.tone ? ` activity-summary-card--${props.tone}` : ""}`}>
-      <div className="activity-summary-top">
-        <span className="activity-summary-icon">
-          <props.icon size={14} />
-        </span>
-        <span className="eyebrow">{props.label}</span>
-      </div>
-      <div className="activity-summary-value" style={{
-        fontSize: "2.25rem",
-        fontWeight: 700,
-        background: "linear-gradient(135deg, #ffffff 0%, var(--text-soft) 100%)",
-        WebkitBackgroundClip: "text",
-        WebkitTextFillColor: "transparent"
-      }}>
-        {props.value}
-      </div>
-      <p className="supporting compact">{props.supporting}</p>
-    </article>
+    <Card className="rounded-2xl border-border/70 bg-card/95 shadow-sm backdrop-blur-xl">
+      <CardContent className="grid gap-2 p-4">
+        <div className="flex items-center justify-between gap-2">
+          <span className={`grid size-8 place-items-center rounded-xl ${props.tone === "danger" ? "bg-destructive/10 text-destructive" : props.tone === "warning" ? "bg-warning/10 text-warning" : props.tone === "success" ? "bg-success/10 text-success" : "bg-primary/10 text-primary"}`}>
+            <props.icon className="size-4" />
+          </span>
+          <span className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">{props.label}</span>
+        </div>
+        {props.loading ? (
+          <Skeleton className="h-8 w-24 rounded-lg" />
+        ) : (
+          <strong className="text-2xl font-bold tracking-tight">{props.value}</strong>
+        )}
+        <p className="m-0 text-xs text-muted-foreground">{props.supporting}</p>
+      </CardContent>
+    </Card>
   );
 }
 
 export function ActivitySummaryRail(props: ActivitySummaryRailProps) {
   const summary = props.summary;
   return (
-    <section className="activity-summary-rail">
-      <SummaryCard
-        icon={Activity}
-        label="Requests"
-        tone="primary"
-        value={formatNumber(summary?.totalRequests ?? 0)}
-        supporting={props.loading ? "Refreshing current slice…" : "Filtered request count"}
-      />
-      <SummaryCard
-        icon={summary?.failureRate === 0 ? CheckCircle : AlertTriangle}
-        label="Failure Rate"
-        tone={summary?.failureRate === 0 ? "success" as any : "danger"}
-        value={formatPercentage(summary?.failureRate ?? 0)}
-        supporting={`${formatNumber(summary?.failedRequests ?? 0)} failed requests`}
-      />
-      <SummaryCard
-        icon={Timer}
-        label="P95 Latency"
-        tone="warning"
-        value={formatDuration(summary?.p95DurationMs ?? 0)}
-        supporting={`P50 ${formatDuration(summary?.p50DurationMs ?? 0)}`}
-      />
-      <SummaryCard
-        icon={GitBranch}
-        label="Avg Attempts"
-        value={formatDecimal(summary?.avgAttempts ?? 0)}
-        supporting={`${formatNumber(summary?.slowRequests ?? 0)} slow requests`}
-      />
-      <SummaryCard
-        icon={ServerCrash}
-        label="Top Failing Provider"
-        value={summary?.topFailedProviders[0]?.value ?? "-"}
-        supporting={summary?.topFailedProviders[0] ? `${formatNumber(summary.topFailedProviders[0].count)} failed attempts` : "No failed provider attempts"}
-      />
-      <SummaryCard
-        icon={Gauge}
-        label="Top Tool"
-        value={summary?.topTools[0]?.value ?? "-"}
-        supporting={summary?.topTools[0] ? `${formatNumber(summary.topTools[0].count)} requests` : "No requests yet"}
-      />
+    <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+      <SummaryCard icon={Activity} label="Requests" loading={props.loading} tone="primary" value={formatNumber(summary?.totalRequests ?? 0)} supporting={props.loading ? "Refreshing current slice…" : "Filtered request count"} />
+      <SummaryCard icon={summary?.failureRate === 0 ? CheckCircle : AlertTriangle} label="Failure Rate" loading={props.loading} tone={summary?.failureRate === 0 ? "success" : "danger"} value={formatPercentage(summary?.failureRate ?? 0)} supporting={`${formatNumber(summary?.failedRequests ?? 0)} failed requests`} />
+      <SummaryCard icon={Timer} label="P95 Latency" loading={props.loading} tone="warning" value={formatDuration(summary?.p95DurationMs ?? 0)} supporting={`P50 ${formatDuration(summary?.p50DurationMs ?? 0)}`} />
+      <SummaryCard icon={GitBranch} label="Avg Attempts" loading={props.loading} value={formatDecimal(summary?.avgAttempts ?? 0)} supporting={`${formatNumber(summary?.slowRequests ?? 0)} slow requests`} />
+      <SummaryCard icon={ServerCrash} label="Top Failing Provider" loading={props.loading} value={summary?.topFailedProviders[0]?.value ?? "-"} supporting={summary?.topFailedProviders[0] ? `${formatNumber(summary.topFailedProviders[0].count)} failed attempts` : "No failed provider attempts"} />
+      <SummaryCard icon={Gauge} label="Top Tool" loading={props.loading} value={summary?.topTools[0]?.value ?? "-"} supporting={summary?.topTools[0] ? `${formatNumber(summary.topTools[0].count)} requests` : "No requests yet"} />
     </section>
   );
 }

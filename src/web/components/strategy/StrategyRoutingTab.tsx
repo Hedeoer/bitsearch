@@ -3,6 +3,8 @@ import { Save } from "lucide-react";
 import type { KeyPoolProvider, SystemSettings } from "@shared/contracts";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import type { StrategyPanelProps } from "./strategy-types";
 
 const MAX_RESULT_BUDGET_CHARS = 1_000_000;
@@ -92,8 +94,8 @@ export function StrategyRoutingTab(props: StrategyPanelProps) {
 
   return (
     <div className="grid gap-4">
-      <div className="rounded-[20px] border border-white/8 bg-white/4 p-4">
-        <div className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--text-dim)]">
+      <div className="rounded-[20px] border border-border/70 bg-muted/20 p-4">
+        <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
           Affected tools
         </div>
         <div className="mt-3 flex flex-wrap gap-2">
@@ -104,7 +106,7 @@ export function StrategyRoutingTab(props: StrategyPanelProps) {
           ))}
         </div>
         {!canUseFailover ? (
-          <div className="mt-3 text-sm text-[color:var(--text-soft)]">
+          <div className="mt-3 text-sm text-muted-foreground">
             Only one provider is ready, so failover is currently locked.
           </div>
         ) : null}
@@ -180,8 +182,8 @@ export function StrategyRoutingTab(props: StrategyPanelProps) {
         />
       </div>
 
-      <div className="rounded-[20px] border border-white/8 bg-white/4 p-4">
-        <div className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--text-dim)]">
+      <div className="rounded-[20px] border border-border/70 bg-muted/20 p-4">
+        <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
           MCP result budget
         </div>
         <div className="mt-3 grid gap-3 xl:grid-cols-3">
@@ -228,10 +230,10 @@ export function StrategyRoutingTab(props: StrategyPanelProps) {
             <p className="text-muted-foreground text-xs">Follow-up page size.</p>
           </div>
 
-          <label className="field">
-            <span>Hard Response Chars</span>
-            <input
-              className="font-['IBM_Plex_Mono']"
+          <div className="grid gap-2">
+            <Label className="text-sm font-medium">Hard Response Chars</Label>
+            <Input
+              className="font-mono"
               disabled={props.loading}
               inputMode="numeric"
               max={MAX_RESULT_BUDGET_CHARS}
@@ -248,8 +250,8 @@ export function StrategyRoutingTab(props: StrategyPanelProps) {
                 })
               }
             />
-            <p className="field-note">Absolute response cap.</p>
-          </label>
+            <p className="text-xs text-muted-foreground">Absolute response cap.</p>
+          </div>
         </div>
       </div>
 
@@ -262,8 +264,6 @@ export function StrategyRoutingTab(props: StrategyPanelProps) {
     </div>
   );
 }
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,

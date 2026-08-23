@@ -30,7 +30,7 @@ type OverviewWorkspaceProps = Readonly<{
 
 export function OverviewWorkspace(props: OverviewWorkspaceProps) {
   return (
-    <div className="workspace-stack">
+    <div className="grid gap-4">
       <OverviewPulsePanel
         dashboard={props.dashboard}
         loading={props.loading}

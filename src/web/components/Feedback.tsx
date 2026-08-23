@@ -93,10 +93,10 @@ export function InlineSpinner({ label }: { label: string }) {
 
 export function EmptyState(props: EmptyStateProps) {
   return (
-    <section className="empty-state">
-      <div className="eyebrow">Empty state</div>
-      <h4>{props.title}</h4>
-      <p className="supporting">{props.description}</p>
+    <section className="grid place-items-center gap-2 rounded-2xl border border-border/60 bg-muted/20 px-6 py-10 text-center">
+      <p className="m-0 text-xs font-semibold uppercase tracking-[0.16em] text-primary">Empty state</p>
+      <h4 className="m-0 mt-1 text-lg font-semibold tracking-tight">{props.title}</h4>
+      <p className="m-0 max-w-md text-sm text-muted-foreground">{props.description}</p>
       {props.actionLabel && props.onAction ? (
         <Button type="button" variant="secondary" onClick={props.onAction}>
           {props.actionLabel}

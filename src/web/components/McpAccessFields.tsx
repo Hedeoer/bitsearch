@@ -17,12 +17,12 @@ type McpAccessFieldsProps = Readonly<{
 
 function AccessSectionHeader() {
   return (
-    <div className="section-heading compact">
+    <div className="flex items-start justify-between gap-3">
       <div>
-        <div className="eyebrow">MCP Access</div>
-        <h3>Stream HTTP</h3>
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">MCP Access</p>
+        <h3 className="mt-1 text-base font-semibold tracking-tight">Stream HTTP</h3>
       </div>
-      <KeyRound size={16} className="section-icon" />
+      <KeyRound className="size-4 text-primary" />
     </div>
   );
 }
@@ -38,7 +38,7 @@ function AccessUrlField(
   return (
     <div className="grid gap-2">
       <Label className="text-sm font-medium">MCP Stream HTTP URL</Label>
-      <div className="field-with-action">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <Input className="font-mono" readOnly value={props.streamHttpUrl} />
         <Button
           size="sm"
@@ -178,7 +178,6 @@ export function McpAccessFields(props: McpAccessFieldsProps) {
 
   return (
     <>
-      <div className="strategy-divider" />
       <AccessSectionHeader />
       <AccessUrlField
         authScheme={props.mcpAccess.authScheme}
@@ -188,7 +187,7 @@ export function McpAccessFields(props: McpAccessFieldsProps) {
       />
       <div className="grid gap-2">
         <Label className="text-sm font-medium">MCP Access Key</Label>
-        <div className="field-with-action">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <Input
             className="font-mono"
             disabled={props.loading || isSaving}

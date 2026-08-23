@@ -40,10 +40,10 @@ export function ProviderMasterCard(props: ProviderMasterCardProps) {
       className={`
         w-full rounded-[16px] border p-3 text-left transition-all
         ${props.isSelected
-          ? "border-cyan-400/40 bg-cyan-400/10"
-          : "border-white/8 bg-white/4 hover:border-white/16 hover:bg-white/6"
+          ? "border-primary/40 bg-primary/10"
+          : "border-border/70 bg-card/95 hover:border-primary/25 hover:bg-accent/20"
         }
-        ${isCore ? "border-l-4 border-l-cyan-400" : ""}
+        ${isCore ? "border-l-4 border-l-primary" : ""}
       `}
     >
       <div className="flex items-start justify-between gap-2">
@@ -58,7 +58,7 @@ export function ProviderMasterCard(props: ProviderMasterCardProps) {
               </Badge>
             )}
           </div>
-          <div className="mt-1 text-xs text-[color:var(--text-dim)]">
+          <div className="mt-1 text-xs text-muted-foreground">
             {props.provider === "search_engine" ? "Search Layer" : "Provider Runtime"}
           </div>
         </div>
@@ -66,7 +66,7 @@ export function ProviderMasterCard(props: ProviderMasterCardProps) {
       </div>
 
       {props.draft.enabled && (
-        <div className="mt-2 text-xs text-[color:var(--text-soft)]">
+        <div className="mt-2 text-xs text-muted-foreground">
           {props.provider === "search_engine"
             ? `${props.draft.apiKey ? "API key saved" : "No key"}`
             : `${props.providerRecord.keyCount} key(s)`

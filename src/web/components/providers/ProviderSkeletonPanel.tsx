@@ -6,7 +6,7 @@ export function ProviderSkeletonPanel() {
     <Card className="relative min-h-[320px] min-w-0">
       <LoadingOverlay label="Loading provider" />
       <CardHeader>
-        <div className="eyebrow">Provider</div>
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Provider</p>
         <CardTitle>Loading...</CardTitle>
       </CardHeader>
     </Card>

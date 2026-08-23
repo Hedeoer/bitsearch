@@ -3,6 +3,7 @@ import { ChevronUp, Clock, Download, Filter, RefreshCw, Search, SlidersHorizonta
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -57,26 +58,27 @@ export function ActivityFiltersBar(props: ActivityFiltersBarProps) {
   }
 
   return (
-    <section className="surface-card activity-command-card">
-      <div className="section-heading compact">
+    <section className="rounded-2xl border border-border/70 bg-card/95 p-4 shadow-sm backdrop-blur-xl sm:p-5">
+      <div className="flex items-start justify-between gap-3">
         <div>
-          <div className="eyebrow">Activity Command</div>
-          <h3>Trace, filter, and isolate slow or failing requests.</h3>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Activity Command</p>
+          <h3 className="mt-1 text-base font-semibold tracking-tight">Trace, filter, and isolate slow or failing requests.</h3>
         </div>
       </div>
 
-      <div className="activity-primary-filters">
-        <div className="activity-command-search relative">
+      <div className="mt-4 grid items-center gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_190px_170px_auto]">
+        <div className="relative sm:col-span-2 lg:col-span-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               type="search"
               value={props.filters.q}
               placeholder="tool, URL, provider, error, preview"
+              className="pl-9"
               onChange={(event) => props.onPatch({ q: event.target.value })}
             />
           </div>
 
-        <div>
+        <div className="min-w-0">
             <Select
               value={props.filters.timePreset}
               onValueChange={(value) => props.onPatch({ timePreset: value as ActivityFilterState["timePreset"] })}
@@ -95,7 +97,7 @@ export function ActivityFiltersBar(props: ActivityFiltersBarProps) {
             </Select>
           </div>
 
-        <div>
+        <div className="min-w-0">
           <Select
             value={props.filters.status}
             onValueChange={(value) => props.onPatch({ status: value === "all" ? "" : value as ActivityFilterState["status"] })}
@@ -111,8 +113,8 @@ export function ActivityFiltersBar(props: ActivityFiltersBarProps) {
           </Select>
         </div>
 
-        <div className="activity-command-actions">
-          <Button className={advancedCount > 0 ? "activity-advanced-toggle-active" : undefined} type="button" variant="secondary" onClick={() => setShowAdvanced(!showAdvanced)}>
+        <div className="flex items-center justify-end gap-1.5 sm:col-span-2 lg:col-span-1">
+          <Button type="button" size="sm" variant={advancedCount > 0 ? "default" : "secondary"} onClick={() => setShowAdvanced(!showAdvanced)}>
             {showAdvanced ? <ChevronUp size={14} /> : <Filter size={14} />}
             <span>{advancedCount > 0 ? `Filters (${advancedCount})` : "More Filters"}</span>
           </Button>
@@ -125,22 +127,18 @@ export function ActivityFiltersBar(props: ActivityFiltersBarProps) {
         </div>
       </div>
 
-      <div className="activity-segmented-row">
-        <div className="activity-segmented-control" role="tablist">
-          <button type="button" role="tab" aria-selected={activeTab === "all"} className={activeTab === "all" ? "active" : ""} onClick={() => handleTabChange("all")}>All views</button>
-          <button type="button" role="tab" aria-selected={activeTab === "failed"} className={activeTab === "failed" ? "active" : ""} onClick={() => handleTabChange("failed")}>
-            <span className="dot dot-danger" /> Failed
-          </button>
-          <button type="button" role="tab" aria-selected={activeTab === "slow"} className={activeTab === "slow" ? "active" : ""} onClick={() => handleTabChange("slow")}>
-            <span className="dot dot-warning" /> Slow
-          </button>
-          <button type="button" role="tab" aria-selected={activeTab === "fallback"} className={activeTab === "fallback" ? "active" : ""} onClick={() => handleTabChange("fallback")}>
-            Fallback
-          </button>
-        </div>
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+        <Tabs onValueChange={handleTabChange} value={activeTab}>
+          <TabsList aria-label="Activity views">
+            <TabsTrigger value="all">All views</TabsTrigger>
+            <TabsTrigger value="failed"><span aria-hidden="true" className="size-1.5 rounded-full bg-destructive" /> Failed</TabsTrigger>
+            <TabsTrigger value="slow"><span aria-hidden="true" className="size-1.5 rounded-full bg-warning" /> Slow</TabsTrigger>
+            <TabsTrigger value="fallback">Fallback</TabsTrigger>
+          </TabsList>
+        </Tabs>
 
         {props.hasActiveFilters ? (
-          <Button type="button" variant="ghost" onClick={props.onReset}>
+          <Button size="sm" type="button" variant="ghost" onClick={props.onReset}>
             <X size={14} />
             Clear filters
           </Button>
@@ -148,7 +146,7 @@ export function ActivityFiltersBar(props: ActivityFiltersBarProps) {
       </div>
 
       {props.filters.timePreset === "custom" ? (
-        <div className="activity-custom-range-row">
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <div className="grid gap-2">
             <Label className="text-sm font-medium">From</Label>
             <Input
@@ -157,20 +155,20 @@ export function ActivityFiltersBar(props: ActivityFiltersBarProps) {
               onChange={(event) => props.onPatch({ customStart: event.target.value })}
             />
           </div>
-          <label className="field">
+          <div className="grid gap-2">
             <Label className="text-sm font-medium">To</Label>
             <Input
               type="datetime-local"
               value={props.filters.customEnd}
               onChange={(event) => props.onPatch({ customEnd: event.target.value })}
             />
-          </label>
+          </div>
         </div>
       ) : null}
 
       {showAdvanced ? (
-        <div className="activity-advanced-filters">
-          <div>
+        <div className="mt-4 grid gap-3 rounded-2xl border border-border/60 bg-muted/20 p-3 md:grid-cols-2 xl:grid-cols-[repeat(3,minmax(0,1fr))_220px_200px]">
+          <div className="min-w-0">
             <Select
               value={props.filters.toolName}
               onValueChange={(value) => props.onPatch({ toolName: value === "all" ? "" : value })}
@@ -185,7 +183,7 @@ export function ActivityFiltersBar(props: ActivityFiltersBarProps) {
             </Select>
           </div>
 
-          <div>
+          <div className="min-w-0">
             <Select
               value={props.filters.provider}
               onValueChange={(value) => props.onPatch({ provider: (value === "all" ? "" : value) as ActivityFilterState["provider"] })}
@@ -200,7 +198,7 @@ export function ActivityFiltersBar(props: ActivityFiltersBarProps) {
             </Select>
           </div>
 
-          <div>
+          <div className="min-w-0">
             <Select
               value={props.filters.errorType}
               onValueChange={(value) => props.onPatch({ errorType: value === "all" ? "" : value })}
@@ -215,8 +213,8 @@ export function ActivityFiltersBar(props: ActivityFiltersBarProps) {
             </Select>
           </div>
 
-          <div className="activity-latency-field grid gap-2">
-            <div className="activity-latency-combo">
+          <div className="grid content-center gap-2">
+            <div className="flex items-center gap-2">
               <Input
                 type="number"
                 min="0"
@@ -224,7 +222,7 @@ export function ActivityFiltersBar(props: ActivityFiltersBarProps) {
                 value={props.filters.minDurationMs}
                 onChange={(event) => props.onPatch({ minDurationMs: event.target.value })}
               />
-              <span className="latency-divider">-</span>
+              <span className="text-muted-foreground">-</span>
               <Input
                 type="number"
                 min="0"
@@ -235,8 +233,8 @@ export function ActivityFiltersBar(props: ActivityFiltersBarProps) {
             </div>
           </div>
 
-          <div className="activity-sort-field">
-            <div className="activity-sort-row">
+          <div className="grid content-center gap-2">
+            <div className="flex items-center gap-2">
               <Select
                 value={props.filters.sortBy}
                 onValueChange={(value) => props.onPatch({ sortBy: value as ActivityFilterState["sortBy"] })}

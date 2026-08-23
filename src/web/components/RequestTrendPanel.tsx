@@ -20,10 +20,11 @@ import {
 import { formatNumber } from "../format";
 import { LoadingOverlay } from "./Feedback";
 
-const SUCCESS_COLOR = "#40e56c";
-const DANGER_COLOR = "#ff8e7d";
-const GRID_COLOR = "rgba(132, 147, 150, 0.14)";
-const AXIS_COLOR = "#7a8898";
+const SUCCESS_COLOR = "var(--success)";
+const DANGER_COLOR = "var(--destructive)";
+const GRID_COLOR = "color-mix(in oklab, var(--border) 60%, transparent)";
+const AXIS_COLOR = "var(--muted-foreground)";
+const DOT_STROKE = "var(--card)";
 
 type RequestTrendPanelProps = Readonly<{
   loading: boolean;
@@ -65,13 +66,13 @@ function CustomTooltip(props: Readonly<{
     return null;
   }
   return (
-    <div className="rounded-2xl border border-white/10 bg-[rgba(10,14,20,0.96)] px-4 py-3 text-xs shadow-[0_12px_28px_rgba(0,0,0,0.22)] backdrop-blur-xl">
-      <div className="font-['IBM_Plex_Mono'] text-[11px] text-[color:var(--text-dim)]">
+    <div className="rounded-2xl border border-border/70 bg-popover px-4 py-3 text-xs shadow-lg">
+      <div className="font-mono text-[11px] text-muted-foreground">
         {props.label}
       </div>
       <div className="mt-2 grid gap-2">
         {props.payload.map((entry) => (
-          <div key={entry.name} className="flex items-center gap-2 text-[color:var(--text)]">
+          <div key={entry.name} className="flex items-center gap-2">
             <span
               className="size-2 rounded-full"
               style={{ background: entry.color }}
@@ -88,7 +89,7 @@ function CustomTooltip(props: Readonly<{
 function TrendChart(props: Readonly<{ trend: DashboardTrendPoint[] }>) {
   if (props.trend.length === 0) {
     return (
-      <div className="grid min-h-[280px] place-items-center text-center text-[color:var(--text-soft)]">
+      <div className="grid min-h-[280px] place-items-center text-center text-muted-foreground">
         <div className="grid gap-3">
           <Activity className="mx-auto size-8" />
           <span>No traffic has been recorded in the last 24 hours.</span>
@@ -107,13 +108,13 @@ function TrendChart(props: Readonly<{ trend: DashboardTrendPoint[] }>) {
           axisLine={false}
           dataKey="label"
           interval={3}
-          tick={{ fill: AXIS_COLOR, fontSize: 12, fontFamily: "IBM Plex Mono, monospace" }}
+          tick={{ fill: AXIS_COLOR, fontSize: 12, fontFamily: "var(--font-mono)" }}
           tickLine={false}
         />
         <YAxis
           allowDecimals={false}
           axisLine={false}
-          tick={{ fill: AXIS_COLOR, fontSize: 12, fontFamily: "IBM Plex Mono, monospace" }}
+          tick={{ fill: AXIS_COLOR, fontSize: 12, fontFamily: "var(--font-mono)" }}
           tickFormatter={(value: number) => formatNumber(value)}
           tickLine={false}
           width={40}
@@ -122,7 +123,7 @@ function TrendChart(props: Readonly<{ trend: DashboardTrendPoint[] }>) {
         <Line
           activeDot={{ r: 5 }}
           dataKey="success"
-          dot={{ r: 3.5, fill: SUCCESS_COLOR, stroke: "rgba(10,14,20,0.94)", strokeWidth: 2 }}
+          dot={{ r: 3.5, fill: SUCCESS_COLOR, stroke: DOT_STROKE, strokeWidth: 2 }}
           isAnimationActive={false}
           stroke={SUCCESS_COLOR}
           strokeWidth={2.5}
@@ -131,7 +132,7 @@ function TrendChart(props: Readonly<{ trend: DashboardTrendPoint[] }>) {
         <Line
           activeDot={{ r: 5 }}
           dataKey="failed"
-          dot={{ r: 3.5, fill: DANGER_COLOR, stroke: "rgba(10,14,20,0.94)", strokeWidth: 2 }}
+          dot={{ r: 3.5, fill: DANGER_COLOR, stroke: DOT_STROKE, strokeWidth: 2 }}
           isAnimationActive={false}
           stroke={DANGER_COLOR}
           strokeWidth={2.5}
@@ -149,7 +150,7 @@ export function RequestTrendPanel(props: RequestTrendPanelProps) {
       <CardHeader className="pb-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <div className="eyebrow">Traffic</div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Traffic</p>
             <CardTitle className="mt-2">24h request trend</CardTitle>
             <CardDescription className="mt-2">
               Hourly buckets keep the chart readable while still surfacing drift and failure bursts.
@@ -172,7 +173,7 @@ export function RequestTrendPanel(props: RequestTrendPanelProps) {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="rounded-[22px] border border-white/8 bg-[color:var(--ui-card-soft)] p-4">
+        <div className="rounded-[22px] border border-border/70 bg-muted/20 p-4">
           <TrendChart trend={props.trend} />
         </div>
       </CardContent>
