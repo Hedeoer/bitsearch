@@ -37,12 +37,12 @@ export function ProviderMasterCard(props: ProviderMasterCardProps) {
       type="button"
       onClick={props.onClick}
       className={`
-        w-full rounded-[16px] border p-3 text-left transition-all
+        w-full rounded-lg border p-3 text-left transition-all
         ${props.isSelected
           ? "border-primary/40 bg-primary/10"
-          : "border-border/70 bg-card/95 hover:border-primary/25 hover:bg-accent/20"
+          : "border-border/70 bg-card hover:border-primary/25 hover:bg-accent/20"
         }
-        ${isCore ? "border-l-4 border-l-primary" : ""}
+        ${isCore ? "border-primary/30" : ""}
       `}
     >
       <div className="flex items-start justify-between gap-2">

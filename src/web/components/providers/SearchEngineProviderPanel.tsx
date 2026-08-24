@@ -61,8 +61,7 @@ export function SearchEngineProviderPanel(props: SearchEngineProviderPanelProps)
       <CardHeader className="pb-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Search Layer</p>
-            <CardTitle className="mt-2">search_engine</CardTitle>
+            <CardTitle>search_engine</CardTitle>
             <CardDescription className="mt-2 max-w-2xl">
               Configure the generic search endpoint, local credential, and default model used by
               the shared search layer.
@@ -86,7 +85,7 @@ export function SearchEngineProviderPanel(props: SearchEngineProviderPanelProps)
       </CardHeader>
       <CardContent className="grid gap-4">
         {props.error ? (
-          <div className="rounded-[20px] border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          <div className="rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
             {props.error}
           </div>
         ) : null}

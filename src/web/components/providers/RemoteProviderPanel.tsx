@@ -31,8 +31,7 @@ export function RemoteProviderPanel(props: RemoteProviderPanelProps) {
       <CardHeader className="pb-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Provider Runtime</p>
-            <CardTitle className="mt-2">{props.provider.provider}</CardTitle>
+            <CardTitle>{props.provider.provider}</CardTitle>
             <CardDescription className="mt-2">
               Keys stay in Key Pools. This card only controls provider availability and network
               behavior.
@@ -53,7 +52,7 @@ export function RemoteProviderPanel(props: RemoteProviderPanelProps) {
       </CardHeader>
       <CardContent className="grid gap-4">
         {props.error ? (
-          <div className="rounded-[20px] border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          <div className="rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
             {props.error}
           </div>
         ) : null}
@@ -85,8 +84,8 @@ export function RemoteProviderPanel(props: RemoteProviderPanelProps) {
             </span>
           </div>
         </FieldShell>
-        <div className="rounded-[22px] border border-border/70 bg-muted/20 p-4">
-          <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+        <div className="rounded-lg border border-border/70 bg-muted/20 p-4">
+          <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
             Key Management
           </div>
           <p className="mt-3 text-sm leading-6 text-muted-foreground">

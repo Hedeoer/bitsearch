@@ -176,10 +176,10 @@ export function ProvidersWorkspace(props: ProvidersWorkspaceProps) {
   }
 
   return (
-    <div className="grid gap-4">
-      <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
+    <div className="grid gap-5">
+      <div className="grid gap-5 lg:grid-cols-[280px_1fr]">
         {/* Master List */}
-        <div className="h-[calc(100vh-200px)] overflow-hidden rounded-[20px] border border-border/70 bg-card/95 p-4 shadow-sm backdrop-blur-xl">
+        <div className="h-[calc(100vh-200px)] overflow-hidden rounded-xl border border-border/70 bg-card p-4 shadow-xs">
           <ProviderMasterList
             providers={props.providers}
             selectedProvider={selectedProvider}
@@ -193,7 +193,7 @@ export function ProvidersWorkspace(props: ProvidersWorkspaceProps) {
 
         {/* Detail Panel */}
         <div className="space-y-4">
-          <div className="rounded-[20px] border border-border/70 bg-card/95 p-6 shadow-sm backdrop-blur-xl">
+          <div className="rounded-xl border border-border/70 bg-card p-6 shadow-xs">
             {selectedDraft && (
               <ProviderDetailPanel
                 selectedProviderRecord={selectedProviderRecord}
@@ -247,7 +247,7 @@ export function ProvidersWorkspace(props: ProvidersWorkspaceProps) {
 
       {/* Dirty Provider Save Bar */}
       {props.dirtyProviders.length > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 rounded-[20px] border border-border/70 bg-card/95 px-6 py-4 shadow-2xl backdrop-blur-xl">
+        <div className="fixed bottom-6 left-1/2 z-30 -translate-x-1/2 rounded-xl border border-border/70 bg-card px-6 py-4 shadow-glow">
           <div className="flex items-center gap-4">
             <span className="text-sm">
               {props.dirtyProviders.length} unsaved provider{props.dirtyProviders.length > 1 ? "s" : ""}
