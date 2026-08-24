@@ -9,9 +9,10 @@
 **一句话**：登录页的暖光无缝延伸进工作区——像走进同一间打暖光的房间。
 
 - 基调延续 tweakcn 暖橙赤陶 token（`src/web/admin-theme.css`，hue ~39-107°），light 为主视觉基准，dark 为完整适配。
-- 壳层氛围两件套（从登录页 `login-scene` 延伸，定义在 `app.css`）：
-  - **径向暖光**：内容区顶部一层 `radial-gradient(720px circle at 50% -10%, color-mix(in oklab, var(--primary) 10%, transparent), transparent 70%)`，固定于视口（不随内容滚动），侧栏区域不受影响。
-  - **点阵纹理**：`radial-gradient(color-mix(in oklab, var(--foreground) 22%, transparent) 1px, transparent 1px)` 22px 网格，mask 渐隐，整体 opacity ≤ 0.25，只出现在内容区顶部 400px 内。
+- 壳层氛围两件套（从登录页 `login-scene` 延伸，定义在 `app.css` 的 `.console-atmosphere`，固定于视口、置于内容之下）：
+  - **径向暖光**：`radial-gradient(900px circle at 50% 2%, color-mix(in oklab, var(--primary) 24%, transparent), transparent 68%)`——峰值落在顶栏下缘，形成「工作台上方一盏暖灯」的弧光；亮色下读作顶栏洇下的暖色地平线，暗色下是明确的橙色 bloom。
+  - **点阵纹理**：`radial-gradient(color-mix(in oklab, var(--foreground) 26%, transparent) 1px, transparent 1px)` 22px 网格，mask 渐隐至视口 38%，整体 opacity 0.26。
+  - 注意：卡片为不透明 bg-card，光只能从顶栏下 padding 带与边距洇出——这是有意的「灯下光」形态，不要为了露出光晕而把卡片改半透明。
 - 记忆点：登录 → 控制台的连续光感。任何页面截屏都应能认出这是 BitSearch。
 
 ## 2. 色板与角色
