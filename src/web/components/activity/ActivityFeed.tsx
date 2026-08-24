@@ -85,10 +85,9 @@ export function ActivityFeed(props: ActivityFeedProps) {
   const totalPages = Math.max(1, Math.ceil(total / Math.max(props.result?.pageSize ?? 25, 1)));
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-border/70 bg-card/95 shadow-sm backdrop-blur-xl">
+    <section className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-xs">
       <div className="flex items-center justify-between gap-3 border-b border-border/60 px-4 py-3.5">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Feed</p>
           <h3 className="mt-1 text-base font-semibold tracking-tight">Request feed</h3>
         </div>
         <Badge variant="neutral">{formatNumber(total)} total</Badge>

@@ -66,7 +66,7 @@ export function ActivityInspector(props: ActivityInspectorProps) {
   if (!props.loading && !props.error && !props.detail) {
     return (
       <div className="min-w-0 xl:max-h-[calc(100vh-180px)] xl:overflow-y-auto">
-        <section className="rounded-2xl border border-border/70 bg-card/95 shadow-sm backdrop-blur-xl">
+        <section className="rounded-xl border border-border/70 bg-card shadow-xs">
           <EmptyState title="Select a request" description="Choose a request from the feed to inspect attempts, payloads, and diagnostics." />
         </section>
       </div>
@@ -75,10 +75,9 @@ export function ActivityInspector(props: ActivityInspectorProps) {
 
   return (
     <div className="grid min-w-0 gap-4 xl:max-h-[calc(100vh-180px)] xl:overflow-y-auto">
-      <section className="rounded-2xl border border-border/70 bg-card/95 shadow-sm backdrop-blur-xl">
+      <section className="rounded-xl border border-border/70 bg-card shadow-xs">
         <div className="flex items-center justify-between gap-3 px-4 py-3.5">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Inspector</p>
             <h3 className="mt-1 text-base font-semibold tracking-tight">Selected request</h3>
           </div>
           {request ? <Badge variant={statusTone(request.status) === "success" ? "success" : statusTone(request.status) === "danger" ? "danger" : "warning"}>{request.status}</Badge> : null}
@@ -99,7 +98,7 @@ export function ActivityInspector(props: ActivityInspectorProps) {
               <CardContent className="grid gap-3 p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Diagnostics</p>
+                  <p className="text-sm font-semibold">Diagnostics</p>
                   <h3 className="mt-1 text-base font-semibold tracking-tight">Execution summary</h3>
                 </div>
               </div>
@@ -120,7 +119,7 @@ export function ActivityInspector(props: ActivityInspectorProps) {
                 <CardContent className="grid gap-3 p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-destructive">Error Summary</p>
+                    <p className="text-sm font-semibold text-destructive">Error Summary</p>
                     <h3 className="mt-1 text-base font-semibold tracking-tight">Top-level request error</h3>
                   </div>
                   <Badge variant="danger">
@@ -136,10 +135,9 @@ export function ActivityInspector(props: ActivityInspectorProps) {
         ) : null}
       </section>
 
-      <section className="rounded-2xl border border-border/70 bg-card/95 shadow-sm backdrop-blur-xl">
+      <section className="rounded-xl border border-border/70 bg-card shadow-xs">
         <div className="px-4 py-3.5">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Timeline</p>
             <h3 className="mt-1 text-base font-semibold tracking-tight">Attempts & payloads</h3>
           </div>
         </div>
