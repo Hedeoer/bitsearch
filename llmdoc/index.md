@@ -11,14 +11,15 @@
 - [MCP Server](architecture/mcp-server-architecture.md) -- HTTP+SSE transport, session lifecycle, tool invocation flow, and authentication.
 - [Search Providers](architecture/search-providers-architecture.md) -- Three-provider routing, key rotation, failover logic, and planning engine.
 - [Key Pool Management](architecture/key-pool-architecture.md) -- Key import, LRU rotation, quota sync, health checks, and AES-256-GCM encryption.
-- [Admin Console](architecture/admin-console-architecture.md) -- React 19 SPA architecture, component tree, state management, and CSS layer system.
+- [Admin Console](architecture/admin-console-architecture.md) -- React 19 SPA architecture, component tree, state management, and Tailwind v4 theme system.
+- [Admin Design System](architecture/admin-design-system.md) -- 方向 A「暖光工作台」视觉规范：token 角色、排版、组件、布局、Motion 哲学（唯一事实源）。
 
 ## Guides
 
 - [Adding MCP Tools](guides/adding-mcp-tools.md) -- Register a new tool in `register-tools.ts` with Zod schema and handler.
 - [Configuring Search Providers](guides/configuring-search-providers.md) -- Set up providers, routing strategy, API keys, and search model selection.
 - [Managing API Keys](guides/managing-api-keys.md) -- Import, monitor, sync quotas, disable, and delete keys in the pool.
-- [Admin Console Development](guides/admin-console-development.md) -- Add panels, wire state, connect backend APIs, and follow CSS architecture.
+- [Admin Console Development](guides/admin-console-development.md) -- Add panels, wire state, connect backend APIs, and follow Tailwind v4 / design-system conventions.
 - [Using BitSearch with Agent Skills](guides/using-bitsearch-with-agent-skills.md) -- Replace the long BitSearch companion prompt with one standard `bitsearch-research` skill template.
 - [Testing BitSearch with Natural Chat Prompts](guides/testing-bitsearch-with-natural-chat-prompts.md) -- Run one realistic conversation that exercises search, source follow-up, fetch, map, crawl, batch scrape, extract, and optional planning behavior.
 
