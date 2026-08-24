@@ -135,7 +135,7 @@ export function ConsoleLayout(props: ConsoleLayoutProps) {
               <Search className="size-4" aria-hidden="true" />
             </div>
             <div className="min-w-0 grid gap-0.5">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">BitSearch</span>
+              <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">BitSearch</span>
               <strong className="truncate font-sans text-sm tracking-tight">Operations Console</strong>
             </div>
           </div>
@@ -150,7 +150,7 @@ export function ConsoleLayout(props: ConsoleLayoutProps) {
             <div className="mx-auto grid w-full max-w-[1440px] gap-3 px-4 py-3 sm:px-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
               <div className="flex min-w-0 items-center gap-3">
                 <div className="min-w-0">
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">{activeRoute.label}</div>
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">{activeRoute.label}</div>
                   <h1 className="truncate text-base font-semibold tracking-tight sm:text-lg">{activeRoute.title}</h1>
                   <p className="mt-0.5 hidden max-w-2xl truncate text-sm text-muted-foreground sm:block">{activeRoute.description}</p>
                 </div>

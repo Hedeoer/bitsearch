@@ -22,14 +22,14 @@ export function LoginView(props: LoginViewProps) {
 
   return (
     <main className="login-scene grid min-h-screen place-items-center bg-background px-4 py-8 text-foreground sm:px-6">
-      <Card className="login-card login-enter w-full max-w-md overflow-hidden rounded-3xl border-border/70 bg-card">
+      <Card className="login-enter w-full max-w-md overflow-hidden rounded-2xl border-border/70 bg-card shadow-glow">
         <CardHeader className="gap-4 pb-4">
           <div className="flex items-center gap-3">
             <div className="grid size-11 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/25">
               <Search className="size-5" aria-hidden="true" />
             </div>
             <div className="grid gap-1">
-              <CardDescription className="font-mono text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+              <CardDescription className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-primary">
                 BitSearch
               </CardDescription>
               <CardTitle className="text-lg">Operations Console</CardTitle>
