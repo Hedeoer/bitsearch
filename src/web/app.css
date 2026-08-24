@@ -68,13 +68,6 @@
   animation: login-rise 300ms cubic-bezier(0.23, 1, 0.32, 1) both;
 }
 
-/* Stripe 式双层染色阴影:贴地一层 + 品牌色氛围一层 */
-.login-card {
-  box-shadow:
-    0 1px 2px oklch(0 0 0 / 0.08),
-    0 20px 48px -24px color-mix(in oklab, var(--primary) 18%, transparent);
-}
-
 .login-enter-2 {
   animation: login-rise 300ms cubic-bezier(0.23, 1, 0.32, 1) 70ms both;
 }
@@ -90,6 +83,75 @@
   }
 
   .login-error {
+    animation: none;
+  }
+}
+
+/* ---- 控制台壳层氛围（方向 A · 暖光工作台） ---- */
+
+::selection {
+  background: color-mix(in oklab, var(--primary) 24%, transparent);
+  color: var(--foreground);
+}
+
+.console-atmosphere {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.console-atmosphere::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    900px circle at 50% 2%,
+    color-mix(in oklab, var(--primary) 24%, transparent),
+    transparent 68%
+  );
+}
+
+.console-atmosphere::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(
+    color-mix(in oklab, var(--foreground) 26%, transparent) 1px,
+    transparent 1px
+  );
+  background-size: 22px 22px;
+  -webkit-mask-image: linear-gradient(to bottom, black 0, transparent 38%);
+  mask-image: linear-gradient(to bottom, black 0, transparent 38%);
+  opacity: 0.26;
+}
+
+@keyframes live-breathe {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--success) 45%, transparent);
+  }
+  55% {
+    box-shadow: 0 0 0 5px color-mix(in oklab, var(--success) 0%, transparent);
+  }
+}
+
+.live-dot {
+  animation: live-breathe 2.4s ease-in-out infinite;
+}
+
+.console-enter {
+  animation: login-rise 300ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+.console-enter-2 {
+  animation: login-rise 300ms cubic-bezier(0.23, 1, 0.32, 1) 70ms both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .console-enter,
+  .console-enter-2,
+  .live-dot {
     animation: none;
   }
 }

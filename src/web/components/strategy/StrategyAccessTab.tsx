@@ -9,23 +9,23 @@ export function StrategyAccessTab(
   >,
 ) {
   return (
-    <div className="grid gap-4">
-      <div className="rounded-[22px] border border-border/70 bg-card/95 p-4 shadow-sm backdrop-blur-xl">
+    <div className="grid">
+      <section className="pb-5">
         <AdminAccessFields
           adminAccess={props.adminAccess}
           loading={props.loading}
           onSaveAdminAccess={props.onSaveAdminAccess}
           onToast={props.onToast}
         />
-      </div>
-      <div className="rounded-[22px] border border-border/70 bg-card/95 p-4 shadow-sm backdrop-blur-xl">
+      </section>
+      <section className="border-t border-border/60 pt-5">
         <McpAccessFields
           loading={props.loading}
           mcpAccess={props.mcpAccess}
           onSaveMcpAccess={props.onSaveMcpAccess}
           onToast={props.onToast}
         />
-      </div>
+      </section>
     </div>
   );
 }

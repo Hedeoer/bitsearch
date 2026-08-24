@@ -21,7 +21,7 @@ const ERROR_PAGE_SIZE = 3;
 
 function ErrorEmptyState() {
   return (
-    <div className="grid min-h-[220px] place-items-center rounded-[22px] border border-success/20 bg-success/8 p-6 text-center">
+    <div className="grid min-h-[220px] place-items-center rounded-xl border border-success/20 bg-success/10 p-6 text-center">
       <div className="grid gap-3">
         <ShieldCheck className="mx-auto size-8 text-success" />
         <div className="text-sm text-muted-foreground">
@@ -40,7 +40,7 @@ function ErrorFeedItem(props: Readonly<{
   const summary = props.error.errorSummary ?? props.error.resultPreview ?? "No summary";
 
   return (
-    <div className="rounded-[20px] border border-destructive/15 bg-destructive/8 p-4">
+    <div className="rounded-lg border border-destructive/15 bg-destructive/10 p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="text-sm font-semibold">
@@ -90,8 +90,7 @@ export function OverviewLatestErrorsPanel(props: OverviewLatestErrorsPanelProps)
       <CardHeader className="pb-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Exceptions</p>
-            <CardTitle className="mt-2">Latest errors</CardTitle>
+            <CardTitle>Latest errors</CardTitle>
             <CardDescription className="mt-2">
               Recent failures stay compact and scannable instead of stretching into a long console dump.
             </CardDescription>

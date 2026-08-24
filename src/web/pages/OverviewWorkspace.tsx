@@ -30,7 +30,7 @@ type OverviewWorkspaceProps = Readonly<{
 
 export function OverviewWorkspace(props: OverviewWorkspaceProps) {
   return (
-    <div className="grid gap-4">
+    <div className="grid gap-5">
       <OverviewPulsePanel
         dashboard={props.dashboard}
         loading={props.loading}
@@ -38,8 +38,8 @@ export function OverviewWorkspace(props: OverviewWorkspaceProps) {
         system={props.system}
         toolSurface={props.toolSurface}
       />
-      <div className="grid gap-4 2xl:grid-cols-[minmax(0,1.45fr)_minmax(360px,0.92fr)]">
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.08fr)_minmax(320px,0.92fr)]">
+      <div className="grid gap-5 2xl:grid-cols-[minmax(0,1.45fr)_minmax(360px,0.92fr)]">
+        <div className="grid gap-5 xl:grid-cols-[minmax(0,1.08fr)_minmax(320px,0.92fr)]">
           <RequestTrendPanel
             loading={props.loading}
             trend={props.dashboard?.trend24h ?? []}

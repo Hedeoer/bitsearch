@@ -58,10 +58,9 @@ export function ActivityFiltersBar(props: ActivityFiltersBarProps) {
   }
 
   return (
-    <section className="rounded-2xl border border-border/70 bg-card/95 p-4 shadow-sm backdrop-blur-xl sm:p-5">
+    <section className="rounded-xl border border-border/70 bg-card p-4 shadow-xs sm:p-5">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Activity Command</p>
           <h3 className="mt-1 text-base font-semibold tracking-tight">Trace, filter, and isolate slow or failing requests.</h3>
         </div>
       </div>

@@ -19,7 +19,7 @@ function AccessSectionHeader() {
   return (
     <div className="flex items-start justify-between gap-3">
       <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Admin Access</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">Admin Access</p>
         <h3 className="mt-1 text-base font-semibold tracking-tight">Console Login</h3>
       </div>
       <KeyRound className="size-4 text-primary" />

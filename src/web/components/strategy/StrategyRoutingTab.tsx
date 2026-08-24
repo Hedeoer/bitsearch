@@ -94,8 +94,8 @@ export function StrategyRoutingTab(props: StrategyPanelProps) {
 
   return (
     <div className="grid gap-4">
-      <div className="rounded-[20px] border border-border/70 bg-muted/20 p-4">
-        <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+      <div className="rounded-lg border border-border/70 bg-muted/20 p-4">
+        <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
           Affected tools
         </div>
         <div className="mt-3 flex flex-wrap gap-2">
@@ -182,8 +182,8 @@ export function StrategyRoutingTab(props: StrategyPanelProps) {
         />
       </div>
 
-      <div className="rounded-[20px] border border-border/70 bg-muted/20 p-4">
-        <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+      <div className="rounded-lg border border-border/70 bg-muted/20 p-4">
+        <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
           MCP result budget
         </div>
         <div className="mt-3 grid gap-3 xl:grid-cols-3">

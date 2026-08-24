@@ -20,8 +20,8 @@ function ToolGroup(props: Readonly<{
   variant: "default" | "neutral" | "warning" | "success";
 }>) {
   return (
-    <div className="grid gap-3 rounded-[20px] border border-border/70 bg-muted/20 p-4">
-      <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+    <div className="grid gap-3 rounded-lg border border-border/70 bg-muted/20 p-4">
+      <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
         {props.label}
       </div>
       <div className="flex flex-wrap gap-2">
@@ -50,8 +50,7 @@ export function ToolSurfaceCard(props: ToolSurfaceCardProps) {
       <CardHeader>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Tool Surface</p>
-            <CardTitle className="mt-2">MCP Tool Exposure</CardTitle>
+            <CardTitle>MCP Tool Exposure</CardTitle>
             <CardDescription className="mt-2 max-w-xl">
               All registered MCP tools organized by category. Tools are automatically discovered and classified.
             </CardDescription>

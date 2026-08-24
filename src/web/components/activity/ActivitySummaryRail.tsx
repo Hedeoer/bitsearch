@@ -20,18 +20,18 @@ function SummaryCard(
   }>,
 ) {
   return (
-    <Card className="rounded-2xl border-border/70 bg-card/95 shadow-sm backdrop-blur-xl">
+    <Card>
       <CardContent className="grid gap-2 p-4">
         <div className="flex items-center justify-between gap-2">
           <span className={`grid size-8 place-items-center rounded-xl ${props.tone === "danger" ? "bg-destructive/10 text-destructive" : props.tone === "warning" ? "bg-warning/10 text-warning" : props.tone === "success" ? "bg-success/10 text-success" : "bg-primary/10 text-primary"}`}>
             <props.icon className="size-4" />
           </span>
-          <span className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">{props.label}</span>
+          <span className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">{props.label}</span>
         </div>
         {props.loading ? (
           <Skeleton className="h-8 w-24 rounded-lg" />
         ) : (
-          <strong className="text-2xl font-bold tracking-tight">{props.value}</strong>
+          <strong className="font-mono text-2xl font-semibold tabular-nums tracking-tight">{props.value}</strong>
         )}
         <p className="m-0 text-xs text-muted-foreground">{props.supporting}</p>
       </CardContent>

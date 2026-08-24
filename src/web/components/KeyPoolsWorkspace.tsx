@@ -87,7 +87,7 @@ function SummaryCards(props: { summary: KeyPoolSummary | null; loading: boolean 
   
   return (
     <div className="grid gap-3 md:grid-cols-3">
-      <div className="rounded-2xl border border-border/70 bg-muted/20 p-4">
+      <div className="rounded-xl border border-border/70 bg-muted/20 p-4">
         <div className="flex items-start gap-3">
           <div className="grid size-10 place-items-center rounded-xl bg-primary/10 text-primary"><Key className="size-5" /></div>
           <div className="min-w-0">
@@ -97,7 +97,7 @@ function SummaryCards(props: { summary: KeyPoolSummary | null; loading: boolean 
           </div>
         </div>
       </div>
-      <div className="rounded-2xl border border-border/70 bg-muted/20 p-4">
+      <div className="rounded-xl border border-border/70 bg-muted/20 p-4">
         <div className="flex items-start gap-3">
           <div className="grid size-10 place-items-center rounded-xl bg-warning/10 text-warning"><Activity className="size-5" /></div>
           <div className="min-w-0">
@@ -107,7 +107,7 @@ function SummaryCards(props: { summary: KeyPoolSummary | null; loading: boolean 
           </div>
         </div>
       </div>
-      <div className="rounded-2xl border border-border/70 bg-muted/20 p-4">
+      <div className="rounded-xl border border-border/70 bg-muted/20 p-4">
         <div className="flex items-start gap-3">
           <div className="grid size-10 place-items-center rounded-xl bg-accent text-accent-foreground"><Database className="size-5" /></div>
           <div className="min-w-0 flex-1">
@@ -149,16 +149,15 @@ export function KeyPoolsWorkspace(props: KeyPoolsWorkspaceProps) {
 
   return (
     <>
-      <section className="grid gap-4">
-        <article className="relative grid gap-4 rounded-2xl border border-border/70 bg-card/95 p-4 shadow-sm backdrop-blur-xl sm:p-5" id="keys">
+      <section className="grid gap-5">
+        <article className="relative grid gap-4 rounded-xl border border-border/70 bg-card p-4 shadow-xs sm:p-5" id="keys">
           {workspace.loading ? <LoadingOverlay label="Refreshing workspace" /> : null}
 
           {/* 1. Combined Header & Overview */}
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="flex flex-wrap items-center gap-3">
               <div>
-                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Key Pools</div>
-                <h2 className="mt-1 text-lg font-semibold tracking-tight">{workspace.provider} Workspace</h2>
+                <h2 className="text-lg font-semibold tracking-tight">{workspace.provider} Workspace</h2>
               </div>
               <div className="flex items-center gap-2 rounded-xl border border-border/70 bg-muted/20 px-2.5 py-1.5">
                 <span className="text-xs font-medium text-muted-foreground">Provider:</span>
@@ -231,7 +230,7 @@ export function KeyPoolsWorkspace(props: KeyPoolsWorkspaceProps) {
               </Select>
             </div>
           ) : (
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/20 bg-primary/5 px-3 py-2">
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/20 bg-primary/10 px-3 py-2">
               <div className="flex items-center gap-2">
                 <Button aria-label="Cancel selection" className="size-7" size="icon" type="button" variant="ghost" onClick={workspace.clearSelection}>
                   <XSquare className="size-4" />
@@ -270,7 +269,7 @@ export function KeyPoolsWorkspace(props: KeyPoolsWorkspaceProps) {
               title={hasActiveFilters ? "No matching keys" : "No keys imported yet"}
             />
           ) : null}
-          <div className="overflow-hidden rounded-2xl border border-border/70">
+          <div className="overflow-hidden rounded-xl border border-border/70">
             <Table className="table-fixed">
               <TableHeader>
                 <tr className="bg-muted/20">

@@ -26,7 +26,7 @@ export function PayloadToolbar(props: PayloadToolbarProps) {
 
   return (
     <div className="flex items-center justify-between border-b border-border/60 px-3.5 py-2.5">
-      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">{props.activeTab.toUpperCase()} PAYLOAD</span>
+      <span className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">{props.activeTab.toUpperCase()} PAYLOAD</span>
       <div className="flex items-center gap-1.5">
         <Button
           className="size-8 rounded-lg"

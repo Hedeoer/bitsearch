@@ -316,17 +316,17 @@ The GitHub Actions Docker publish workflow pushes:
 #### Option 3: Development mode
 For day-to-day local development, use the Vite frontend as the fixed browser entrypoint and let it proxy API traffic to the TSX backend:
 ```bash
-# Starts the Express server on 127.0.0.1:8097 and the Vite dev server on 5173
+# Starts the Express backend on 127.0.0.1:8098 and the Vite dev server on 5176
 npm run dev
 ```
-- Admin Console: `http://localhost:5173`
-- Backend API/MCP (dev service): `http://127.0.0.1:8097`
+- Admin Console: `http://localhost:5176` (端口被占时 Vite 会静默 +1，以终端输出为准)
+- Backend API/MCP (dev service): `http://127.0.0.1:8098`
 
 Useful dev endpoints:
 
-- Browser entrypoint: `http://localhost:5173`
-- Health check: `http://127.0.0.1:8097/healthz`
-- MCP endpoint: `http://127.0.0.1:8097/mcp`
+- Browser entrypoint: `http://localhost:5176`
+- Health check: `http://127.0.0.1:8098/healthz`
+- MCP endpoint: `http://127.0.0.1:8098/mcp`
 
 For local development, prefer `http://localhost:5173` for browser verification. Temporary standalone ports are for isolated debugging only and should not be treated as the default dev entrypoint.
 
@@ -926,13 +926,15 @@ src/
 └── web/
     ├── components/      # React components (Dashboard, Key Pools, Activity)
     ├── pages/           # Main workspace layouts
+    ├── components/      # Console chrome, panels, activity UI
     ├── api.ts           # Frontend fetch client
     ├── format.ts        # Display formatting utilities
     ├── types.ts         # Frontend type definitions
     ├── toast-store.ts   # Toast notification state
     ├── LoginView.tsx    # Admin login page
-    ├── theme.css        # Design tokens and theme system
-    ├── styles.css       # Global and component styles
+    ├── AppShell.tsx     # Route table (mounts ConsoleLayout)
+    ├── app.css          # Tailwind v4 entry + custom atmosphere styles
+    ├── admin-theme.css  # tweakcn oklch design tokens (@theme inline)
     └── main.tsx         # React UI entry point
 ```
 
