@@ -1,2 +1,95 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+/* 主题必须与 Tailwind 同一次编译:@theme 定义在此文件,
+   分开导入会导致 primary/card/muted 等语义工具类不被生成。 */
+@import "./admin-theme.css";
+
+/* ---- 登录页氛围与动效(仅 LoginView 使用) ---- */
+
+@keyframes login-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes login-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-4px);
+  }
+  45% {
+    transform: translateX(3px);
+  }
+  70% {
+    transform: translateX(-2px);
+  }
+}
+
+.login-scene {
+  position: relative;
+  isolation: isolate;
+}
+
+.login-scene::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background: radial-gradient(
+    640px circle at 50% -8%,
+    color-mix(in oklab, var(--primary) 13%, transparent),
+    transparent 72%
+  );
+}
+
+.login-scene::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image: radial-gradient(
+    color-mix(in oklab, var(--foreground) 22%, transparent) 1px,
+    transparent 1px
+  );
+  background-size: 22px 22px;
+  mask-image: linear-gradient(to bottom, black, transparent 68%);
+  opacity: 0.3;
+}
+
+.login-enter {
+  animation: login-rise 300ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+/* Stripe 式双层染色阴影:贴地一层 + 品牌色氛围一层 */
+.login-card {
+  box-shadow:
+    0 1px 2px oklch(0 0 0 / 0.08),
+    0 20px 48px -24px color-mix(in oklab, var(--primary) 18%, transparent);
+}
+
+.login-enter-2 {
+  animation: login-rise 300ms cubic-bezier(0.23, 1, 0.32, 1) 70ms both;
+}
+
+.login-error {
+  animation: login-shake 240ms cubic-bezier(0.23, 1, 0.32, 1) 80ms both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-enter,
+  .login-enter-2 {
+    animation: none;
+  }
+
+  .login-error {
+    animation: none;
+  }
+}
