@@ -41,18 +41,27 @@ docs(readme): add deployment and usage examples
 
 ## Validation
 
-There is no dedicated test runner configured in the repository yet. Minimum validation for every change:
+Tests use the built-in `node:test` runner executed through tsx (`npm test`). Minimum validation for every change:
 
 ```bash
-npm run check
+npm run check && npm test
+```
+
+Lint checks use ESLint (`npm run lint`); new code should not introduce errors.
+
+For changes to backend or MCP-related code, also run the MCP tooling gate locally:
+
+```bash
+npm run mcp:tooling
 ```
 
 Also run a manual smoke test for the flow you changed while `npm run dev` is running.
 
 When adding tests:
 
-- Place `*.test.ts` or `*.test.tsx` next to the feature they cover.
+- Add `*.test.ts` files under the central `tests/` directory.
 - Keep tests deterministic and easy to run locally.
+- Note that `tests/guidance-consistency.test.ts` asserts exact phrases in `README.md` and `skills/bitsearch-research/SKILL.md`.
 
 ## Pull Requests
 
@@ -66,7 +75,7 @@ Include the following in your PR description:
 
 Review checklist before opening a PR:
 
-- `npm run check` passes
+- `npm run check && npm test` passes
 - Changed flows were manually exercised
 - Documentation was updated when behavior changed
 - No secrets or local state files were added

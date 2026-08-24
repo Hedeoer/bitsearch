@@ -8,7 +8,7 @@ Install dependencies with `npm install`.
 
 - `npm run dev`: starts the Express server with `tsx watch` and the Vite dev server together.
 - `npm run dev:server`: runs only the backend from `src/server/main.ts`.
-- `npm run dev:web`: runs only the frontend on port `5173`.
+- `npm run dev:web`: runs only the frontend on port `5176`.
 - `npm run build`: builds both the web bundle and server output into `dist/`.
 - `npm run check`: runs TypeScript type-checking with no emit; use this before every PR.
 - `npm start`: serves the compiled app from `dist/server/main.js`.
@@ -17,7 +17,7 @@ Install dependencies with `npm install`.
 Use strict TypeScript and ESM imports. Follow the existing style: 2-space indentation, double quotes, trailing commas where the formatter leaves them, and small focused modules. Use `PascalCase` for React component files such as `SecurityPanel.tsx`; use `kebab-case` for backend modules such as `admin-routes.ts` and `planning-engine.ts`. Prefer named exports for reusable utilities and keep shared API shapes in `src/shared/contracts.ts`.
 
 ## Testing Guidelines
-No dedicated test runner is checked in yet; there is no `vitest` or `jest` config in the repo today. Minimum validation for every change is `npm run check` plus a manual smoke test of the touched flow in `npm run dev`. When adding tests, place `*.test.ts` or `*.test.tsx` next to the feature they cover.
+Tests use the built-in `node:test` runner executed through tsx; there is no `vitest` or `jest`. Run all tests with `npm test`; run a single file with `node --import tsx --test tests/<file>.test.ts`. Minimum validation for every change is `npm run check && npm test`, plus a manual smoke test of the touched flow in `npm run dev`. Add new tests as `*.test.ts` under the central `tests/` directory. Note that `tests/guidance-consistency.test.ts` asserts exact phrases in `README.md` and `skills/bitsearch-research/SKILL.md`.
 
 ## Commit & Pull Request Guidelines
 Recent history uses Conventional Commit style with scopes, for example `feat(activity): add detail tabs and web_search messages` and `chore: bootstrap bitsearch admin service`. Keep commits in the form `<type>(<scope>): <summary>` when a scope adds clarity. PRs should describe user-visible changes, list verification steps, reference related issues, and include screenshots for UI work.

@@ -2,7 +2,7 @@
 
 ## 1. Core Summary
 
-This project follows Conventional Commits with optional scopes. The single long-lived branch is `master`. PRs should describe user-visible changes, list verification steps, and include screenshots for UI work.
+This project follows Conventional Commits with optional scopes. The single long-lived branch is `main`. PRs should describe user-visible changes, list verification steps, and include screenshots for UI work.
 
 ## 2. Source of Truth
 
@@ -13,8 +13,8 @@ This project follows Conventional Commits with optional scopes. The single long-
 
 | Branch   | Purpose                        |
 | -------- | ------------------------------ |
-| `master` | Primary integration branch     |
-| feature  | Short-lived, merged to master  |
+| `main`   | Primary integration branch      |
+| feature  | Short-lived, merged to main     |
 
 ## 4. Commit Message Format
 
