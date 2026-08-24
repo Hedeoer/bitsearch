@@ -57,7 +57,7 @@ function MetricCard(props: MetricCardProps) {
       <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
         {props.label}
       </div>
-      <div className="mt-3 font-['Space_Grotesk'] text-[1.9rem] font-semibold tracking-[-0.04em]">
+      <div className="mt-3 font-mono text-[1.9rem] font-semibold tabular-nums tracking-tight">
         {props.value}
       </div>
       <div className="mt-2 text-sm leading-6 text-muted-foreground">
