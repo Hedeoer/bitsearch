@@ -66,7 +66,7 @@ function CustomTooltip(props: Readonly<{
     return null;
   }
   return (
-    <div className="rounded-2xl border border-border/70 bg-popover px-4 py-3 text-xs shadow-lg">
+    <div className="rounded-lg border border-border/70 bg-popover px-4 py-3 text-xs shadow-lg">
       <div className="font-mono text-[11px] text-muted-foreground">
         {props.label}
       </div>
@@ -150,8 +150,7 @@ export function RequestTrendPanel(props: RequestTrendPanelProps) {
       <CardHeader className="pb-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Traffic</p>
-            <CardTitle className="mt-2">24h request trend</CardTitle>
+            <CardTitle>24h request trend</CardTitle>
             <CardDescription className="mt-2">
               Hourly buckets keep the chart readable while still surfacing drift and failure bursts.
             </CardDescription>
@@ -173,7 +172,7 @@ export function RequestTrendPanel(props: RequestTrendPanelProps) {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="rounded-[22px] border border-border/70 bg-muted/20 p-4">
+        <div className="rounded-xl border border-border/70 bg-muted/20 p-4">
           <TrendChart trend={props.trend} />
         </div>
       </CardContent>

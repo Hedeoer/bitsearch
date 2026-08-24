@@ -38,23 +38,23 @@ type MetricCardProps = Readonly<{
 
 function getMetricToneClass(tone: MetricCardProps["tone"]) {
   if (tone === "success") {
-    return "border-success/20 bg-success/8";
+    return "border-success/20 bg-success/10";
   }
   if (tone === "warning") {
-    return "border-warning/20 bg-warning/8";
+    return "border-warning/20 bg-warning/10";
   }
   if (tone === "danger") {
-    return "border-destructive/20 bg-destructive/8";
+    return "border-destructive/20 bg-destructive/10";
   }
-  return "border-primary/20 bg-primary/8";
+  return "border-primary/20 bg-primary/10";
 }
 
 function MetricCard(props: MetricCardProps) {
   return (
     <div
-      className={`rounded-[22px] border bg-card/95 p-4 shadow-sm backdrop-blur-xl ${getMetricToneClass(props.tone)}`}
+      className={`rounded-xl border p-4 shadow-xs ${getMetricToneClass(props.tone)}`}
     >
-      <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+      <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
         {props.label}
       </div>
       <div className="mt-3 font-mono text-[1.9rem] font-semibold tabular-nums tracking-tight">
@@ -69,27 +69,27 @@ function MetricCard(props: MetricCardProps) {
 
 function CompactFact(props: Readonly<{ label: string; value: string }>) {
   return (
-    <div className="rounded-[18px] border border-border/70 bg-muted/20 px-4 py-3">
-      <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+    <div className="rounded-lg border border-border/70 bg-muted/20 px-4 py-3">
+      <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
         {props.label}
       </div>
-      <div className="mt-2 text-sm font-medium">{props.value}</div>
+      <div className="mt-2 font-mono text-sm font-medium tabular-nums">{props.value}</div>
     </div>
   );
 }
 
-function PostureCard(props: Readonly<{
+function PostureRow(props: Readonly<{
   label: string;
   value: string;
   supporting: string;
 }>) {
   return (
-    <div className="rounded-[18px] border border-border/70 bg-background/60 px-4 py-3">
-      <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+    <div className="py-3 first:pt-0 last:pb-0">
+      <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
         {props.label}
       </div>
-      <div className="mt-2 text-sm font-medium">{props.value}</div>
-      <div className="mt-1 text-xs leading-5 text-muted-foreground">
+      <div className="mt-1.5 text-sm font-medium">{props.value}</div>
+      <div className="mt-1 break-words font-mono text-xs leading-5 text-muted-foreground">
         {props.supporting}
       </div>
     </div>
@@ -171,13 +171,12 @@ export function OverviewPulsePanel(props: OverviewPulsePanelProps) {
   );
 
   return (
-    <Card className="relative overflow-hidden">
+    <Card className="relative overflow-hidden shadow-glow">
       {props.loading ? <LoadingOverlay label="Refreshing overview" /> : null}
       <CardHeader className="relative pb-4">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="max-w-3xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Operations Snapshot</p>
-            <CardTitle className="mt-2 text-2xl">Operational overview</CardTitle>
+            <CardTitle className="text-2xl">Operational overview</CardTitle>
             <CardDescription className="mt-3 max-w-2xl">
               Health, throughput, and routing state stay visible without repeating control details.
             </CardDescription>
@@ -229,23 +228,23 @@ export function OverviewPulsePanel(props: OverviewPulsePanelProps) {
             </div>
           </div>
 
-          <div className="grid gap-4 rounded-[24px] border border-border/70 bg-card/95 p-5 shadow-sm backdrop-blur-xl">
-            <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-              <Activity className="size-3.5" />
+          <div className="grid content-start gap-1 rounded-xl border border-border/70 bg-card p-5 shadow-xs">
+            <div className="flex items-center gap-2 pb-2 text-sm font-semibold">
+              <Activity className="size-4 text-primary" aria-hidden="true" />
               System posture
             </div>
-            <div className="mt-4 grid gap-3">
-              <PostureCard
+            <div className="grid divide-y divide-border/60">
+              <PostureRow
                 label="Routing"
                 value={routeLabel}
                 supporting={effectiveOrder}
               />
-              <PostureCard
+              <PostureRow
                 label="Provider readiness"
                 value={providerReadiness.value}
                 supporting={providerReadiness.supporting}
               />
-              <PostureCard
+              <PostureRow
                 label="Surface freshness"
                 value={`${refreshedAt} · ${refreshMode}`}
                 supporting="Tool exposure refresh state"

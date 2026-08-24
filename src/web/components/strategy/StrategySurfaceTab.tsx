@@ -7,8 +7,8 @@ function ToolGroup(props: Readonly<{
   variant: "default" | "neutral" | "warning" | "success";
 }>) {
   return (
-    <div className="grid gap-3 rounded-[20px] border border-border/70 bg-muted/20 p-4">
-      <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+    <div className="grid gap-3 rounded-lg border border-border/70 bg-muted/20 p-4">
+      <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
         {props.label}
       </div>
       <div className="flex flex-wrap gap-2">
