@@ -29,7 +29,7 @@
 ### CSS Architecture
 
 - `src/web/app.css`：唯一自定义 CSS 编译入口。`@import "tailwindcss"` + `@import "./admin-theme.css"` 必须同一次编译（分开导入会导致 primary/card/muted 等语义工具类不被生成）；另含登录页与壳层氛围动效类。
-- `src/web/admin-theme.css`：Tailwind v4 CSS-based 配置（无 `tailwind.config.js`）。tweakcn 生成的 oklch token（light `.dark` 两套）经 `@theme inline` 映射为 `bg-card`/`text-muted-foreground` 等语义工具类；含 `--success/--warning`（手工维护）、`--shadow-glow`（方向 A 主面板染色阴影）与字体定义（`--font-sans: Outfit`、`--font-mono: Geist Mono`，字体权威定义须留 `:root`，不得进 `@theme inline`）。
+- `src/web/admin-theme.css`：Tailwind v4 CSS-based 配置（无 `tailwind.config.js`）。tweakcn 生成的 oklch token（light `.dark` 两套）经 `@theme inline` 映射为 `bg-card`/`text-muted-foreground` 等语义工具类；含 `--success/--warning`（手工维护）、`--shadow-glow`（方向 A 主面板染色阴影）与字体定义（`--font-sans: Inter`、`--font-mono: JetBrains Mono`，字体权威定义须留 `:root`，不得进 `@theme inline`）。
 - 页面样式一律用 Tailwind 语义工具类 + shadcn 组件，无 feature 级 CSS 文件。
 
 ### Server-Side (Auth + API)
@@ -78,5 +78,5 @@
 
 - **Workspace-based routing over single-page scroll:** The console uses React Router 7 to split the four major functional areas into independent route-level page components. Each workspace mounts only when its route is active, keeping per-workspace state isolated and simplifying per-route logic (e.g., the 30-second auto-refresh fires only on `/overview`).
 - **No external state management:** The admin console is a single-user operations tool with modest complexity. Local hooks + props drilling avoids dependency overhead.
-- **方向 A · 暖光工作台（2026-08 重设计）:** 视觉规范见 `llmdoc/architecture/admin-design-system.md`。暖橙赤陶 oklch token + Outfit / Geist Mono 字体，延续登录页的径向暖光与点阵纹理；侧栏唯一导航、卡片体系统一到 `--radius` 派生刻度、主面板用 `--shadow-glow` 双层染色阴影；eyebrow 预算每页 ≤2。
+- **方向 A · 暖光工作台（2026-08 重设计）:** 视觉规范见 `llmdoc/architecture/admin-design-system.md`。暖橙赤陶 oklch token + Inter / JetBrains Mono 字体（借鉴 AxonHub），延续登录页的径向暖光与点阵纹理；侧栏唯一导航、卡片体系统一到 `--radius` 派生刻度、主面板用 `--shadow-glow` 双层染色阴影；eyebrow 预算每页 ≤2。
 - **Shared contracts:** `src/shared/contracts.ts` serves as the single type authority imported by both frontend and backend, avoiding schema drift without code generation.

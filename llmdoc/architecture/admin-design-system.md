@@ -32,7 +32,8 @@
 
 ## 3. 排版规则
 
-- 西文/界面：`Outfit`（--font-sans）；数字/代码/指标：`Geist Mono`（--font-mono）+ `tabular-nums`。中文回退系统栈。
+- 西文/界面：`Inter`（--font-sans）；数字/代码/指标：`JetBrains Mono`（--font-mono）+ `tabular-nums`。中文回退系统栈（PingFang SC / Microsoft YaHei / Noto Sans SC）。
+  （2026-08 借鉴 AxonHub 的字体组合，从 Outfit + Geist Mono 迁入 Inter + JetBrains Mono；字体权威定义仍留在 `:root`，加载在 `index.html` Google Fonts。）
 - **渐进字距**（偷自 Stripe）：页面标题 `tracking-tight`；eyebrow 式小型大写标签 `tracking-[0.14em]`（唯一允许的大字距）。
 - **eyebrow 预算**：每个页面视图 ≤ 2 处 eyebrow（含侧栏分组标签）。现有 31 处 uppercase 小标题收敛为：CardTitle（正常大小写、font-semibold）为主，eyebrow 只保留给「页面身份」级标签。
 - 数字层级锚点：指标数值 `font-mono text-3xl/4xl tabular-nums tracking-tight`；修复所有非 mono 数字。
@@ -70,7 +71,7 @@
 ## 7. Do's & Don'ts
 
 **Do**
-- 数字一律 Geist Mono tabular-nums；图表色直引 var()
+- 数字一律 JetBrains Mono tabular-nums；图表色直引 var()
 - 激活/强调用整块底色 + 边框 + 字重
 - 新增区块先查本文件第 4/5 节再写类名
 - hover 动效包 `@media (hover:hover)`；所有动效 ≤300ms、逐属性声明、`cubic-bezier(0.23,1,0.32,1)`、reduced-motion 兜底
