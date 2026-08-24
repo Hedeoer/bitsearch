@@ -26,7 +26,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { TableRow, TableCell } from "@/components/ui/table";
 import type {
   FirecrawlHistoricalQuotaSnapshot,
   FirecrawlTeamQuotaSnapshot,
@@ -68,11 +67,11 @@ export function renderTavilyQuota(
   if (account && account.planLimit > 0) {
     return `${formatNumber(account.planUsage)}/${formatNumber(account.planLimit)}`;
   }
-  
+
   if (quota.key.limit > 0) {
     return `${formatNumber(quota.key.usage)}/${formatNumber(quota.key.limit)}`;
   }
-  
+
   return `${formatNumber(quota.key.usage)}`;
 }
 
@@ -106,57 +105,36 @@ export function KeyInventoryCard(props: KeyCardProps) {
       );
 
   return (
-    <TableRow
-      aria-selected={props.selected}
-      className={props.selected ? "bg-primary/8" : undefined}
-      data-state={props.selected ? "selected" : undefined}
+    <article
+      aria-checked={props.selected}
+      className={`flex cursor-pointer flex-col gap-2 rounded-xl border p-3 shadow-xs transition-colors duration-150 outline-none hover:border-primary/25 focus-visible:ring-2 focus-visible:ring-ring/50 ${
+        props.selected ? "border-primary/25 bg-primary/10" : "border-border/70 bg-card"
+      }`}
       onClick={() => props.onToggleSelected(props.item.id)}
+      onKeyDown={(event) => {
+        if (event.target !== event.currentTarget) return;
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          props.onToggleSelected(props.item.id);
+        }
+      }}
+      role="checkbox"
+      tabIndex={0}
     >
-      <TableCell className="min-w-[220px] max-w-[320px] align-top">
+      {/* Row 1: status badge, masked key, quick actions */}
+      <div className="flex items-center gap-2">
         {(() => {
           if (!props.item.enabled) return <Badge variant="danger"><XCircle size={12} /> Disabled</Badge>;
           if (props.item.healthStatus === "unhealthy") return <Badge variant="danger"><AlertCircle size={12} /> Error</Badge>;
           return <Badge variant="success"><CheckCircle size={12} /> Active</Badge>;
         })()}
-        <p className="mt-2 truncate font-mono text-xs text-muted-foreground" title={`Fingerprint: ${props.item.fingerprint}`}>
+        <span
+          className={`min-w-0 flex-1 font-mono text-xs text-muted-foreground ${props.revealedValue ? "break-all" : "truncate"}`}
+          title={`Fingerprint: ${props.item.fingerprint}`}
+        >
           {props.revealedValue ?? props.item.maskedValue}
-        </p>
-      </TableCell>
-      <TableCell className="align-top">
-        {isNoteOpen ? (
-          <Input
-            autoFocus
-            className="h-8 font-mono text-xs"
-            value={noteDraft}
-            onChange={(event) => setNoteDraft(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" && !props.isSavingNote) {
-                props.onSaveNote(props.item.id, noteDraft);
-                setIsNoteOpen(false);
-              } else if (event.key === "Escape") {
-                setNoteDraft(props.item.note);
-                setIsNoteOpen(false);
-              }
-            }}
-            placeholder="Add note... (Press Enter to save)"
-          />
-        ) : (
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-            <span title="Requests" className="inline-flex items-center gap-1"><Activity size={12} /><strong>{formatNumber(props.item.requestCount)}</strong></span>
-            <span title="Failures" className={props.item.failureCount > 0 ? "text-destructive inline-flex items-center gap-1" : "inline-flex items-center gap-1"}>
-              <AlertCircle size={12} /><strong>{formatNumber(props.item.failureCount)}</strong>
-            </span>
-            <span title="Last used" className="inline-flex items-center gap-1"><Clock size={12} />{formatDateTime(props.item.lastUsedAt)}</span>
-            <span title="Quota" className="inline-flex items-center gap-1"><Database size={12} />{quotaText}</span>
-            {props.item.note ? <span className="inline-flex items-center gap-1 text-primary"><Edit2 size={10} />{props.item.note}</span> : null}
-          </div>
-        )}
-        {(props.item.lastError || props.item.lastCheckError) && !isNoteOpen ? (
-          <p className="mt-2 text-xs text-destructive">{props.item.lastCheckError ?? props.item.lastError}</p>
-        ) : null}
-      </TableCell>
-      <TableCell className="w-[168px] align-top">
-        <div className="flex items-center justify-end gap-1" onClick={(event) => event.stopPropagation()}>
+        </span>
+        <div className="flex shrink-0 items-center gap-0.5" onClick={(event) => event.stopPropagation()}>
           <Button aria-label="Edit note" className="size-7" size="icon" type="button" variant="ghost" onClick={() => setIsNoteOpen(!isNoteOpen)}>
             <Edit2 className="size-3.5" />
           </Button>
@@ -166,9 +144,42 @@ export function KeyInventoryCard(props: KeyCardProps) {
           <Button aria-label="Copy key" className="size-7" disabled={props.isCopying || props.isRevealing} size="icon" type="button" variant="ghost" onClick={() => props.onCopy(props.item.id)}>
             {props.isCopying ? <InlineSpinner label="" /> : <Copy className="size-3.5" />}
           </Button>
+        </div>
+      </div>
+
+      {/* Row 2: inline metrics (or note editor) + overflow actions */}
+      {isNoteOpen ? (
+        <Input
+          autoFocus
+          className="h-8 font-mono text-xs"
+          value={noteDraft}
+          onChange={(event) => setNoteDraft(event.target.value)}
+          onClick={(event) => event.stopPropagation()}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" && !props.isSavingNote) {
+              props.onSaveNote(props.item.id, noteDraft);
+              setIsNoteOpen(false);
+            } else if (event.key === "Escape") {
+              setNoteDraft(props.item.note);
+              setIsNoteOpen(false);
+            }
+          }}
+          placeholder="Add note... (Press Enter to save)"
+        />
+      ) : (
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs text-muted-foreground">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+            <span title="Requests" className="inline-flex items-center gap-1"><Activity size={12} /><strong className="font-mono tabular-nums">{formatNumber(props.item.requestCount)}</strong></span>
+            <span title="Failures" className={props.item.failureCount > 0 ? "text-destructive inline-flex items-center gap-1" : "inline-flex items-center gap-1"}>
+              <AlertCircle size={12} /><strong className="font-mono tabular-nums">{formatNumber(props.item.failureCount)}</strong>
+            </span>
+            <span title="Last used" className="inline-flex items-center gap-1"><Clock size={12} />{formatDateTime(props.item.lastUsedAt)}</span>
+            <span title="Quota" className="inline-flex items-center gap-1 font-mono tabular-nums"><Database size={12} />{quotaText}</span>
+            {props.item.note ? <span className="inline-flex items-center gap-1 text-primary"><Edit2 size={10} />{props.item.note}</span> : null}
+          </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button aria-label="Key actions" className="size-7" size="icon" type="button" variant="ghost">
+              <Button aria-label="Key actions" className="size-7" size="icon" type="button" variant="ghost" onClick={(event) => event.stopPropagation()}>
                 <MoreHorizontal className="size-3.5" />
               </Button>
             </DropdownMenuTrigger>
@@ -189,7 +200,12 @@ export function KeyInventoryCard(props: KeyCardProps) {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-      </TableCell>
-    </TableRow>
+      )}
+
+      {/* Row 3: last error context, only when present */}
+      {(props.item.lastError || props.item.lastCheckError) && !isNoteOpen ? (
+        <p className="text-xs text-destructive">{props.item.lastCheckError ?? props.item.lastError}</p>
+      ) : null}
+    </article>
   );
 }

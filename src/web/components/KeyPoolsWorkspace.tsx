@@ -30,7 +30,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
-import { Table, TableBody, TableHead, TableHeader } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 
 function renderSummaryQuota(summary: KeyPoolSummary | null): string {
@@ -101,7 +100,7 @@ function SummaryCards(props: { summary: KeyPoolSummary | null; loading: boolean 
         <div className="flex items-start gap-3">
           <div className="grid size-10 place-items-center rounded-xl bg-warning/10 text-warning"><Activity className="size-5" /></div>
           <div className="min-w-0">
-            <span className="text-xs font-medium text-muted-foreground">Req / Fail</span>
+            <span className="text-xs font-medium text-muted-foreground">Requests / Failures</span>
             <strong className="mt-1 block text-xl font-semibold">{loading ? "..." : `${formatNumber(s?.totalRequests ?? 0)} / ${formatNumber(s?.totalFailures ?? 0)}`}</strong>
             {!loading && s?.totalRequests ? <p className="mt-1 text-xs text-muted-foreground">Success rate <span className="font-semibold text-primary">{((1 - (s.totalFailures / s.totalRequests)) * 100).toFixed(1)}%</span></p> : null}
           </div>
@@ -235,7 +234,7 @@ export function KeyPoolsWorkspace(props: KeyPoolsWorkspaceProps) {
                 <Button aria-label="Cancel selection" className="size-7" size="icon" type="button" variant="ghost" onClick={workspace.clearSelection}>
                   <XSquare className="size-4" />
                 </Button>
-                <span className="text-sm font-semibold text-primary">{workspace.selectedIds.length} Keys Selected</span>
+                <span className="text-sm font-semibold text-primary">{workspace.selectedIds.length} {workspace.selectedIds.length === 1 ? "Key" : "Keys"} Selected</span>
               </div>
 
               <div className="flex flex-wrap items-center gap-1.5">
@@ -269,19 +268,10 @@ export function KeyPoolsWorkspace(props: KeyPoolsWorkspaceProps) {
               title={hasActiveFilters ? "No matching keys" : "No keys imported yet"}
             />
           ) : null}
-          <div className="overflow-hidden rounded-xl border border-border/70">
-            <Table className="table-fixed">
-              <TableHeader>
-                <tr className="bg-muted/20">
-                  <TableHead className="w-[30%]">Key</TableHead>
-                  <TableHead>Usage & quota</TableHead>
-                  <TableHead className="w-[168px] text-right">Actions</TableHead>
-                </tr>
-              </TableHeader>
-              <TableBody>
-                {pagedKeys.map((item) => (
-                  <KeyInventoryCard
-                    key={item.id}
+          <div className="grid gap-3 grid-cols-[repeat(auto-fill,minmax(330px,1fr))]">
+            {pagedKeys.map((item) => (
+              <KeyInventoryCard
+                key={item.id}
                 isCopying={workspace.copyingIds.has(item.id)}
                 isDeleting={workspace.deletingIds.has(item.id)}
                 item={item}
@@ -300,10 +290,8 @@ export function KeyPoolsWorkspace(props: KeyPoolsWorkspaceProps) {
                 onToggleEnabled={(id, enabled) => void workspace.toggleCardEnabled([id], enabled)}
                 onTest={(ids) => void workspace.testCardKeys(ids)}
                 onSyncQuota={(ids) => void workspace.syncCardKeys(ids)}
-                    />
-                  ))}
-              </TableBody>
-            </Table>
+              />
+            ))}
           </div>
           {totalPages > 1 && (
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/70 pt-3">
