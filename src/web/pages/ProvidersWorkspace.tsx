@@ -65,7 +65,7 @@ export function ProvidersWorkspace(props: ProvidersWorkspaceProps) {
     SEARCH_ENGINE_PROVIDER
   );
   const [visibleApiKeys, setVisibleApiKeys] = useState<Record<string, boolean>>({});
-  const [isRevealingApiKey, setIsRevealingApiKey] = useState(false);
+  const [isRevealingApiKey] = useState(false);
   const [apiKeyRevealError, setApiKeyRevealError] = useState("");
   const [probeOpen, setProbeOpen] = useState(false);
   const [probeModels, setProbeModels] = useState<string[]>([]);

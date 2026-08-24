@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { AlertTriangle, GitBranch, KeyRound, Server, Timer, Wrench } from "lucide-react";
 import { PayloadToolbar } from "./PayloadToolbar";
 import type { ActivityDetailRecord } from "@shared/contracts";
-import { EmptyState, LoadingOverlay } from "../Feedback";
+import { EmptyState } from "../Feedback";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";

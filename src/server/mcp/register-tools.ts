@@ -51,7 +51,6 @@ import {
 import {
   getCurrentGenericRoutingSnapshot,
   getToolSurfaceSnapshot,
-  shouldExposeTool,
 } from "../services/tool-surface-service.js";
 import { registerProviderTools } from "./provider-tools.js";
 import {
@@ -612,10 +611,7 @@ export function createMcpRuntime(context: AppContext): McpRuntime {
         getProviderConfig(context.db, provider),
       );
       const settings = getSystemSettings(context.db);
-      let connectionTest: Record<string, unknown> = {
-        status: "Not tested",
-        message: "Configure search_engine first",
-      };
+      let connectionTest: Record<string, unknown>;
 
       try {
         const models = await listSearchEngineModels(requireSearchEngineConfig(context));

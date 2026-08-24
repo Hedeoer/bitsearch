@@ -1,6 +1,5 @@
 import type { RemoteProvider, ProviderConfigRecord } from "@shared/contracts";
 import type { ProviderDraft } from "../../types";
-import type { ProviderSaveErrors } from "../../provider-actions";
 import { Badge } from "@/components/ui/badge";
 
 type ProviderMasterCardProps = Readonly<{

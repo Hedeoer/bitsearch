@@ -18,11 +18,6 @@ export type ToastItem = {
   message: string;
 };
 
-type ToastViewportProps = {
-  items: ToastItem[];
-  onDismiss: (id: string) => void;
-};
-
 type ConfirmDialogProps = {
   open: boolean;
   title: string;

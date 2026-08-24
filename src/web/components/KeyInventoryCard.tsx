@@ -58,20 +58,6 @@ type KeyCardProps = {
   onSyncQuota: (ids: string[]) => void;
 };
 
-function joinSummary(primary: string, secondary: string | null): string {
-  return secondary ? `${primary} · ${secondary}` : primary;
-}
-
-function healthLabel(status: ProviderKeyRecord["healthStatus"]): string {
-  if (status === "healthy") {
-    return "healthy";
-  }
-  if (status === "unhealthy") {
-    return "unhealthy";
-  }
-  return "unknown";
-}
-
 export function renderTavilyQuota(
   item: ProviderKeyRecord,
   account: TavilyAccountQuotaSnapshot | null,
@@ -102,11 +88,6 @@ export function renderFirecrawlQuota(
   }
   return `${formatNumber(metrics.usedCredits)}/${formatNumber(metrics.remainingCredits)}`;
 }
-
-function MetaSep() {
-  return <span className="meta-sep" aria-hidden="true">·</span>;
-}
-
 
 export function KeyInventoryCard(props: KeyCardProps) {
   const [noteDraft, setNoteDraft] = useState(props.item.note);

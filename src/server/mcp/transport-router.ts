@@ -271,8 +271,9 @@ function getExistingTransport(sessionId: string | undefined) {
 }
 
 async function createTransport(context: AppContext) {
-  let server: McpServer;
   let syncToolSurface: TransportSession["syncToolSurface"] = () => {};
+  const runtime = mcpRuntimeFactory(context);
+  const server = runtime.server;
   const transport = new StreamableHTTPServerTransport({
     sessionIdGenerator: () => randomUUID(),
     onsessioninitialized: (sessionId) => {
@@ -291,8 +292,6 @@ async function createTransport(context: AppContext) {
       forgetClientSession(sessionId);
     }
   };
-  const runtime = mcpRuntimeFactory(context);
-  server = runtime.server;
   syncToolSurface = runtime.syncToolSurface;
   await server.connect(transport);
   return transport;

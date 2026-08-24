@@ -37,7 +37,7 @@ export function extractUniqueUrls(input: string): string[] {
   return Array.from(
     new Set(
       matches.map((item) =>
-        item.replace(/^[*(\[]+/, "").replace(/[.,;:!?*]+$/, ""),
+        item.replace(/^[*([]+/, "").replace(/[.,;:!?*]+$/, ""),
       ),
     ),
   );

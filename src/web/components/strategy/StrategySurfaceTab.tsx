@@ -1,6 +1,4 @@
-import { ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import type { StrategyPanelProps } from "./strategy-types";
 
 function ToolGroup(props: Readonly<{

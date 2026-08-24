@@ -12,7 +12,6 @@ import {
 } from "./http/middleware.js";
 import { AppHttpError } from "./lib/http.js";
 import {
-  closeModernMcpHandler,
   handleMcpDelete,
   handleMcpGet,
   handleMcpPost,

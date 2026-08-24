@@ -2,13 +2,8 @@ import type { KeyPoolProvider } from "../../shared/contracts.js";
 import type { GenericRoutingMode, SystemSettings } from "../../shared/tool-surface.js";
 
 const DEFAULT_PROVIDER_ORDER: KeyPoolProvider[] = ["tavily", "firecrawl"];
-const LEGACY_FETCH_MODES = [
-  "strict_firecrawl",
-  "strict_tavily",
-  "auto_ordered",
-] as const;
 
-type LegacyFetchMode = (typeof LEGACY_FETCH_MODES)[number];
+type LegacyFetchMode = "strict_firecrawl" | "strict_tavily" | "auto_ordered";
 
 function dedupeProviders(order: KeyPoolProvider[]): KeyPoolProvider[] {
   return order.filter((provider, index) => order.indexOf(provider) === index);

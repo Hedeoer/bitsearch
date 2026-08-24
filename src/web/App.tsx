@@ -33,7 +33,7 @@ export function App() {
   const [toolSurface, setToolSurface] = useState<ToolSurfaceSnapshot>(EMPTY_TOOL_SURFACE);
   const [adminAccess, setAdminAccess] = useState<AdminAccessInfo>(EMPTY_ADMIN_ACCESS);
   const [mcpAccess, setMcpAccess] = useState<McpAccessInfo>(EMPTY_MCP_ACCESS);
-  const [activity, setActivity] = useState<AppDataBundle["activity"]>(null);
+  const [, setActivity] = useState<AppDataBundle["activity"]>(null);
   const [authKey, setAuthKey] = useState("");
   const [loginMessage, setLoginMessage] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
