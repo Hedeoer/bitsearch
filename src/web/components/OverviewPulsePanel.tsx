@@ -191,9 +191,9 @@ export function OverviewPulsePanel(props: OverviewPulsePanelProps) {
       <CardContent className="relative grid gap-4">
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.85fr)]">
           <div className="grid gap-4">
-            <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-4">
+            <div className="grid gap-4 lg:grid-cols-3">
               <MetricCard
-                label="10m RPM"
+                label="10-min RPM"
                 tone="primary"
                 value={formatDecimal(props.dashboard?.requestRate.rpm10m)}
                 supporting={`${formatNumber(props.dashboard?.requestRate.requestCount10m)} requests in the last ten minutes`}
@@ -208,13 +208,7 @@ export function OverviewPulsePanel(props: OverviewPulsePanelProps) {
                 label="24h Failures"
                 tone="danger"
                 value={formatNumber(props.dashboard?.delivery24h.failed)}
-                supporting="Final failures only, no retries counted twice"
-              />
-              <MetricCard
-                label="24h Error Rate"
-                tone="warning"
-                value={formatPercentage(props.dashboard?.delivery24h.errorRate)}
-                supporting="Rolling failure share across the last twenty-four hours"
+                supporting={`${formatPercentage(props.dashboard?.delivery24h.errorRate)} of requests · no retries counted twice`}
               />
             </div>
 

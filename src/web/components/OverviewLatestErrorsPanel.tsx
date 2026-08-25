@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { AlertTriangle, ChevronLeft, ChevronRight, ShieldCheck } from "lucide-react";
+import { AlertTriangle, ArrowUpRight, ChevronLeft, ChevronRight, ShieldCheck } from "lucide-react";
+import { Link } from "react-router-dom";
 import type { DashboardSummary } from "@shared/contracts";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -95,10 +96,19 @@ export function OverviewLatestErrorsPanel(props: OverviewLatestErrorsPanelProps)
               Recent failures stay compact and scannable instead of stretching into a long console dump.
             </CardDescription>
           </div>
-          <Badge variant={props.errors.length > 0 ? "danger" : "success"}>
-            <AlertTriangle className="size-3.5" />
-            {props.failedCount24h} failures / 24h
-          </Badge>
+          <div className="flex flex-col items-end gap-1.5">
+            <Badge variant={props.errors.length > 0 ? "danger" : "success"}>
+              <AlertTriangle className="size-3.5" />
+              {props.failedCount24h} failures / 24h
+            </Badge>
+            <Link
+              className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+              to="/activity?status=failed"
+            >
+              View all in Activity
+              <ArrowUpRight className="size-3" />
+            </Link>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
