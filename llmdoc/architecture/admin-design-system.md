@@ -10,9 +10,9 @@
 
 - 基调延续 tweakcn 暖橙赤陶 token（`src/web/admin-theme.css`，hue ~39-107°），light 为主视觉基准，dark 为完整适配。
 - 壳层氛围两件套（从登录页 `login-scene` 延伸，定义在 `app.css` 的 `.console-atmosphere`，固定于视口、置于内容之下）：
-  - **径向暖光**：`radial-gradient(900px circle at 50% 2%, color-mix(in oklab, var(--primary) 24%, transparent), transparent 68%)`——峰值落在顶栏下缘，形成「工作台上方一盏暖灯」的弧光；亮色下读作顶栏洇下的暖色地平线，暗色下是明确的橙色 bloom。
+  - **径向暖光**：`radial-gradient(900px circle at 50% 2%, color-mix(in oklab, var(--primary) 24%, transparent), transparent 68%)`——峰值落在视口顶部，形成「工作台上方一盏暖灯」的弧光；亮色下读作视口顶缘洇下的暖色地平线，暗色下是明确的橙色 bloom。
   - **点阵纹理**：`radial-gradient(color-mix(in oklab, var(--foreground) 26%, transparent) 1px, transparent 1px)` 22px 网格，mask 渐隐至视口 38%，整体 opacity 0.26。
-  - 注意：卡片为不透明 bg-card，光只能从顶栏下 padding 带与边距洇出——这是有意的「灯下光」形态，不要为了露出光晕而把卡片改半透明。
+  - 注意：卡片为不透明 bg-card，光只能从内容区顶部 padding 带与边距洇出——这是有意的「灯下光」形态，不要为了露出光晕而把卡片改半透明。
 - 记忆点：登录 → 控制台的连续光感。任何页面截屏都应能认出这是 BitSearch。
 
 ## 2. 色板与角色
@@ -52,7 +52,7 @@
 
 ## 5. 布局原则
 
-- **骨架**：侧栏 256px 固定（lg+，唯一主导航，含 Monitor / Configure 两组）+ 顶栏（页面上下文 + 全局操作，无中央导航、无第二个 logo）+ 内容区。
+- **骨架**：侧栏 224px（w-56）固定（lg+，唯一持久 chrome）：顶部 logo 卡 + Monitor / Configure 两组主导航（菜单项全宽）+ 底部全局操作行（刷新 / 主题切换 / 退出登录，border-t 分隔）。顶栏已于 2026-08-24 移除，页面上下文由内容区自身承担；<lg 时保留精简顶栏（汉堡导航 + 品牌 + 主题/退出），导航收进 Sheet 抽屉。
 - 容器：`max-w-[1440px] mx-auto`（header 与 main 成对出现，改一起改）。
 - 密度哲学（偷自 Stripe「dense data, generous chrome」）：表格/图表/指标内部紧凑（gap-3/p-4），容器与区块之间宽松（gap-5/p-6）；组内间距 < 组间间距。
 - 移动端（<lg）：侧栏收进 Sheet 抽屉（保留）；非对称网格塌缩单列；`min-h-screen` 不用 `h-screen`。

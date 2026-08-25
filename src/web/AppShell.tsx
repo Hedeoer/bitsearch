@@ -52,9 +52,6 @@ export function AppShell(props: AppShellProps) {
       <Route
         element={
           <ConsoleLayout
-            dashboard={props.dashboard}
-            providers={props.providers}
-            system={props.system}
             isRefreshing={props.isConsoleBusy}
             onRefresh={props.onRefresh}
             onLogout={props.onLogout}
