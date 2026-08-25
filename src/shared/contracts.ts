@@ -236,10 +236,14 @@ export interface DashboardTrendPoint {
   failedCount: number;
 }
 
+export type DashboardTrendRange = "24h" | "7d" | "30d";
+
+export type DashboardTrendSeries = Record<DashboardTrendRange, DashboardTrendPoint[]>;
+
 export interface DashboardSummary {
   requestRate: RequestRateSummary;
   delivery24h: DeliveryWindowSummary;
-  trend24h: DashboardTrendPoint[];
+  trend: DashboardTrendSeries;
   providerErrors24h: ProviderErrorCount[];
   latestErrors: RequestLogRecord[];
 }

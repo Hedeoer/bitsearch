@@ -8,7 +8,7 @@ import type {
   ToolSurfaceSnapshot,
 } from "@shared/contracts";
 import { OverviewLatestErrorsPanel } from "../components/OverviewLatestErrorsPanel";
-import { OverviewPulsePanel } from "../components/OverviewPulsePanel";
+import { MetricOverviewRow } from "../components/OverviewPulsePanel";
 import { RequestTrendPanel } from "../components/RequestTrendPanel";
 import { StrategyPanel } from "../components/StrategyPanel";
 import type { ToastTone } from "../components/Feedback";
@@ -31,24 +31,19 @@ type OverviewWorkspaceProps = Readonly<{
 export function OverviewWorkspace(props: OverviewWorkspaceProps) {
   return (
     <div className="grid gap-5">
-      <OverviewPulsePanel
+      <MetricOverviewRow
         dashboard={props.dashboard}
         loading={props.loading}
         providers={props.providers}
         system={props.system}
         toolSurface={props.toolSurface}
       />
-      <div className="grid gap-5 2xl:grid-cols-[minmax(0,1.45fr)_minmax(360px,0.92fr)]">
-        <div className="grid gap-5 xl:grid-cols-[minmax(0,1.08fr)_minmax(320px,0.92fr)]">
-          <RequestTrendPanel
-            loading={props.loading}
-            trend={props.dashboard?.trend24h ?? []}
-          />
-          <OverviewLatestErrorsPanel
-            errors={props.dashboard?.latestErrors ?? []}
-            failedCount24h={props.dashboard?.delivery24h.failed ?? 0}
-          />
-        </div>
+      <RequestTrendPanel loading={props.loading} trend={props.dashboard?.trend} />
+      <div className="grid items-start gap-5 2xl:grid-cols-[minmax(0,1.45fr)_minmax(360px,0.92fr)]">
+        <OverviewLatestErrorsPanel
+          errors={props.dashboard?.latestErrors ?? []}
+          failedCount24h={props.dashboard?.delivery24h.failed ?? 0}
+        />
         <StrategyPanel
           loading={props.loading}
           adminAccess={props.adminAccess}

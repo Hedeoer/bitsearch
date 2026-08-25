@@ -1,15 +1,7 @@
-import type { DashboardTrendPoint } from "@shared/contracts";
-import { Activity, CheckCircle2, XCircle } from "lucide-react";
-import {
-  CartesianGrid,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
-import { Badge } from "@/components/ui/badge";
+import { useState } from "react";
+import { Activity } from "lucide-react";
+import type { DashboardTrendPoint, DashboardTrendRange, DashboardTrendSeries } from "@shared/contracts";
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import {
   Card,
   CardContent,
@@ -17,18 +9,36 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from "@/components/ui/chart";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { formatNumber } from "../format";
 import { LoadingOverlay } from "./Feedback";
 
-const SUCCESS_COLOR = "var(--success)";
-const DANGER_COLOR = "var(--destructive)";
-const GRID_COLOR = "color-mix(in oklab, var(--border) 60%, transparent)";
-const AXIS_COLOR = "var(--muted-foreground)";
-const DOT_STROKE = "var(--card)";
+const RANGE_OPTIONS: Array<{ value: DashboardTrendRange; label: string }> = [
+  { value: "24h", label: "24h" },
+  { value: "7d", label: "7d" },
+  { value: "30d", label: "30d" },
+];
+
+const RANGE_DESCRIPTIONS: Record<DashboardTrendRange, string> = {
+  "24h": "Hourly buckets for the last 24 hours.",
+  "7d": "6-hour buckets for the last 7 days.",
+  "30d": "Daily buckets for the last 30 days.",
+};
+
+const chartConfig = {
+  success: { label: "Successful", color: "var(--success)" },
+  failed: { label: "Failed", color: "var(--destructive)" },
+} satisfies ChartConfig;
 
 type RequestTrendPanelProps = Readonly<{
   loading: boolean;
-  trend: DashboardTrendPoint[];
+  trend: DashboardTrendSeries | undefined;
 }>;
 
 type ChartDatum = {
@@ -37,144 +47,140 @@ type ChartDatum = {
   failed: number;
 };
 
-function formatHourLabel(bucketStart: string): string {
-  const date = new Date(bucketStart);
-  if (Number.isNaN(date.getTime())) {
-    return "--:--";
-  }
-  return date.toLocaleTimeString("zh-CN", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
+function pad2(value: number): string {
+  return String(value).padStart(2, "0");
 }
 
-function toChartData(trend: DashboardTrendPoint[]): ChartDatum[] {
-  return trend.map((point) => ({
-    label: formatHourLabel(point.bucketStart),
+function formatBucketLabel(bucketStart: string, range: DashboardTrendRange): string {
+  const date = new Date(bucketStart);
+  if (Number.isNaN(date.getTime())) {
+    return "--";
+  }
+  const md = `${pad2(date.getMonth() + 1)}/${pad2(date.getDate())}`;
+  if (range === "30d") {
+    return md;
+  }
+  const hm = `${pad2(date.getHours())}:00`;
+  return range === "7d" ? `${md} ${hm}` : `${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
+}
+
+function toChartData(points: DashboardTrendPoint[], range: DashboardTrendRange): ChartDatum[] {
+  return points.map((point) => ({
+    label: formatBucketLabel(point.bucketStart, range),
     success: point.successCount,
     failed: point.failedCount,
   }));
 }
 
-function CustomTooltip(props: Readonly<{
-  active?: boolean;
-  payload?: Array<{ name: string; value: number; color: string }>;
-  label?: string;
-}>) {
-  if (!props.active || !props.payload?.length) {
-    return null;
-  }
-  return (
-    <div className="rounded-lg border border-border/70 bg-popover px-4 py-3 text-xs shadow-lg">
-      <div className="font-mono text-[11px] text-muted-foreground">
-        {props.label}
-      </div>
-      <div className="mt-2 grid gap-2">
-        {props.payload.map((entry) => (
-          <div key={entry.name} className="flex items-center gap-2">
-            <span
-              className="size-2 rounded-full"
-              style={{ background: entry.color }}
-            />
-            <span>{entry.name === "success" ? "Successful" : "Failed"}:</span>
-            <strong>{formatNumber(entry.value)}</strong>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
+const X_AXIS_INTERVAL: Record<DashboardTrendRange, number> = {
+  "24h": 3,
+  "7d": 3,
+  "30d": 4,
+};
 
-function TrendChart(props: Readonly<{ trend: DashboardTrendPoint[] }>) {
-  if (props.trend.length === 0) {
-    return (
-      <div className="grid min-h-[280px] place-items-center text-center text-muted-foreground">
-        <div className="grid gap-3">
-          <Activity className="mx-auto size-8" />
-          <span>No traffic has been recorded in the last 24 hours.</span>
-        </div>
-      </div>
-    );
-  }
-
-  const data = toChartData(props.trend);
+function TrendChart(props: Readonly<{ points: DashboardTrendPoint[]; range: DashboardTrendRange }>) {
+  const data = toChartData(props.points, props.range);
 
   return (
-    <ResponsiveContainer width="100%" height={300}>
-      <LineChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
-        <CartesianGrid stroke={GRID_COLOR} strokeDasharray="" vertical={false} />
+    <ChartContainer config={chartConfig} className="aspect-auto h-[320px] w-full">
+      <AreaChart data={data} margin={{ top: 12, right: 12, bottom: 0, left: 0 }}>
+        <defs>
+          <linearGradient id="fillSuccess" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor="var(--color-success)" stopOpacity={0.32} />
+            <stop offset="95%" stopColor="var(--color-success)" stopOpacity={0.03} />
+          </linearGradient>
+          <linearGradient id="fillFailed" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor="var(--color-failed)" stopOpacity={0.32} />
+            <stop offset="95%" stopColor="var(--color-failed)" stopOpacity={0.03} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid stroke="color-mix(in oklab, var(--border) 60%, transparent)" vertical={false} />
         <XAxis
           axisLine={false}
           dataKey="label"
-          interval={3}
-          tick={{ fill: AXIS_COLOR, fontSize: 12, fontFamily: "var(--font-mono)" }}
+          interval={X_AXIS_INTERVAL[props.range]}
+          tick={{ fill: "var(--muted-foreground)", fontSize: 12, fontFamily: "var(--font-mono)" }}
           tickLine={false}
         />
         <YAxis
           allowDecimals={false}
           axisLine={false}
-          tick={{ fill: AXIS_COLOR, fontSize: 12, fontFamily: "var(--font-mono)" }}
+          tick={{ fill: "var(--muted-foreground)", fontSize: 12, fontFamily: "var(--font-mono)" }}
           tickFormatter={(value: number) => formatNumber(value)}
           tickLine={false}
           width={40}
         />
-        <Tooltip content={<CustomTooltip />} cursor={{ stroke: GRID_COLOR, strokeWidth: 1 }} />
-        <Line
-          activeDot={{ r: 5 }}
+        <ChartTooltip
+          cursor={{ stroke: "color-mix(in oklab, var(--border) 80%, transparent)", strokeWidth: 1 }}
+          content={<ChartTooltipContent labelFormatter={(label) => label} />}
+        />
+        <Area
           dataKey="success"
-          dot={{ r: 3.5, fill: SUCCESS_COLOR, stroke: DOT_STROKE, strokeWidth: 2 }}
+          stroke="var(--color-success)"
+          fill="url(#fillSuccess)"
+          strokeWidth={2}
+          dot={false}
+          activeDot={{ r: 4 }}
           isAnimationActive={false}
-          stroke={SUCCESS_COLOR}
-          strokeWidth={2.5}
-          type="linear"
+          type="monotone"
         />
-        <Line
-          activeDot={{ r: 5 }}
+        <Area
           dataKey="failed"
-          dot={{ r: 3.5, fill: DANGER_COLOR, stroke: DOT_STROKE, strokeWidth: 2 }}
+          stroke="var(--color-failed)"
+          fill="url(#fillFailed)"
+          strokeWidth={2}
+          dot={false}
+          activeDot={{ r: 4 }}
           isAnimationActive={false}
-          stroke={DANGER_COLOR}
-          strokeWidth={2.5}
-          type="linear"
+          type="monotone"
         />
-      </LineChart>
-    </ResponsiveContainer>
+      </AreaChart>
+    </ChartContainer>
   );
 }
 
 export function RequestTrendPanel(props: RequestTrendPanelProps) {
+  const [range, setRange] = useState<DashboardTrendRange>("24h");
+  const points = props.trend?.[range] ?? [];
+
   return (
-    <Card className="relative min-w-0">
+    <Card className="relative min-w-0 shadow-glow">
       {props.loading ? <LoadingOverlay label="Refreshing request trend" /> : null}
       <CardHeader className="pb-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <CardTitle>24h request trend</CardTitle>
-            <CardDescription className="mt-2">
-              Hourly buckets keep the chart readable while still surfacing drift and failure bursts.
-            </CardDescription>
+            <CardTitle>Request trend</CardTitle>
+            <CardDescription className="mt-2">{RANGE_DESCRIPTIONS[range]}</CardDescription>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Badge variant="neutral">
-              <Activity className="size-3.5" />
-              hourly
-            </Badge>
-            <Badge variant="success">
-              <CheckCircle2 className="size-3.5" />
-              success
-            </Badge>
-            <Badge variant="danger">
-              <XCircle className="size-3.5" />
-              failed
-            </Badge>
-          </div>
+          <ToggleGroup
+            aria-label="Select trend time range"
+            type="single"
+            value={range}
+            onValueChange={(value) => {
+              if (value) {
+                setRange(value as DashboardTrendRange);
+              }
+            }}
+          >
+            {RANGE_OPTIONS.map((option) => (
+              <ToggleGroupItem key={option.value} value={option.value}>
+                {option.label}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
         </div>
       </CardHeader>
       <CardContent>
-        <div className="rounded-xl border border-border/70 bg-muted/20 p-4">
-          <TrendChart trend={props.trend} />
-        </div>
+        {points.length === 0 ? (
+          <div className="grid min-h-[280px] place-items-center text-center text-muted-foreground">
+            <div className="grid gap-3">
+              <Activity className="mx-auto size-8" />
+              <span>No traffic has been recorded in this window.</span>
+            </div>
+          </div>
+        ) : (
+          <TrendChart points={points} range={range} />
+        )}
       </CardContent>
     </Card>
   );

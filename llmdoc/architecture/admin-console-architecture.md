@@ -17,8 +17,8 @@
 - `src/web/api.ts` (apiRequest): Generic fetch wrapper with JSON content-type, `credentials: "same-origin"`, structured error result. Signature: `apiRequest<T>(method, path, body?)`. Returns `ApiResult<T>` (`{ ok: true, data }` | `{ ok: false, status, message }`). No retry, no interceptors.
 - `src/web/types.ts` (SessionState, ProviderDraft, AppDataBundle): Frontend-only types extending shared contracts.
 - `src/web/format.ts`: Display formatting utilities (duration, datetime, numbers with zh-CN locale).
-- `src/web/components/ConsoleChrome.tsx` (ConsoleLayout): Shell chrome — 256px fixed sidebar (唯一主导航，Monitor / Configure 两组，React Router `<NavLink>`)，顶栏为「页面上下文 + 全局操作」（Live 状态胶囊 / Refresh / ThemeToggle / Sign out / 移动端 Sheet 抽屉），内容经 `<Outlet />` 渲染；壳层含暖光氛围层 `.console-atmosphere`。
-- `src/web/pages/OverviewWorkspace.tsx` (OverviewWorkspace): Overview workspace page — dashboard metrics, request trend, latest errors, routing/access config.
+- `src/web/components/ConsoleChrome.tsx` (ConsoleLayout): Shell chrome — 224px fixed sidebar（lg+ 唯一持久 chrome：logo 卡、Monitor / Configure 两组 `<NavLink>` 导航、底部刷新/主题/退出操作行），桌面端无顶栏；<lg 保留精简顶栏（汉堡 + 品牌 + 主题/退出），导航收进 Sheet 抽屉；内容经 `<Outlet />` 渲染；壳层含暖光氛围层 `.console-atmosphere`。
+- `src/web/pages/OverviewWorkspace.tsx` (OverviewWorkspace): Overview workspace page — 三段式：8 张指标卡两行（流量四卡 + Routing/readiness/active providers/enabled keys）、全宽 Request trend 图表卡（ChartContainer 面积图 + 24h/7d/30d ToggleGroup 切换）、底部双栏（Latest errors | routing/access config）。
 - `src/web/pages/ProvidersWorkspace.tsx` (ProvidersWorkspace): Providers workspace page — per-provider enable/disable, API key, base URL, timeout, search model configuration, tool surface.
 - `src/web/pages/KeysWorkspace.tsx` (KeysWorkspace): Keys workspace page — key pool management; coordinates import and inventory panels.
 - `src/web/pages/ActivityWorkspace.tsx` (ActivityWorkspace): Activity workspace page — two-column request feed with search/filter and tabbed detail inspector.

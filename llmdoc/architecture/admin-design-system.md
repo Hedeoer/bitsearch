@@ -44,7 +44,7 @@
 - **卡片**：一律 shadcn `Card`（`rounded-xl` = --radius+4px 派生），禁止手写 `rounded-[Npx]`。圆角刻度只用派生值：`rounded-lg`（交互件）/ `rounded-xl`（卡片）/ `rounded-2xl`（品牌方块）。
 - **双层染色阴影**（DNA：Stripe 公式赤陶化，token 名 `--shadow-glow`，定义于 admin-theme.css 的 :root,.dark 块）：
   `0 24px 48px -28px color-mix(in oklab, var(--primary) 16%, transparent), 0 2px 6px -2px oklch(0 0 0 / 0.06)`
-  用于：Overview 主面板、Providers 悬浮保存条、Dialog、登录卡（替换 login-card 内联值）。
+  用于：Request trend 主图表卡、Providers 悬浮保存条、Dialog、登录卡（替换 login-card 内联值）。
 - **Badge**：五变体枚举不可改（default/neutral/success/warning/danger）；状态徽章保持胶囊形。
 - **导航激活态**：整块 `bg-primary/10 border-primary/25 text-primary rounded-lg`——**严禁左侧竖线装饰**（border-left 色条 / inset 竖条 / ::before 左条）。
 - **按钮**：保留 shadcn 变体；主 CTA hover 时叠加 `shadow-primary/20` 染色；`:active { transform: scale(0.98) }`。
@@ -64,7 +64,7 @@
 |------|------|------|
 | L0 平面 | 无阴影 | 页面底、侧栏 |
 | L1 浮起 | `shadow-xs` + border | 普通卡片、列表项容器 |
-| L2 主面板 | `--shadow-glow` 双层染色 | Overview 主面板、悬浮保存条 |
+| L2 主面板 | `--shadow-glow` 双层染色 | Request trend 主图表卡、悬浮保存条 |
 | L3 浮层 | shadow-xl + border | Dialog、Sheet、popover |
 | 焦点 | ring = primary（token 已定） | 所有可交互件 focus-visible |
 
@@ -86,7 +86,7 @@
 ## 8. 响应式
 
 - 断点：lg（1024）切换侧栏/抽屉；xl（1280）起用多列网格；2xl 放宽列距。
-- Overview 三栏（1.45fr/360px/0.92fr）→ xl 双栏 → 单列；Activity 双栏 → 单列；Providers 主从 → 单列堆叠（主列表变横向 chip 行）。
+- Overview 三段式（2026-08-25 重构）：顶部 8 张指标卡（流量四卡 + Routing/Provider readiness/Active providers/Enabled keys 四卡，2xl 两行 4 列）→ 全宽 Request trend 图表卡（ToggleGroup 24h/7d/30d 切换）→ 底部双栏（Latest errors | Configuration & Access）；窄屏逐级塌缩单列。Activity 双栏 → 单列；Providers 主从 → 单列堆叠（主列表变横向 chip 行）。
 - 窄屏检查项：无横向滚动、表格转卡或横向滚动、悬浮保存条全宽贴底。
 
 ## 9. Motion 哲学

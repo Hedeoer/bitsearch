@@ -1,6 +1,7 @@
 import type {
   DashboardSummary,
   DashboardTrendPoint,
+  DashboardTrendRange,
   ProviderErrorCount,
   RequestLogRecord,
 } from "../../shared/contracts.js";
@@ -12,10 +13,23 @@ import {
 import { mapRequestLog } from "./log-record-mappers.js";
 
 const MINUTES_PER_RPM_WINDOW = 10;
-const HOURS_PER_TREND_WINDOW = 24;
 const LATEST_ERROR_LIMIT = 24;
 const MILLISECONDS_PER_MINUTE = 60_000;
 const MILLISECONDS_PER_HOUR = 3_600_000;
+
+type TrendWindowSpec = {
+  hours: number;
+  bucketHours: 1 | 6 | 24;
+  bucketCount: number;
+};
+
+const TREND_WINDOWS: Record<DashboardTrendRange, TrendWindowSpec> = {
+  "24h": { hours: 24, bucketHours: 1, bucketCount: 24 },
+  "7d": { hours: 168, bucketHours: 6, bucketCount: 28 },
+  "30d": { hours: 720, bucketHours: 24, bucketCount: 30 },
+};
+
+const TREND_RANGES = Object.keys(TREND_WINDOWS) as DashboardTrendRange[];
 
 type StatusTotalsRow = {
   success_count: number | null;
@@ -47,17 +61,49 @@ function bucketKeyToIso(bucketHour: string): string {
   return `${bucketHour}:00:00.000Z`;
 }
 
-function buildTrendSkeleton(now: Date): DashboardTrendPoint[] {
-  const currentHour = startOfUtcHour(now);
-  return Array.from({ length: HOURS_PER_TREND_WINDOW }, (_, index) => {
-    const offset = HOURS_PER_TREND_WINDOW - index - 1;
-    const bucket = new Date(currentHour.getTime() - offset * MILLISECONDS_PER_HOUR);
-    return {
-      bucketStart: bucket.toISOString(),
-      successCount: 0,
-      failedCount: 0,
-    };
-  });
+export function aggregateHourlyBuckets(
+  hourly: DashboardTrendPoint[],
+  bucketHours: 1 | 6 | 24,
+  now: Date,
+): DashboardTrendPoint[] {
+  if (bucketHours === 1) {
+    return hourly;
+  }
+  const bucketMs = bucketHours * MILLISECONDS_PER_HOUR;
+  const currentBucketStart = Math.floor(now.getTime() / bucketMs) * bucketMs;
+  const merged = new Map<number, DashboardTrendPoint>();
+  for (const point of hourly) {
+    const startMs = new Date(point.bucketStart).getTime();
+    if (Number.isNaN(startMs)) {
+      continue;
+    }
+    // 尾部桶对齐 now 所在桶，其余对齐固定粒度边界（6h/24h 均能整除日界）。
+    const bucketStart = startMs >= currentBucketStart
+      ? currentBucketStart
+      : Math.floor(startMs / bucketMs) * bucketMs;
+    const existing = merged.get(bucketStart);
+    if (existing) {
+      existing.successCount += point.successCount;
+      existing.failedCount += point.failedCount;
+    } else {
+      merged.set(bucketStart, {
+        bucketStart: new Date(bucketStart).toISOString(),
+        successCount: point.successCount,
+        failedCount: point.failedCount,
+      });
+    }
+  }
+  return [...merged.entries()]
+    .sort(([left], [right]) => left - right)
+    .map(([, point]) => point);
+}
+
+function buildTrendSkeleton(now: Date, spec: TrendWindowSpec): string[] {
+  const bucketMs = spec.bucketHours * MILLISECONDS_PER_HOUR;
+  const currentBucketStart = Math.floor(now.getTime() / bucketMs) * bucketMs;
+  return Array.from({ length: spec.bucketCount }, (_, index) =>
+    new Date(currentBucketStart - (spec.bucketCount - index - 1) * bucketMs).toISOString(),
+  );
 }
 
 function getRequestRate10m(db: AppDatabase, now: Date): DashboardSummary["requestRate"] {
@@ -73,7 +119,7 @@ function getRequestRate10m(db: AppDatabase, now: Date): DashboardSummary["reques
 }
 
 function getDelivery24h(db: AppDatabase, now: Date): DashboardSummary["delivery24h"] {
-  const since = new Date(now.getTime() - HOURS_PER_TREND_WINDOW * MILLISECONDS_PER_HOUR).toISOString();
+  const since = new Date(now.getTime() - 24 * MILLISECONDS_PER_HOUR).toISOString();
   const row = db.sqlite
     .prepare(
       `SELECT
@@ -95,7 +141,7 @@ function getDelivery24h(db: AppDatabase, now: Date): DashboardSummary["delivery2
 }
 
 function getProviderErrors24h(db: AppDatabase, now: Date): ProviderErrorCount[] {
-  const since = new Date(now.getTime() - HOURS_PER_TREND_WINDOW * MILLISECONDS_PER_HOUR).toISOString();
+  const since = new Date(now.getTime() - 24 * MILLISECONDS_PER_HOUR).toISOString();
   return db.sqlite
     .prepare(
       `SELECT provider, COUNT(*) AS count
@@ -107,9 +153,16 @@ function getProviderErrors24h(db: AppDatabase, now: Date): ProviderErrorCount[] 
     .all(since) as ProviderErrorRow[];
 }
 
-function getTrend24h(db: AppDatabase, now: Date): DashboardTrendPoint[] {
-  const skeleton = buildTrendSkeleton(now);
-  const since = skeleton[0]?.bucketStart ?? now.toISOString();
+function getTrendSeries(db: AppDatabase, now: Date): DashboardSummary["trend"] {
+  let longestWindowHours = 0;
+  for (const range of TREND_RANGES) {
+    longestWindowHours = Math.max(longestWindowHours, TREND_WINDOWS[range].hours);
+  }
+
+  const hourlySkeletonStart = startOfUtcHour(
+    new Date(now.getTime() - (longestWindowHours - 1) * MILLISECONDS_PER_HOUR),
+  );
+  const hourlySince = hourlySkeletonStart.toISOString();
   const rows = db.sqlite
     .prepare(
       `SELECT
@@ -121,8 +174,8 @@ function getTrend24h(db: AppDatabase, now: Date): DashboardTrendPoint[] {
        GROUP BY bucket_hour
        ORDER BY bucket_hour ASC`,
     )
-    .all(since) as TrendRow[];
-  const counts = new Map(
+    .all(hourlySince) as TrendRow[];
+  const hourlyCounts = new Map(
     rows.map((row) => [
       bucketKeyToIso(row.bucket_hour),
       {
@@ -131,14 +184,38 @@ function getTrend24h(db: AppDatabase, now: Date): DashboardTrendPoint[] {
       },
     ]),
   );
-  return skeleton.map((point) => ({
-    ...point,
-    ...counts.get(point.bucketStart),
-  }));
+  const hourlyPoints: DashboardTrendPoint[] = [];
+  for (
+    let ts = hourlySkeletonStart.getTime();
+    ts <= startOfUtcHour(now).getTime();
+    ts += MILLISECONDS_PER_HOUR
+  ) {
+    const bucketStart = new Date(ts).toISOString();
+    const counts = hourlyCounts.get(bucketStart);
+    hourlyPoints.push({
+      bucketStart,
+      successCount: counts?.successCount ?? 0,
+      failedCount: counts?.failedCount ?? 0,
+    });
+  }
+
+  const series = {} as DashboardSummary["trend"];
+  for (const range of TREND_RANGES) {
+    const spec = TREND_WINDOWS[range];
+    const merged = aggregateHourlyBuckets(hourlyPoints, spec.bucketHours, now);
+    const skeleton = buildTrendSkeleton(now, spec);
+    const byStart = new Map(merged.map((point) => [point.bucketStart, point]));
+    series[range] = skeleton.map((bucketStart) => ({
+      bucketStart,
+      successCount: byStart.get(bucketStart)?.successCount ?? 0,
+      failedCount: byStart.get(bucketStart)?.failedCount ?? 0,
+    }));
+  }
+  return series;
 }
 
 function getLatestErrors24h(db: AppDatabase, now: Date): RequestLogRecord[] {
-  const since = new Date(now.getTime() - HOURS_PER_TREND_WINDOW * MILLISECONDS_PER_HOUR).toISOString();
+  const since = new Date(now.getTime() - 24 * MILLISECONDS_PER_HOUR).toISOString();
   const rows = db.sqlite
     .prepare(
       `SELECT *
@@ -161,7 +238,7 @@ export function getDashboardSummary(db: AppDatabase): DashboardSummary {
   return setCachedDashboardSummary({
     requestRate: getRequestRate10m(db, now),
     delivery24h: getDelivery24h(db, now),
-    trend24h: getTrend24h(db, now),
+    trend: getTrendSeries(db, now),
     providerErrors24h: getProviderErrors24h(db, now),
     latestErrors: getLatestErrors24h(db, now),
   }, now.getTime());

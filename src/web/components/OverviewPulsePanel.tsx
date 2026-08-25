@@ -1,27 +1,13 @@
-import {
-  Activity,
-  CheckCircle2,
-  RefreshCw,
-  Waypoints,
-} from "lucide-react";
 import type {
   DashboardSummary,
   ProviderConfigRecord,
   SystemSettings,
   ToolSurfaceSnapshot,
 } from "@shared/contracts";
-import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { formatDateTime, formatDecimal, formatNumber, formatPercentage } from "../format";
-import { LoadingOverlay } from "./Feedback";
+import { Skeleton } from "@/components/ui/skeleton";
+import { formatDecimal, formatNumber, formatPercentage } from "../format";
 
-type OverviewPulsePanelProps = Readonly<{
+type MetricOverviewRowProps = Readonly<{
   dashboard: DashboardSummary | null;
   loading: boolean;
   providers: ProviderConfigRecord[];
@@ -31,66 +17,26 @@ type OverviewPulsePanelProps = Readonly<{
 
 type MetricCardProps = Readonly<{
   label: string;
-  tone: "primary" | "success" | "warning" | "danger";
   value: string;
+  description: string;
   supporting: string;
+  loading: boolean;
 }>;
-
-function getMetricToneClass(tone: MetricCardProps["tone"]) {
-  if (tone === "success") {
-    return "border-success/20 bg-success/10";
-  }
-  if (tone === "warning") {
-    return "border-warning/20 bg-warning/10";
-  }
-  if (tone === "danger") {
-    return "border-destructive/20 bg-destructive/10";
-  }
-  return "border-primary/20 bg-primary/10";
-}
 
 function MetricCard(props: MetricCardProps) {
   return (
-    <div
-      className={`rounded-xl border p-4 shadow-xs ${getMetricToneClass(props.tone)}`}
-    >
-      <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-        {props.label}
-      </div>
-      <div className="mt-3 font-mono text-[1.9rem] font-semibold tabular-nums tracking-tight">
-        {props.value}
-      </div>
-      <div className="mt-2 text-sm leading-6 text-muted-foreground">
-        {props.supporting}
-      </div>
-    </div>
-  );
-}
-
-function CompactFact(props: Readonly<{ label: string; value: string }>) {
-  return (
-    <div className="rounded-lg border border-border/70 bg-muted/20 px-4 py-3">
-      <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-        {props.label}
-      </div>
-      <div className="mt-2 font-mono text-sm font-medium tabular-nums">{props.value}</div>
-    </div>
-  );
-}
-
-function PostureRow(props: Readonly<{
-  label: string;
-  value: string;
-  supporting: string;
-}>) {
-  return (
-    <div className="py-3 first:pt-0 last:pb-0">
-      <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-        {props.label}
-      </div>
-      <div className="mt-1.5 text-sm font-medium">{props.value}</div>
-      <div className="mt-1 break-words font-mono text-xs leading-5 text-muted-foreground">
-        {props.supporting}
+    <div className="grid gap-3 rounded-xl border border-border/70 bg-card p-4 shadow-xs">
+      <div className="text-sm text-muted-foreground">{props.label}</div>
+      {props.loading ? (
+        <Skeleton className="h-9 w-24 rounded-lg" />
+      ) : (
+        <div className="truncate font-mono text-3xl font-semibold tabular-nums tracking-tight">
+          {props.value}
+        </div>
+      )}
+      <div className="grid gap-0.5">
+        <div className="text-sm font-medium">{props.description}</div>
+        <div className="text-sm text-muted-foreground">{props.supporting}</div>
       </div>
     </div>
   );
@@ -119,134 +65,87 @@ function formatProviderReadiness(
 
   const limitedNames = limitedProviders.map((item) => item.provider).join(", ");
   return {
-    value: `${readyProviders.length} ready · ${limitedProviders.length} limited`,
+    value: `${readyProviders.length}r · ${limitedProviders.length}l`,
     supporting: `${readyNames} ready · ${limitedNames} limited`,
   };
 }
 
-function HeroBadgeRow(props: Readonly<{
-  availableProviders: number;
-  routeLabel: string;
-}>) {
-  return (
-    <div className="flex flex-wrap gap-2">
-      <Badge variant="default">
-        <RefreshCw className="size-3.5" />
-        live 30s
-      </Badge>
-      <Badge variant="neutral">
-        <Waypoints className="size-3.5" />
-        {props.routeLabel}
-      </Badge>
-      <Badge variant={props.availableProviders > 1 ? "success" : "warning"}>
-        <CheckCircle2 className="size-3.5" />
-        {props.availableProviders} providers ready
-      </Badge>
-    </div>
-  );
-}
-
-export function OverviewPulsePanel(props: OverviewPulsePanelProps) {
+export function MetricOverviewRow(props: MetricOverviewRowProps) {
+  const d = props.dashboard;
+  const loading = props.loading && !d;
+  const successRate = d
+    ? Math.max(0, 100 - d.delivery24h.errorRate)
+    : null;
   const activeProviders = props.providers.filter((item) => item.enabled).length;
   const totalKeys = props.providers.reduce((sum, item) => sum + item.keyCount, 0);
-  const availableProviders = props.toolSurface.providerCapabilities.filter(
-    (item) => item.genericAvailable,
-  );
-  const totalRequests = props.dashboard?.delivery24h.total ?? 0;
-  const successRate = props.dashboard
-    ? Math.max(0, 100 - props.dashboard.delivery24h.errorRate)
-    : null;
   const routeLabel =
     props.system.genericRoutingMode === "ordered_failover"
-      ? "ordered failover"
-      : "single provider";
-  const effectiveOrder =
-    props.toolSurface.genericRouting.effectiveProviderOrder.join(" -> ") || "pending";
-  const refreshMode = props.toolSurface.requiresReconnect ? "refresh client" : "live";
-  const refreshedAt = props.toolSurface.lastRefreshedAt
-    ? formatDateTime(props.toolSurface.lastRefreshedAt)
-    : "pending";
-  const providerReadiness = formatProviderReadiness(
-    props.toolSurface.providerCapabilities,
-  );
+      ? "Failover"
+      : "Single";
+  const routeSupporting =
+    props.system.genericRoutingMode === "ordered_failover"
+      ? "Ordered failover mode"
+      : "Single provider mode";
+  const readiness = formatProviderReadiness(props.toolSurface.providerCapabilities);
 
   return (
-    <Card className="relative overflow-hidden shadow-glow">
-      {props.loading ? <LoadingOverlay label="Refreshing overview" /> : null}
-      <CardHeader className="relative pb-4">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="max-w-3xl">
-            <CardTitle className="text-2xl">Operational overview</CardTitle>
-            <CardDescription className="mt-3 max-w-2xl">
-              Health, throughput, and routing state stay visible without repeating control details.
-            </CardDescription>
-          </div>
-          <HeroBadgeRow
-            availableProviders={availableProviders.length}
-            routeLabel={routeLabel}
-          />
-        </div>
-      </CardHeader>
-
-      <CardContent className="relative grid gap-4">
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.85fr)]">
-          <div className="grid gap-4">
-            <div className="grid gap-4 lg:grid-cols-3">
-              <MetricCard
-                label="10-min RPM"
-                tone="primary"
-                value={formatDecimal(props.dashboard?.requestRate.rpm10m)}
-                supporting={`${formatNumber(props.dashboard?.requestRate.requestCount10m)} requests in the last ten minutes`}
-              />
-              <MetricCard
-                label="24h Success Rate"
-                tone="success"
-                value={formatPercentage(successRate)}
-                supporting={`${formatNumber(props.dashboard?.delivery24h.successful)} successful outcomes`}
-              />
-              <MetricCard
-                label="24h Failures"
-                tone="danger"
-                value={formatNumber(props.dashboard?.delivery24h.failed)}
-                supporting={`${formatPercentage(props.dashboard?.delivery24h.errorRate)} of requests · no retries counted twice`}
-              />
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-3">
-              <CompactFact label="24h Requests" value={formatNumber(totalRequests)} />
-              <CompactFact
-                label="Active Providers"
-                value={`${activeProviders} / ${props.providers.length}`}
-              />
-              <CompactFact label="Enabled Keys" value={String(totalKeys)} />
-            </div>
-          </div>
-
-          <div className="grid content-start gap-1 rounded-xl border border-border/70 bg-card p-5 shadow-xs">
-            <div className="flex items-center gap-2 pb-2 text-sm font-semibold">
-              <Activity className="size-4 text-primary" aria-hidden="true" />
-              System posture
-            </div>
-            <div className="grid divide-y divide-border/60">
-              <PostureRow
-                label="Routing"
-                value={routeLabel}
-                supporting={effectiveOrder}
-              />
-              <PostureRow
-                label="Provider readiness"
-                value={providerReadiness.value}
-                supporting={providerReadiness.supporting}
-              />
-              <PostureRow
-                label="Surface freshness"
-                value={`${refreshedAt} · ${refreshMode}`}
-                supporting="Tool exposure refresh state"
-              />
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-4">
+      <MetricCard
+        label="24h Requests"
+        value={formatNumber(d?.delivery24h.total ?? 0)}
+        description="All MCP tool calls"
+        supporting="Successful + failed outcomes"
+        loading={loading}
+      />
+      <MetricCard
+        label="24h Success Rate"
+        value={formatPercentage(successRate)}
+        description={`${formatNumber(d?.delivery24h.successful ?? 0)} successful outcomes`}
+        supporting="Across the last twenty-four hours"
+        loading={loading}
+      />
+      <MetricCard
+        label="24h Failures"
+        value={formatNumber(d?.delivery24h.failed ?? 0)}
+        description={`${formatPercentage(d?.delivery24h.errorRate)} of requests`}
+        supporting="Final failures only, no retries counted twice"
+        loading={loading}
+      />
+      <MetricCard
+        label="10-min RPM"
+        value={formatDecimal(d?.requestRate.rpm10m)}
+        description={`${formatNumber(d?.requestRate.requestCount10m)} requests in 10 min`}
+        supporting="Rolling short-term rate"
+        loading={loading}
+      />
+      <MetricCard
+        label="Routing"
+        value={routeLabel}
+        description={props.toolSurface.genericRouting.effectiveProviderOrder.join(" -> ") || "pending"}
+        supporting={routeSupporting}
+        loading={loading}
+      />
+      <MetricCard
+        label="Provider readiness"
+        value={readiness.value}
+        description={readiness.supporting}
+        supporting="Generic tool availability"
+        loading={loading}
+      />
+      <MetricCard
+        label="Active providers"
+        value={`${activeProviders} / ${props.providers.length}`}
+        description="Enabled provider configs"
+        supporting={`Of ${props.providers.length} configured`}
+        loading={loading}
+      />
+      <MetricCard
+        label="Enabled keys"
+        value={formatNumber(totalKeys)}
+        description="Across all providers"
+        supporting="Tavily + Firecrawl key pools"
+        loading={loading}
+      />
+    </div>
   );
 }
