@@ -19,7 +19,7 @@ export type ProviderSwitchProps = Readonly<{
 
 export function ProviderSwitch(props: ProviderSwitchProps) {
   return (
-    <label className="flex items-center gap-2 text-xs text-muted-foreground">
+    <label className="flex items-center gap-2 text-xs font-medium text-muted-foreground cursor-pointer select-none">
       <Switch
         aria-checked={props.checked}
         checked={props.checked}
@@ -27,7 +27,9 @@ export function ProviderSwitch(props: ProviderSwitchProps) {
         disabled={props.disabled}
         onCheckedChange={props.onToggle}
       />
-      {props.checked ? "Enabled" : "Disabled"}
+      <span className={props.checked ? "text-foreground" : "text-muted-foreground"}>
+        {props.checked ? "Enabled" : "Disabled"}
+      </span>
     </label>
   );
 }
@@ -37,33 +39,43 @@ export function PanelBadges(props: Readonly<{
   keyCount: number;
 }>) {
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex flex-wrap items-center gap-2">
       <Badge variant="neutral">
         <KeyRound className="size-3.5" />
-        {props.keyCount} keys
+        <span className="font-mono tabular-nums">{props.keyCount}</span> keys
       </Badge>
       {props.dirty ? <Badge variant="warning">unsaved</Badge> : null}
     </div>
   );
 }
 
-export function FieldShell(props: Readonly<{
+export function FormField(props: Readonly<{
   children: ReactNode;
   description?: string;
-  title: string;
+  label: string;
+  className?: string;
 }>) {
   return (
-    <div className="rounded-lg border border-border/70 bg-muted/20 p-4">
-      <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-        {props.title}
+    <div className={props.className ?? "space-y-1.5"}>
+      <div className="flex flex-col gap-0.5">
+        <label className="text-sm font-medium text-foreground">
+          {props.label}
+        </label>
+        {props.description ? (
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            {props.description}
+          </p>
+        ) : null}
       </div>
-      {props.description ? (
-        <p className="mt-1 text-xs leading-5 text-muted-foreground">{props.description}</p>
-      ) : null}
-      <div className="mt-3">{props.children}</div>
+      <div className="pt-0.5">{props.children}</div>
     </div>
   );
 }
+
+/**
+ * @deprecated Use FormField instead of FieldShell
+ */
+export const FieldShell = FormField;
 
 export function parseTimeoutMs(value: string, fallback: number) {
   const nextValue = Number(value);

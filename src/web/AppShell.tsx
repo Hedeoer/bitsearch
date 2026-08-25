@@ -35,6 +35,7 @@ type AppShellProps = Readonly<{
   onSaveMcpAccess: (bearerToken: string) => Promise<boolean>;
   onSaveSystem: () => void;
   onToast: (type: ToastTone, message: string) => void;
+  onToolSurfaceChange: (snapshot: ToolSurfaceSnapshot) => void;
   providerDrafts: ProviderDrafts;
   providerSaveErrors: ProviderSaveErrors;
   providers: ProviderConfigRecord[];
@@ -87,6 +88,8 @@ export function AppShell(props: AppShellProps) {
               loading={props.isRefreshing}
               onDraftChange={props.onDraftChange}
               onSaveAll={props.onSaveAllProviderChanges}
+              onToast={props.onToast}
+              onToolSurfaceChange={props.onToolSurfaceChange}
               providers={props.providers}
               saveErrors={props.providerSaveErrors}
               saving={props.savingProviders}
@@ -101,6 +104,7 @@ export function AppShell(props: AppShellProps) {
             <KeysWorkspace
               onToast={props.onToast}
               refreshNonce={props.workspaceRefreshNonce}
+              providers={props.providers}
             />
           }
         />

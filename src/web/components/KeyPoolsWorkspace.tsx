@@ -1,4 +1,4 @@
-import { Upload, Download, Key, Database, Trash2, RefreshCw, FlaskConical, Power, CheckSquare, XSquare, Activity, AlertTriangle, Search, X } from "lucide-react";
+import { Upload, Download, Key, KeyRound, Database, Trash2, RefreshCw, FlaskConical, Power, CheckSquare, XSquare, Activity, AlertTriangle, Search, X } from "lucide-react";
 import { useState, useEffect } from "react";
 
 const PAGE_SIZE = 16;
@@ -7,7 +7,7 @@ import { ConfirmDialog, InlineSpinner, LoadingOverlay, EmptyState } from "./Feed
 import { formatNumber, formatDateTime } from "../format";
 import type { KeySortMode } from "../types";
 import { KeyInventoryCard } from "./KeyInventoryCard";
-import type { KeyListStatus, KeyPoolSummary, KeyPoolProvider } from "@shared/contracts";
+import type { KeyListStatus, KeyPoolSummary, KeyPoolProvider, ProviderConfigRecord } from "@shared/contracts";
 import { KeyPoolProviderPicker } from "./KeyPoolProviderPicker";
 import { useKeyWorkspace } from "./useKeyWorkspace";
 import { Badge } from "@/components/ui/badge";
@@ -73,9 +73,8 @@ function QuotaBar({ percentage }: { percentage: number | null }) {
 
 function SummaryCards(props: { summary: KeyPoolSummary | null; loading: boolean }) {
   const s = props.summary;
-  const loading = props.loading;
   const [isAlertClosed, setIsAlertClosed] = useState(false);
-  
+
   const issues = (s?.totalKeys ?? 0) - (s?.healthyKeys ?? 0);
   const quotaPercent = computeQuotaPercentage(s);
   const quotaVariant = quotaPercent !== null && quotaPercent >= 0.85
@@ -83,36 +82,70 @@ function SummaryCards(props: { summary: KeyPoolSummary | null; loading: boolean 
     : quotaPercent !== null && quotaPercent >= 0.7
       ? "warning"
       : "default";
-  
+
   return (
     <div className="grid gap-3 md:grid-cols-3">
-      <div className="rounded-xl border border-border/70 bg-muted/20 p-4">
+      <div className="rounded-xl border border-border/70 bg-muted/20 p-4 min-h-[104px]">
         <div className="flex items-start gap-3">
-          <div className="grid size-10 place-items-center rounded-xl bg-primary/10 text-primary"><Key className="size-5" /></div>
+          <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+            <Key className="size-5" />
+          </div>
           <div className="min-w-0">
             <span className="text-xs font-medium text-muted-foreground">Total Keys</span>
-            <strong className="mt-1 block text-xl font-semibold">{loading ? "..." : formatNumber(s?.totalKeys ?? 0)}</strong>
-            {!loading ? <div className="mt-1 flex gap-2 text-xs"><Badge className="px-2 py-0.5" variant="success">{formatNumber(s?.healthyKeys ?? 0)} Healthy</Badge><Badge className="px-2 py-0.5" variant={issues > 0 ? "danger" : "neutral"}>{formatNumber(issues)} Issues</Badge></div> : null}
+            <strong className="mt-1 block font-mono text-xl font-semibold">{formatNumber(s?.totalKeys ?? 0)}</strong>
+            <div className="mt-1.5 flex h-5 items-center gap-2 text-xs">
+              <Badge className="px-2 py-0.5" variant="success">{formatNumber(s?.healthyKeys ?? 0)} Healthy</Badge>
+              <Badge className="px-2 py-0.5" variant={issues > 0 ? "danger" : "neutral"}>{formatNumber(issues)} Issues</Badge>
+            </div>
           </div>
         </div>
       </div>
-      <div className="rounded-xl border border-border/70 bg-muted/20 p-4">
+      <div className="rounded-xl border border-border/70 bg-muted/20 p-4 min-h-[104px]">
         <div className="flex items-start gap-3">
-          <div className="grid size-10 place-items-center rounded-xl bg-warning/10 text-warning"><Activity className="size-5" /></div>
+          <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-warning/10 text-warning">
+            <Activity className="size-5" />
+          </div>
           <div className="min-w-0">
             <span className="text-xs font-medium text-muted-foreground">Requests / Failures</span>
-            <strong className="mt-1 block text-xl font-semibold">{loading ? "..." : `${formatNumber(s?.totalRequests ?? 0)} / ${formatNumber(s?.totalFailures ?? 0)}`}</strong>
-            {!loading && s?.totalRequests ? <p className="mt-1 text-xs text-muted-foreground">Success rate <span className="font-semibold text-primary">{((1 - (s.totalFailures / s.totalRequests)) * 100).toFixed(1)}%</span></p> : null}
+            <strong className="mt-1 block font-mono text-xl font-semibold">
+              {`${formatNumber(s?.totalRequests ?? 0)} / ${formatNumber(s?.totalFailures ?? 0)}`}
+            </strong>
+            <div className="mt-1.5 flex h-5 items-center text-xs text-muted-foreground">
+              {s && s.totalRequests > 0 ? (
+                <span>
+                  Success rate <span className="font-semibold text-primary">{((1 - (s.totalFailures / s.totalRequests)) * 100).toFixed(1)}%</span>
+                </span>
+              ) : (
+                <span>No request activity</span>
+              )}
+            </div>
           </div>
         </div>
       </div>
-      <div className="rounded-xl border border-border/70 bg-muted/20 p-4">
+      <div className="rounded-xl border border-border/70 bg-muted/20 p-4 min-h-[104px]">
         <div className="flex items-start gap-3">
-          <div className="grid size-10 place-items-center rounded-xl bg-accent text-accent-foreground"><Database className="size-5" /></div>
+          <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent text-accent-foreground">
+            <Database className="size-5" />
+          </div>
           <div className="min-w-0 flex-1">
-            <div className="flex items-center justify-between gap-2"><span className="text-xs font-medium text-muted-foreground">Quota</span>{quotaPercent !== null && !loading ? <Badge className="px-2 py-0.5" variant={quotaVariant}>{(quotaPercent * 100).toFixed(1)}% used</Badge> : null}</div>
-            <strong className="mt-1 block truncate text-sm font-semibold">{loading ? "..." : renderSummaryQuota(s)}</strong>
-            {!loading ? <QuotaBar percentage={quotaPercent} /> : null}
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-medium text-muted-foreground">Quota</span>
+              {quotaPercent !== null ? (
+                <Badge className="px-2 py-0.5 text-[10px]" variant={quotaVariant}>
+                  {(quotaPercent * 100).toFixed(1)}% used
+                </Badge>
+              ) : null}
+            </div>
+            <strong className="mt-1 block truncate font-mono text-sm font-semibold">{renderSummaryQuota(s)}</strong>
+            <div className="mt-1.5 flex h-5 items-center">
+              {quotaPercent !== null ? (
+                <div className="w-full">
+                  <QuotaBar percentage={quotaPercent} />
+                </div>
+              ) : (
+                <span className="text-xs text-muted-foreground">Quota tracking inactive</span>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -131,6 +164,7 @@ function SummaryCards(props: { summary: KeyPoolSummary | null; loading: boolean 
 type KeyPoolsWorkspaceProps = {
   refreshNonce: number;
   onToast: (type: ToastTone, message: string) => void;
+  providers?: ProviderConfigRecord[];
 };
 
 export function KeyPoolsWorkspace(props: KeyPoolsWorkspaceProps) {
@@ -145,39 +179,49 @@ export function KeyPoolsWorkspace(props: KeyPoolsWorkspaceProps) {
 
   const totalPages = Math.ceil(workspace.keys.length / PAGE_SIZE);
   const pagedKeys = workspace.keys.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const isBulkBusy =
+    workspace.isBatchDeleting ||
+    workspace.isBatchSyncing ||
+    workspace.isBatchTesting ||
+    workspace.isBulkUpdating;
 
   return (
     <>
       <section className="grid gap-5">
-        <article className="relative grid gap-4 rounded-xl border border-border/70 bg-card p-4 shadow-xs sm:p-5" id="keys">
-          {workspace.loading ? <LoadingOverlay label="Refreshing workspace" /> : null}
+        <article className="relative grid gap-5 rounded-xl border border-border/70 bg-card p-4 shadow-xs sm:p-5" id="keys">
+          {isBulkBusy ? <LoadingOverlay label="Processing keys" /> : null}
 
           {/* 1. Combined Header & Overview */}
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <div>
-                <h2 className="text-lg font-semibold tracking-tight">{workspace.provider} Workspace</h2>
+          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border/50 pb-4">
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="flex items-center gap-2.5">
+                <div className="grid size-9 place-items-center rounded-lg bg-primary/10 text-primary">
+                  <KeyRound className="size-4.5" />
+                </div>
+                <div>
+                  <h1 className="text-base font-semibold tracking-tight text-foreground">Key Pools</h1>
+                  <p className="text-xs text-muted-foreground">
+                    Credential inventory, rotation, and quota health across providers.
+                  </p>
+                </div>
               </div>
-              <div className="flex items-center gap-2 rounded-xl border border-border/70 bg-muted/20 px-2.5 py-1.5">
-                <span className="text-xs font-medium text-muted-foreground">Provider:</span>
-                <KeyPoolProviderPicker
-                  value={workspace.provider as KeyPoolProvider}
-                  onChange={(provider) => workspace.setProvider(provider)}
-                />
-                {/*
-                  Native select menus render with browser/system colors. Use a themed picker
-                  here so the options menu matches the rest of the console.
-                */}
-              </div>
+
+              <KeyPoolProviderPicker
+                value={workspace.provider as KeyPoolProvider}
+                onChange={(provider) => workspace.setProvider(provider)}
+                providers={props.providers}
+                summary={workspace.summary}
+              />
             </div>
+
             <div className="flex items-center gap-3">
-              <Button className="min-h-9 px-3" type="button" onClick={() => setIsImportOpen(true)}>
-                <Upload className="size-3.5" />
+              <Button className="min-h-9 px-3.5" type="button" onClick={() => setIsImportOpen(true)}>
+                <Upload className="mr-1.5 size-3.5" />
                 Manage & Import
               </Button>
             </div>
           </div>
-          
+
           <SummaryCards loading={workspace.loading} summary={workspace.summary} />
 
 

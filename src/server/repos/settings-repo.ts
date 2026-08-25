@@ -1,5 +1,6 @@
 import type { AppDatabase } from "../db/database.js";
 import type { KeyPoolProvider, SystemSettings } from "../../shared/contracts.js";
+import { KNOWN_MCP_TOOLS } from "../../shared/tool-surface.js";
 import {
   createDefaultSystemSettings,
   mapLegacyRoutingSettings,
@@ -10,6 +11,9 @@ const DEFAULT_SEARCH_MODEL_KEY = "default_search_model";
 const GENERIC_PROVIDER_ORDER_KEY = "generic_provider_order";
 const GENERIC_ROUTING_MODE_KEY = "generic_routing_mode";
 const MCP_BEARER_TOKEN_KEY = "mcp_bearer_token";
+const DISABLED_TOOLS_KEY = "disabled_tools";
+
+const KNOWN_TOOL_SET = new Set<string>(KNOWN_MCP_TOOLS);
 
 interface SettingRow {
   key: string;
@@ -76,10 +80,23 @@ export function getSystemSettings(db: AppDatabase): SystemSettings {
     allowedOrigins: parseJson<string[]>(
       map.get("allowed_origins") ?? JSON.stringify(defaults.allowedOrigins),
     ),
+    disabledTools: parseDisabledTools(
+      map.get(DISABLED_TOOLS_KEY) ?? JSON.stringify(defaults.disabledTools),
+    ),
     mcpResultBudget: parseJson<SystemSettings["mcpResultBudget"]>(
       map.get("mcp_result_budget") ?? JSON.stringify(defaults.mcpResultBudget),
     ),
   };
+}
+
+function parseDisabledTools(value: string): string[] {
+  const parsed = parseJson<unknown>(value);
+  if (!Array.isArray(parsed)) {
+    return [];
+  }
+  return [...new Set(
+    parsed.filter((item): item is string => typeof item === "string" && KNOWN_TOOL_SET.has(item)),
+  )];
 }
 
 export function saveSystemSetting(db: AppDatabase, key: string, value: unknown): void {
@@ -112,6 +129,13 @@ export function saveSystemSettings(db: AppDatabase, settings: Partial<SystemSett
   }
   if (settings.allowedOrigins) {
     saveSystemSetting(db, "allowed_origins", settings.allowedOrigins);
+  }
+  if (settings.disabledTools) {
+    saveSystemSetting(
+      db,
+      DISABLED_TOOLS_KEY,
+      settings.disabledTools.filter((tool) => KNOWN_TOOL_SET.has(tool)),
+    );
   }
   if (settings.mcpResultBudget) {
     saveSystemSetting(db, "mcp_result_budget", settings.mcpResultBudget);

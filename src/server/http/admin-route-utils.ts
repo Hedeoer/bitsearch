@@ -15,6 +15,7 @@ import {
   type UpdateAdminAccessPayload,
   type UpdateMcpAccessPayload,
 } from "../../shared/contracts.js";
+import { KNOWN_MCP_TOOLS } from "../../shared/tool-surface.js";
 import { normalizeGenericProviderOrder } from "../lib/generic-routing.js";
 import { AppHttpError } from "../lib/http.js";
 import { isLocalHostname, normalizeOrigin } from "./origin-utils.js";
@@ -38,6 +39,9 @@ const DEFAULT_MCP_RESULT_BUDGET = {
 };
 
 const keyListStatusSchema = z.enum(KEY_LIST_STATUSES);
+const disabledToolsSchema = z.object({
+  disabledTools: z.array(z.enum(KNOWN_MCP_TOOLS)).max(KNOWN_MCP_TOOLS.length),
+});
 const keyPoolProviderSchema = z.enum(KEY_POOL_PROVIDERS);
 const genericProviderOrderSchema = z
   .array(keyPoolProviderSchema)
@@ -74,6 +78,7 @@ const systemSettingsSchema = z
     defaultSearchModel: z.string().trim().min(1).max(MAX_MODEL_NAME_LENGTH),
     logRetentionDays: z.coerce.number().int().min(1).max(MAX_RETENTION_DAYS),
     allowedOrigins: z.array(z.string().trim().min(1)).max(MAX_ALLOWED_ORIGINS),
+    disabledTools: z.array(z.enum(KNOWN_MCP_TOOLS)).optional(),
     mcpResultBudget: z
       .object({
         firstResponseChars: z.coerce.number().int().min(MIN_RESULT_BUDGET_CHARS).max(MAX_RESULT_BUDGET_CHARS),
@@ -380,7 +385,7 @@ export function parseRequiredId(raw: unknown, code: string): string {
 export function parseSystemSettingsPayload(
   raw: unknown,
   allowHttpLocal: boolean,
-): SystemSettings {
+): Omit<SystemSettings, "disabledTools"> & Partial<Pick<SystemSettings, "disabledTools">> {
   const parsed = parseSchema(systemSettingsSchema, raw, "invalid_system_settings");
 
   const allowedOrigins = [...new Set(parsed.allowedOrigins.map((origin) => {
@@ -400,6 +405,13 @@ export function parseSystemSettingsPayload(
     allowedOrigins,
     mcpResultBudget: parsed.mcpResultBudget ?? DEFAULT_MCP_RESULT_BUDGET,
   };
+}
+
+export function parseDisabledToolsPayload(
+  raw: unknown,
+): Pick<SystemSettings, "disabledTools"> {
+  const parsed = parseSchema(disabledToolsSchema, raw, "invalid_disabled_tools");
+  return { disabledTools: [...new Set(parsed.disabledTools)] };
 }
 
 export function parseMcpAccessPayload(

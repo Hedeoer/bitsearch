@@ -12,6 +12,7 @@ The bitsearch MCP server exposes 20 tools across five categories: search (4), pr
 - **Planning Engine:** `src/server/services/planning-engine.ts` -- Phase processing logic, complexity-level phase requirements.
 - **Provider Routing:** `src/server/providers/fetch-router.ts` -- Key pool failover used by `web_fetch` and `web_map`.
 - **Related Architecture:** `/llmdoc/architecture/mcp-server-architecture.md` -- Full execution flow and session lifecycle.
+- **Manual Disabling:** Any tool can be disabled from the admin console (Providers page, MCP Tool Exposure card). Disabled tools disappear from `tools/list`, calls to them return "tool not found", and connected clients receive a `tools/list_changed` notification immediately — no reconnect required. Disabled tools appear in `get_config_info` output under `tool_surface.hidden_tools` with reason `manually_disabled`.
 
 ## 3. Large Result Pagination
 

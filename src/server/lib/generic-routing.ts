@@ -33,6 +33,7 @@ export function createDefaultSystemSettings(): SystemSettings {
     defaultSearchModel: "grok-4-fast",
     logRetentionDays: 7,
     allowedOrigins: [],
+    disabledTools: [],
     mcpResultBudget: {
       firstResponseChars: 20_000,
       pageChars: 50_000,

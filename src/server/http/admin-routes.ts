@@ -47,6 +47,7 @@ import {
   csvEscape,
   parseAdminAccessPayload,
   parseCsvKeys,
+  parseDisabledToolsPayload,
   parseIds,
   parseKeyLines,
   parseMcpAccessPayload,
@@ -115,6 +116,14 @@ export function createAdminRouter(context: AppContext): Router {
   });
 
   router.get("/tool-surface", (_req, res) => {
+    res.json(getToolSurfaceSnapshot(context));
+  });
+
+  router.put("/tools/disabled", (req, res) => {
+    const payload = parseDisabledToolsPayload(req.body ?? {});
+    runWithToolSurfaceBroadcast(() => {
+      saveSystemSettings(context.db, payload);
+    });
     res.json(getToolSurfaceSnapshot(context));
   });
 

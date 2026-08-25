@@ -9,11 +9,11 @@ import type {
   ToolSurfaceSnapshot,
 } from "@shared/contracts";
 import { SEARCH_ENGINE_PROVIDER } from "@shared/contracts";
-import { ProviderMasterList } from "../components/providers/ProviderMasterList";
 import { ProviderDetailPanel } from "../components/providers/ProviderDetailPanel";
 import { ProbeModelsDialog } from "../components/providers/ProbeModelsDialog";
 import { SearchEngineRequestTestDialog } from "../components/providers/SearchEngineRequestTestDialog";
 import { ToolSurfaceCard } from "../components/providers/ToolSurfaceCard";
+import type { ToastTone } from "../components/Feedback";
 import {
   buildSearchEngineConnectionPayload,
   probeSearchEngineModels,
@@ -33,6 +33,8 @@ type ProvidersWorkspaceProps = Readonly<{
   saving: boolean;
   system: SystemSettings;
   toolSurface: ToolSurfaceSnapshot;
+  onToast: (type: ToastTone, message: string) => void;
+  onToolSurfaceChange: (snapshot: ToolSurfaceSnapshot) => void;
 }>;
 
 function createRequestTestFailure(
@@ -61,9 +63,7 @@ function createRequestTestFailure(
 }
 
 export function ProvidersWorkspace(props: ProvidersWorkspaceProps) {
-  const [selectedProvider, setSelectedProvider] = useState<RemoteProvider | null>(
-    SEARCH_ENGINE_PROVIDER
-  );
+  const [selectedProvider, setSelectedProvider] = useState<RemoteProvider>(SEARCH_ENGINE_PROVIDER);
   const [visibleApiKeys, setVisibleApiKeys] = useState<Record<string, boolean>>({});
   const [isRevealingApiKey] = useState(false);
   const [apiKeyRevealError, setApiKeyRevealError] = useState("");
@@ -76,28 +76,24 @@ export function ProvidersWorkspace(props: ProvidersWorkspaceProps) {
   const [isTesting, setIsTesting] = useState(false);
 
   const dirtyProviderSet = new Set(props.dirtyProviders);
-  const selectedProviderRecord = props.providers.find(
-    (p) => p.provider === selectedProvider
-  ) ?? null;
-  const selectedDraft = selectedProvider ? props.drafts[selectedProvider] : null;
-  const isDirty = selectedProvider ? dirtyProviderSet.has(selectedProvider) : false;
+  const selectedProviderRecord =
+    props.providers.find((p) => p.provider === selectedProvider) ?? null;
+  const selectedDraft = props.drafts[selectedProvider] ?? null;
+  const isDirty = dirtyProviderSet.has(selectedProvider);
   const searchEngineDraft = props.drafts[SEARCH_ENGINE_PROVIDER] ?? null;
 
   const toggleApiKey = () => {
-    if (!selectedProvider) return;
     setVisibleApiKeys((prev) => ({
       ...prev,
       [selectedProvider]: !prev[selectedProvider],
     }));
   };
 
-  const apiKeyInputType: "password" | "text" = selectedProvider
-    ? visibleApiKeys[selectedProvider]
-      ? "text"
-      : selectedDraft?.revealedApiKey
-        ? "password"
-        : "text"
-    : "text";
+  const apiKeyInputType: "password" | "text" = visibleApiKeys[selectedProvider]
+    ? "text"
+    : selectedDraft?.revealedApiKey
+      ? "password"
+      : "text";
 
   async function openProbeDialog() {
     if (!searchEngineDraft) {
@@ -176,55 +172,47 @@ export function ProvidersWorkspace(props: ProvidersWorkspaceProps) {
   }
 
   return (
-    <div className="grid gap-5">
-      <div className="grid gap-5 lg:grid-cols-[280px_1fr]">
-        {/* Master List */}
-        <div className="h-[calc(100vh-200px)] overflow-hidden rounded-xl border border-border/70 bg-card p-4 shadow-xs">
-          <ProviderMasterList
-            providers={props.providers}
-            selectedProvider={selectedProvider}
-            dirtyProviders={dirtyProviderSet}
-            drafts={props.drafts}
-            saveErrors={props.saveErrors}
-            saving={props.saving}
-            onSelect={setSelectedProvider}
-          />
-        </div>
+    <div className="space-y-6">
+      {/* Provider Configuration Card with Embedded Tabs */}
+      {selectedDraft && (
+        <ProviderDetailPanel
+          providers={props.providers}
+          selectedProvider={selectedProvider}
+          onSelectProvider={setSelectedProvider}
+          selectedProviderRecord={selectedProviderRecord}
+          draft={selectedDraft}
+          drafts={props.drafts}
+          dirtyProviders={dirtyProviderSet}
+          saveErrors={props.saveErrors}
+          system={props.system}
+          loading={props.loading}
+          saving={props.saving}
+          isDirty={isDirty}
+          onDraftChange={(provider, patch) => {
+            setApiKeyRevealError("");
+            props.onDraftChange(provider, patch);
+          }}
+          apiKeyBusy={isRevealingApiKey}
+          apiKeyInputType={apiKeyInputType}
+          showApiKey={Boolean(visibleApiKeys[selectedProvider])}
+          toggleApiKey={toggleApiKey}
+          isProbing={isProbing}
+          isTesting={isTesting}
+          onOpenProbe={() => void openProbeDialog()}
+          onRunLiveTest={() => void openRequestTestDialog()}
+          apiKeyRevealError={apiKeyRevealError}
+        />
+      )}
 
-        {/* Detail Panel */}
-        <div className="space-y-4">
-          <div className="rounded-xl border border-border/70 bg-card p-6 shadow-xs">
-            {selectedDraft && (
-              <ProviderDetailPanel
-                selectedProviderRecord={selectedProviderRecord}
-                draft={selectedDraft}
-                saveErrors={props.saveErrors}
-                system={props.system}
-                loading={props.loading}
-                saving={props.saving}
-                isDirty={isDirty}
-                onDraftChange={(provider, patch) => {
-                  setApiKeyRevealError("");
-                  props.onDraftChange(provider, patch);
-                }}
-                apiKeyBusy={isRevealingApiKey}
-                apiKeyInputType={apiKeyInputType}
-                showApiKey={selectedProvider ? Boolean(visibleApiKeys[selectedProvider]) : false}
-                toggleApiKey={toggleApiKey}
-                isProbing={isProbing}
-                isTesting={isTesting}
-                onOpenProbe={() => void openProbeDialog()}
-                onRunLiveTest={() => void openRequestTestDialog()}
-                apiKeyRevealError={apiKeyRevealError}
-              />
-            )}
-          </div>
+      {/* Tool Surface Exposure Card */}
+      <ToolSurfaceCard
+        loading={props.loading}
+        toolSurface={props.toolSurface}
+        onToast={props.onToast}
+        onToolSurfaceChange={props.onToolSurfaceChange}
+      />
 
-          {/* Tool Surface */}
-          <ToolSurfaceCard toolSurface={props.toolSurface} loading={props.loading} />
-        </div>
-      </div>
-
+      {/* Diagnostics Dialogs */}
       <ProbeModelsDialog
         error={probeError}
         loading={isProbing}
