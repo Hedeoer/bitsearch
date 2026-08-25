@@ -1,19 +1,13 @@
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import type { ProviderDraft } from "../../types";
-import { LoadingOverlay } from "../Feedback";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ArrowUpRight, Eye, EyeOff, KeyRound } from "lucide-react";
+import { Link } from "react-router-dom";
+import type { ProviderDraft } from "../../types";
 import {
-  FieldShell,
-  PanelBadges,
+  FormField,
   type PanelProps,
   parseTimeoutMs,
-  ProviderSwitch,
 } from "./provider-panel-shared";
 
 const DEFAULT_TIMEOUT_MS = 30_000;
@@ -25,50 +19,47 @@ type RemoteProviderPanelProps = PanelProps &
   }>;
 
 export function RemoteProviderPanel(props: RemoteProviderPanelProps) {
+  const [revealBaseUrl, setRevealBaseUrl] = useState(false);
+
   return (
-    <Card className="relative min-w-0">
-      {props.busy ? <LoadingOverlay label={`Saving ${props.provider.provider}`} /> : null}
-      <CardHeader className="pb-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <CardTitle>{props.provider.provider}</CardTitle>
-            <CardDescription className="mt-2">
-              Keys stay in Key Pools. This card only controls provider availability and network
-              behavior.
-            </CardDescription>
-          </div>
-          <div className="flex items-center gap-3">
-            <PanelBadges
-              dirty={props.dirty}
-              keyCount={props.provider.keyCount}
-            />
-            <ProviderSwitch
-              checked={props.draft.enabled}
-              disabled={props.busy}
-              onToggle={() => props.onDraftChange({ enabled: !props.draft.enabled })}
-            />
-          </div>
+    <div className="space-y-5">
+      {props.error ? (
+        <div className="rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {props.error}
         </div>
-      </CardHeader>
-      <CardContent className="grid gap-4">
-        {props.error ? (
-          <div className="rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-            {props.error}
+      ) : null}
+
+      <div className="grid gap-4 sm:grid-cols-[1fr_150px]">
+        <FormField
+          label="Base URL"
+          description={`Custom upstream endpoint for ${props.provider.provider}. Leave blank for official default.`}
+        >
+          <div className="relative flex items-center">
+            <Input
+              className="pr-10 font-mono text-sm"
+              disabled={props.busy}
+              type={revealBaseUrl ? "text" : "password"}
+              placeholder="Default endpoint"
+              value={props.draft.baseUrl}
+              onChange={(event) => props.onDraftChange({ baseUrl: event.target.value })}
+            />
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              className="absolute right-1 size-7 text-muted-foreground hover:text-foreground"
+              onClick={() => setRevealBaseUrl(!revealBaseUrl)}
+              title={revealBaseUrl ? "Hide Base URL" : "Show Base URL"}
+              aria-label={revealBaseUrl ? "Hide Base URL" : "Show Base URL"}
+            >
+              {revealBaseUrl ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+            </Button>
           </div>
-        ) : null}
-        <FieldShell title="Base URL" description="Root endpoint for this provider. Leave blank to use the default.">
-          <Input
-            className="font-['IBM_Plex_Mono']"
-            disabled={props.busy}
-            type="text"
-            value={props.draft.baseUrl}
-            onChange={(event) => props.onDraftChange({ baseUrl: event.target.value })}
-          />
-        </FieldShell>
-        <FieldShell title="Timeout" description="Applied to provider requests made with managed keys.">
+        </FormField>
+        <FormField label="Timeout" description="Per-request limit.">
           <div className="relative">
             <Input
-              className="pr-11 font-['IBM_Plex_Mono']"
+              className="pr-10 font-mono text-sm"
               disabled={props.busy}
               inputMode="numeric"
               type="number"
@@ -79,21 +70,33 @@ export function RemoteProviderPanel(props: RemoteProviderPanelProps) {
                 })
               }
             />
-              <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
               ms
             </span>
           </div>
-        </FieldShell>
-        <div className="rounded-lg border border-border/70 bg-muted/20 p-4">
-          <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-            Key Management
+        </FormField>
+      </div>
+
+      <div className="rounded-lg border border-border/70 bg-muted/20 p-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <KeyRound className="size-4 text-primary" />
+              <span className="text-sm font-semibold text-foreground">Key Management</span>
+            </div>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Credential inventory, health monitoring, rate limits, and rotation live in Key Pools for
+              <span className="font-mono font-medium text-foreground"> {props.provider.provider}</span>.
+            </p>
           </div>
-          <p className="mt-3 text-sm leading-6 text-muted-foreground">
-            Credential inventory, enable/disable, health, and rotation all live in Key Pools for
-            {` ${props.provider.provider}`}.
-          </p>
+          <Button asChild size="sm" variant="outline" className="shrink-0">
+            <Link to="/keys">
+              Open Key Pools
+              <ArrowUpRight className="ml-1.5 size-3.5" />
+            </Link>
+          </Button>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

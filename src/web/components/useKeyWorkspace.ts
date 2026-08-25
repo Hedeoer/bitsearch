@@ -20,6 +20,7 @@ export function useKeyWorkspace(refreshNonce: number, onToast: ToastHandler) {
   const deferredQuery = useDeferredValue(query);
   const [keys, setKeys] = useState<ProviderKeyRecord[]>([]);
   const [summary, setSummary] = useState<KeyPoolSummary | null>(null);
+  const [summaries, setSummaries] = useState<Record<string, KeyPoolSummary>>({});
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [revealedValues, setRevealedValues] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
@@ -48,7 +49,10 @@ export function useKeyWorkspace(refreshNonce: number, onToast: ToastHandler) {
         apiRequest<KeyPoolSummary>("GET", `/admin/keys/summary?provider=${provider}`),
       ]);
       if (keyRes.ok) setKeys(keyRes.data);
-      if (summaryRes.ok) setSummary(summaryRes.data);
+      if (summaryRes.ok) {
+        setSummary(summaryRes.data);
+        setSummaries((prev) => ({ ...prev, [provider]: summaryRes.data }));
+      }
       if (!keyRes.ok || !summaryRes.ok) {
         onToast("error", "Failed to refresh the key workspace");
       }
@@ -109,7 +113,7 @@ export function useKeyWorkspace(refreshNonce: number, onToast: ToastHandler) {
     setTag,
     sortMode,
     status,
-    summary,
+    summary: summaries[provider] ?? (summary?.provider === provider ? summary : null),
     tag,
     toggleSelected,
   };

@@ -3,17 +3,15 @@ import {
   Activity,
   KeyRound,
   LayoutDashboard,
-  LogOut,
   Menu,
-  RefreshCw,
-  Search,
   Server,
 } from "lucide-react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
-import { ThemeToggle } from "./ThemeToggle";
+import { BitSearchLogo } from "./BitSearchLogo";
+import { NavUser } from "./NavUser";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 type ConsoleLayoutProps = Readonly<{
   isRefreshing: boolean;
@@ -103,42 +101,6 @@ function NavList(
   );
 }
 
-function SidebarUtilityRow(props: Readonly<{
-  isRefreshing: boolean;
-  onLogout: () => void;
-  onRefresh: () => void;
-}>) {
-  return (
-    <div className="mt-6 flex items-center justify-between gap-1 border-t border-border/70 pt-3">
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            aria-label="Refresh"
-            className="size-8"
-            disabled={props.isRefreshing}
-            size="icon"
-            type="button"
-            variant="ghost"
-            onClick={props.onRefresh}
-          >
-            <RefreshCw className={`size-4 ${props.isRefreshing ? "animate-spin" : ""}`} />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>Refresh</TooltipContent>
-      </Tooltip>
-      <ThemeToggle />
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button aria-label="Sign out" className="size-8" size="icon" type="button" variant="ghost" onClick={props.onLogout}>
-            <LogOut className="size-4" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>Sign out</TooltipContent>
-      </Tooltip>
-    </div>
-  );
-}
-
 export function ConsoleLayout(props: ConsoleLayoutProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
@@ -151,49 +113,55 @@ export function ConsoleLayout(props: ConsoleLayoutProps) {
     <TooltipProvider delayDuration={200}>
       <div className="min-h-screen bg-background text-foreground">
         <aside className="console-enter fixed inset-y-0 left-0 z-30 hidden w-56 flex-col border-r border-border/70 bg-card p-4 lg:flex">
-          <div className="flex items-center gap-2.5 rounded-xl border border-border/70 bg-background px-2.5 py-3">
-            <div className="grid size-9 shrink-0 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/20">
-              <Search className="size-4" aria-hidden="true" />
+          <div className="flex items-center gap-2.5 rounded-xl border border-border/70 bg-background px-3 py-2.5">
+            <div className="grid size-8 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground shadow-md shadow-primary/20">
+              <BitSearchLogo className="size-4" />
             </div>
-            <div className="min-w-0 grid gap-0.5">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">BitSearch</span>
-              <strong className="truncate font-sans text-[13px] leading-tight tracking-tight">Operations Console</strong>
+            <div className="min-w-0">
+              <span className="font-semibold text-sm tracking-tight text-foreground">BitSearch</span>
             </div>
           </div>
           <nav className="mt-6 flex-1" aria-label="Console navigation">
             <NavList onNavigate={() => setMobileOpen(false)} />
           </nav>
-          <SidebarUtilityRow isRefreshing={props.isRefreshing} onLogout={props.onLogout} onRefresh={props.onRefresh} />
+          <div className="mt-auto pt-3 border-t border-border/70">
+            <NavUser
+              isRefreshing={props.isRefreshing}
+              onLogout={props.onLogout}
+              onRefresh={props.onRefresh}
+            />
+          </div>
         </aside>
 
         <div className="relative min-w-0 lg:pl-56">
           <div className="console-atmosphere" aria-hidden="true" />
-          <header className="console-enter sticky top-0 z-20 flex items-center gap-2 border-b border-border/70 bg-background px-4 py-2.5 lg:hidden">
-            <Sheet onOpenChange={setMobileOpen} open={mobileOpen}>
-              <Button aria-label="Open navigation" size="icon" type="button" variant="ghost" onClick={() => setMobileOpen(true)}>
-                <Menu className="size-5" />
-              </Button>
-              <SheetContent className="border-border bg-card" side="left">
-                <SheetHeader>
-                  <SheetTitle className="flex items-center gap-2 text-base normal-case tracking-normal">
-                    <Search className="size-4" /> BitSearch
-                  </SheetTitle>
-                </SheetHeader>
-                <div className="mt-4 flex flex-col px-4 pb-4">
-                  <NavList onNavigate={() => setMobileOpen(false)} />
-                  <SidebarUtilityRow isRefreshing={props.isRefreshing} onLogout={props.onLogout} onRefresh={props.onRefresh} />
-                </div>
-              </SheetContent>
-            </Sheet>
-            <div className="flex min-w-0 items-center gap-2">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">BitSearch</span>
-              <strong className="truncate text-sm tracking-tight">Operations Console</strong>
-            </div>
-            <div className="ml-auto flex items-center gap-1">
-              <ThemeToggle />
-              <Button aria-label="Sign out" className="size-8" size="icon" type="button" variant="ghost" onClick={props.onLogout}>
-                <LogOut className="size-4" />
-              </Button>
+          <header className="console-enter sticky top-0 z-20 flex items-center justify-between gap-2 border-b border-border/70 bg-background px-4 py-2.5 lg:hidden">
+            <div className="flex items-center gap-2">
+              <Sheet onOpenChange={setMobileOpen} open={mobileOpen}>
+                <Button aria-label="Open navigation" size="icon" type="button" variant="ghost" onClick={() => setMobileOpen(true)}>
+                  <Menu className="size-5" />
+                </Button>
+                <SheetContent className="border-border bg-card flex flex-col justify-between" side="left">
+                  <div>
+                    <SheetHeader>
+                      <SheetTitle className="flex items-center gap-2 text-base normal-case tracking-normal">
+                        <BitSearchLogo className="size-4" /> BitSearch
+                      </SheetTitle>
+                    </SheetHeader>
+                    <div className="mt-6">
+                      <NavList onNavigate={() => setMobileOpen(false)} />
+                    </div>
+                  </div>
+                  <div className="pt-3 border-t border-border/70">
+                    <NavUser
+                      isRefreshing={props.isRefreshing}
+                      onLogout={props.onLogout}
+                      onRefresh={props.onRefresh}
+                    />
+                  </div>
+                </SheetContent>
+              </Sheet>
+              <span className="font-semibold text-sm tracking-tight text-foreground">BitSearch</span>
             </div>
           </header>
           <main className="console-enter-2 relative mx-auto w-full max-w-[1440px] overflow-x-hidden p-4 sm:p-6">

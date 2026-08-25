@@ -36,3 +36,5 @@ Thumbs.db
 .ace-tool/
 .claude/
 .stitch/
+.workflow/
+design-previews/

@@ -19,7 +19,7 @@
 - `src/web/format.ts`: Display formatting utilities (duration, datetime, numbers with zh-CN locale).
 - `src/web/components/ConsoleChrome.tsx` (ConsoleLayout): Shell chrome — 224px fixed sidebar（lg+ 唯一持久 chrome：logo 卡、Monitor / Configure 两组 `<NavLink>` 导航、底部刷新/主题/退出操作行），桌面端无顶栏；<lg 保留精简顶栏（汉堡 + 品牌 + 主题/退出），导航收进 Sheet 抽屉；内容经 `<Outlet />` 渲染；壳层含暖光氛围层 `.console-atmosphere`。
 - `src/web/pages/OverviewWorkspace.tsx` (OverviewWorkspace): Overview workspace page — 三段式：8 张指标卡两行（流量四卡 + Routing/readiness/active providers/enabled keys）、全宽 Request trend 图表卡（ChartContainer 面积图 + 24h/7d/30d ToggleGroup 切换）、底部双栏（Latest errors | routing/access config）。
-- `src/web/pages/ProvidersWorkspace.tsx` (ProvidersWorkspace): Providers workspace page — per-provider enable/disable, API key, base URL, timeout, search model configuration, tool surface.
+- `src/web/pages/ProvidersWorkspace.tsx` (ProvidersWorkspace): Providers workspace page — per-provider enable/disable, API key, base URL, timeout, search model configuration, tool surface（MCP Tool Exposure 卡支持点击工具 chip 手动禁用/启用，经 `PUT /api/admin/tools/disabled` 持久化并广播 `tools/list_changed`）.
 - `src/web/pages/KeysWorkspace.tsx` (KeysWorkspace): Keys workspace page — key pool management; coordinates import and inventory panels.
 - `src/web/pages/ActivityWorkspace.tsx` (ActivityWorkspace): Activity workspace page — two-column request feed with search/filter and tabbed detail inspector.
 - `src/web/toast-store.ts` (enqueueToast, dismissToast, useToastStore): Lightweight global toast notification state; exposes imperative helpers and a React hook for reading the queue.

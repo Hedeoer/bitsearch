@@ -1,6 +1,8 @@
 import {
   GENERIC_LAYER_TOOLS,
   KEY_POOL_PROVIDERS,
+  META_LAYER_TOOLS,
+  PLANNING_LAYER_TOOLS,
   PROVIDER_LAYER_TOOLS,
   type ClientGuidance,
   type GenericRoutingSnapshot,
@@ -19,16 +21,14 @@ import { getSystemSettings } from "../repos/settings-repo.js";
 
 const GENERIC_ROUTED_TOOLS = ["web_fetch", "web_map"];
 
-// Static tool lists for meta and planning tools
-const META_TOOLS_STATIC = ["get_result_page", "get_config_info", "switch_model"];
-const PLANNING_TOOLS_STATIC = [
-  "plan_intent",
-  "plan_complexity",
-  "plan_sub_query",
-  "plan_search_term",
-  "plan_tool_mapping",
-  "plan_execution",
-];
+const META_TOOLS_STATIC = [...META_LAYER_TOOLS];
+const PLANNING_TOOLS_STATIC = [...PLANNING_LAYER_TOOLS];
+
+const PROVIDER_OF_TOOL = new Map<string, KeyPoolProvider>(
+  Object.entries(PROVIDER_LAYER_TOOLS).flatMap(
+    ([provider, tools]) => tools.map((tool) => [tool, provider as KeyPoolProvider]),
+  ),
+);
 
 function getProviderHiddenReason(
   enabled: boolean,
@@ -81,7 +81,12 @@ function createClientGuidance(snapshot: ToolSurfaceSnapshot): ClientGuidance {
   ];
 
   const promptLines = [
-    "Use web_search for open-web discovery and get_sources when source listing is needed.",
+    ...(snapshot.genericTools.includes("web_search")
+      ? ["Use web_search for open-web discovery."]
+      : []),
+    ...(snapshot.genericTools.includes("get_sources")
+      ? ["Use get_sources when source listing is needed."]
+      : []),
     "When a response includes result_id and next_cursor, call get_result_page instead of asking the tool to return all content again.",
   ];
   if (snapshot.genericTools.includes("web_fetch")) {
@@ -139,6 +144,8 @@ export function getCurrentGenericRoutingSnapshot(
 }
 
 export function getToolSurfaceSnapshot(context: AppContext): ToolSurfaceSnapshot {
+  const settings = getSystemSettings(context.db);
+  const disabledTools = new Set(settings.disabledTools);
   const genericRouting = getCurrentGenericRoutingSnapshot(context);
   const providerCapabilities = KEY_POOL_PROVIDERS.map((provider) =>
     createProviderSnapshot(context, provider),
@@ -157,12 +164,19 @@ export function getToolSurfaceSnapshot(context: AppContext): ToolSurfaceSnapshot
     "web_search",
     "get_sources",
     ...(genericRouting.effectiveProviderOrder.length > 0 ? GENERIC_ROUTED_TOOLS : []),
-  ];
-  const providerTools = providerCapabilities.flatMap((item) => item.exposedTools);
+  ].filter((tool) => !disabledTools.has(tool));
+  const providerTools = providerCapabilities.flatMap((item) => item.exposedTools)
+    .filter((tool) => !disabledTools.has(tool));
 
   // Use static tool lists - complete and accurate
-  const metaTools = META_TOOLS_STATIC;
-  const planningTools = PLANNING_TOOLS_STATIC;
+  const metaTools = META_TOOLS_STATIC.filter((tool) => !disabledTools.has(tool));
+  const planningTools = PLANNING_TOOLS_STATIC.filter((tool) => !disabledTools.has(tool));
+
+  const manuallyHidden: HiddenToolRecord[] = settings.disabledTools.map((tool) => ({
+    tool,
+    reason: "manually_disabled",
+    provider: PROVIDER_OF_TOOL.get(tool) ?? null,
+  }));
 
   const snapshot: ToolSurfaceSnapshot = {
     genericRouting,
@@ -178,9 +192,13 @@ export function getToolSurfaceSnapshot(context: AppContext): ToolSurfaceSnapshot
       ...planningTools,
     ],
     hiddenTools: [
+      ...manuallyHidden,
       ...hiddenGenericTools,
       ...providerCapabilities.flatMap((item) => item.hiddenTools),
-    ],
+    ].filter(
+      (record, index, all) =>
+        all.findIndex((other) => other.tool === record.tool) === index,
+    ),
     requiresReconnect: true,
     behaviorChangesApplyImmediately: true,
     lastRefreshedAt: new Date().toISOString(),

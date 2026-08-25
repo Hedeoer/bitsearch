@@ -1,53 +1,46 @@
-import type { KeyPoolProvider } from "@shared/contracts";
-import { Check, ChevronsUpDown } from "lucide-react";
-
-import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-
-const PROVIDER_OPTIONS: ReadonlyArray<KeyPoolProvider> = ["tavily", "firecrawl"];
-
-function formatProviderLabel(provider: KeyPoolProvider): string {
-  return provider === "tavily" ? "Tavily" : "Firecrawl";
-}
+import type { KeyPoolProvider, ProviderConfigRecord, KeyPoolSummary } from "@shared/contracts";
+import { KEY_POOL_PROVIDERS } from "@shared/contracts";
 
 type KeyPoolProviderPickerProps = Readonly<{
   onChange: (provider: KeyPoolProvider) => void;
   value: KeyPoolProvider;
+  providers?: ProviderConfigRecord[];
+  summary?: KeyPoolSummary | null;
 }>;
 
 export function KeyPoolProviderPicker(props: KeyPoolProviderPickerProps) {
   return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button
-          aria-haspopup="listbox"
-          className="justify-between"
-          role="combobox"
-          type="button"
-          variant="outline"
-        >
-          <span>{formatProviderLabel(props.value)}</span>
-          <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent align="start" className="w-[180px] p-1" role="listbox">
-        {PROVIDER_OPTIONS.map((provider) => (
-          <Button
+    <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-border/60 bg-muted/40 p-1">
+      {KEY_POOL_PROVIDERS.map((provider) => {
+        const isSelected = provider === props.value;
+        const providerRecord = props.providers?.find((p) => p.provider === provider);
+        const count =
+          providerRecord?.keyCount ??
+          (props.summary?.provider === provider ? props.summary.totalKeys : undefined);
+
+        return (
+          <button
             key={provider}
-            aria-selected={provider === props.value}
-            className="w-full justify-start gap-2 px-3 py-2 font-normal"
-            role="option"
             type="button"
-            variant={provider === props.value ? "secondary" : "ghost"}
             onClick={() => props.onChange(provider)}
+            className={`
+              flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-medium transition-all outline-none cursor-pointer
+              ${isSelected
+                ? "border border-border/80 bg-background text-foreground shadow-xs"
+                : "border border-transparent text-muted-foreground hover:bg-background/40 hover:text-foreground"
+              }
+            `}
           >
-            <Check
-              className={`size-4 ${provider === props.value ? "opacity-100" : "opacity-0"}`}
-            />
-            {formatProviderLabel(provider)}
-          </Button>
-        ))}
-      </PopoverContent>
-    </Popover>
+            <span className={`size-2 rounded-full ${isSelected ? "bg-emerald-500" : "bg-muted-foreground/40"}`} />
+            <span className="font-mono font-semibold">{provider}</span>
+            {count !== undefined ? (
+              <span className="font-mono text-[11px] text-muted-foreground tabular-nums">
+                {count} keys
+              </span>
+            ) : null}
+          </button>
+        );
+      })}
+    </div>
   );
 }

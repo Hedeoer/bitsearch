@@ -22,12 +22,39 @@ export const PROVIDER_LAYER_TOOLS = {
   ],
 } as const;
 
+export const META_LAYER_TOOLS = [
+  "get_result_page",
+  "get_config_info",
+  "switch_model",
+] as const;
+
+export const PLANNING_LAYER_TOOLS = [
+  "plan_intent",
+  "plan_complexity",
+  "plan_sub_query",
+  "plan_search_term",
+  "plan_tool_mapping",
+  "plan_execution",
+] as const;
+
 export const TOOL_HIDDEN_REASONS = [
   "provider_disabled",
   "no_enabled_keys",
   "generic_provider_unavailable",
   "capability_unavailable",
+  "manually_disabled",
 ] as const;
+
+const PROVIDER_LAYER_TOOL_LIST = Object.values(PROVIDER_LAYER_TOOLS).flat();
+
+export const KNOWN_MCP_TOOLS = [
+  ...GENERIC_LAYER_TOOLS,
+  ...PROVIDER_LAYER_TOOL_LIST,
+  ...META_LAYER_TOOLS,
+  ...PLANNING_LAYER_TOOLS,
+] as const;
+
+export type KnownMcpTool = (typeof KNOWN_MCP_TOOLS)[number];
 
 export type GenericRoutingMode = (typeof GENERIC_ROUTING_MODES)[number];
 export type ToolHiddenReason = (typeof TOOL_HIDDEN_REASONS)[number];
@@ -38,6 +65,7 @@ export interface SystemSettings {
   defaultSearchModel: string;
   logRetentionDays: number;
   allowedOrigins: string[];
+  disabledTools: string[];
   mcpResultBudget: {
     firstResponseChars: number;
     pageChars: number;

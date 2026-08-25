@@ -234,6 +234,7 @@ export function App() {
         onSaveMcpAccess={saveMcpAccess}
         onSaveSystem={() => void saveSystem()}
         onToast={(type, message) => enqueueToast(type, message)}
+        onToolSurfaceChange={setToolSurface}
         providerDrafts={providerWorkspace.drafts}
         providerSaveErrors={providerWorkspace.saveErrors}
         providers={providers}
