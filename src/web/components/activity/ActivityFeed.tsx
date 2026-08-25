@@ -93,7 +93,7 @@ export function ActivityFeed(props: ActivityFeedProps) {
         <Badge variant="neutral">{formatNumber(total)} total</Badge>
       </div>
 
-      <div className="grid max-h-[calc(100vh-360px)] gap-3 overflow-y-auto p-4">
+      <div className="grid max-h-[calc(100vh-260px)] gap-3 overflow-y-auto p-4">
         {!props.loading && props.error ? (
           <p className="m-0 rounded-xl border border-destructive/25 bg-destructive/10 px-3 py-2 text-sm text-destructive">{props.error}</p>
         ) : null}

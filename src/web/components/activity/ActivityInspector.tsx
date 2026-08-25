@@ -35,12 +35,12 @@ function SummaryCard(
   }>,
 ) {
   return (
-    <div className="rounded-xl border border-border/60 bg-muted/20 p-3">
-      <span>
-        <props.icon size={12} />
+    <div className="grid gap-1.5 rounded-xl border border-border/60 bg-muted/20 p-3">
+      <span className="inline-flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+        <props.icon className="size-3" />
         {props.label}
       </span>
-      <strong>{props.value}</strong>
+      <strong className="truncate font-mono text-sm font-semibold tabular-nums">{props.value}</strong>
     </div>
   );
 }
@@ -65,7 +65,7 @@ export function ActivityInspector(props: ActivityInspectorProps) {
 
   if (!props.loading && !props.error && !props.detail) {
     return (
-      <div className="min-w-0 xl:max-h-[calc(100vh-180px)] xl:overflow-y-auto">
+      <div className="min-w-0 xl:max-h-[calc(100vh-120px)] xl:overflow-y-auto">
         <section className="rounded-xl border border-border/70 bg-card shadow-xs">
           <EmptyState title="Select a request" description="Choose a request from the feed to inspect attempts, payloads, and diagnostics." />
         </section>
@@ -74,7 +74,7 @@ export function ActivityInspector(props: ActivityInspectorProps) {
   }
 
   return (
-    <div className="grid min-w-0 gap-4 xl:max-h-[calc(100vh-180px)] xl:overflow-y-auto">
+    <div className="grid min-w-0 gap-4 xl:max-h-[calc(100vh-120px)] xl:overflow-y-auto">
       <section className="rounded-xl border border-border/70 bg-card shadow-xs">
         <div className="flex items-center justify-between gap-3 px-4 py-3.5">
           <div>

@@ -210,7 +210,7 @@ export function ActivityWorkbench() {
         onRefresh={() => setRefreshTick((value) => value + 1)}
       />
       <ActivitySummaryRail loading={listLoading} summary={summary} />
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,0.85fr)_minmax(1.15fr,0)]">
+      <div className="grid gap-4 xl:grid-cols-[minmax(320px,0.92fr)_minmax(0,2.08fr)]">
         <ActivityFeed
           error={listError}
           hasActiveFilters={hasActiveActivityFilters(filters)}

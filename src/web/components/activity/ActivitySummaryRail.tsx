@@ -42,7 +42,7 @@ function SummaryCard(
 export function ActivitySummaryRail(props: ActivitySummaryRailProps) {
   const summary = props.summary;
   return (
-    <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+    <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
       <SummaryCard icon={Activity} label="Requests" loading={props.loading} tone="primary" value={formatNumber(summary?.totalRequests ?? 0)} supporting={props.loading ? "Refreshing current slice…" : "Filtered request count"} />
       <SummaryCard icon={summary?.failureRate === 0 ? CheckCircle : AlertTriangle} label="Failure Rate" loading={props.loading} tone={summary?.failureRate === 0 ? "success" : "danger"} value={formatPercentage(summary?.failureRate ?? 0)} supporting={`${formatNumber(summary?.failedRequests ?? 0)} failed requests`} />
       <SummaryCard icon={Timer} label="P95 Latency" loading={props.loading} tone="warning" value={formatDuration(summary?.p95DurationMs ?? 0)} supporting={`P50 ${formatDuration(summary?.p50DurationMs ?? 0)}`} />
