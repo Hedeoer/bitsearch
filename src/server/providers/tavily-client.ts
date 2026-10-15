@@ -199,3 +199,77 @@ export async function tavilySearch(
     provider: "tavily",
   }));
 }
+
+export interface TavilyUpstreamSearchInput {
+  query: string;
+  maxResults: number;
+  searchDepth: "basic" | "advanced" | "fast" | "ultra-fast";
+  includeAnswer: boolean | "basic" | "advanced";
+  chunksPerSource: number;
+  includeUsage: boolean;
+  sessionId?: string;
+  timeoutMs?: number;
+}
+
+export interface TavilyUpstreamSearchResult {
+  answer: string | null;
+  results: Array<{
+    title: string;
+    url: string;
+    content: string;
+    score: number;
+  }>;
+  usageCredits: number | null;
+  requestId: string | null;
+}
+
+export async function tavilyUpstreamSearch(
+  config: TavilyClientConfig,
+  input: TavilyUpstreamSearchInput,
+): Promise<TavilyUpstreamSearchResult> {
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${config.apiKey}`,
+  };
+  if (input.sessionId) {
+    headers["X-Session-Id"] = input.sessionId;
+  }
+
+  const data = await requestJson<{
+    answer?: string | null;
+    request_id?: string;
+    usage?: { credits?: number };
+    results?: Array<{
+      title?: string;
+      url?: string;
+      content?: string;
+      score?: number;
+    }>;
+  }>(`${config.baseUrl.replace(/\/$/, "")}/search`, {
+    headers,
+    body: {
+      query: input.query,
+      max_results: input.maxResults,
+      search_depth: input.searchDepth,
+      include_answer: input.includeAnswer,
+      include_raw_content: false,
+      chunks_per_source: input.chunksPerSource,
+      auto_parameters: false,
+      include_usage: input.includeUsage,
+    },
+    timeoutMs: input.timeoutMs ?? config.timeoutMs,
+  });
+
+  return {
+    answer: typeof data.answer === "string" && data.answer.trim().length > 0
+      ? data.answer
+      : null,
+    results: (data.results ?? []).map((item) => ({
+      title: item.title ?? "",
+      url: item.url ?? "",
+      content: item.content ?? "",
+      score: item.score ?? 0,
+    })),
+    usageCredits: typeof data.usage?.credits === "number" ? data.usage.credits : null,
+    requestId: typeof data.request_id === "string" ? data.request_id : null,
+  };
+}

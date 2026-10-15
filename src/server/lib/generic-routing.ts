@@ -30,6 +30,7 @@ export function createDefaultSystemSettings(): SystemSettings {
   return {
     genericRoutingMode: "ordered_failover",
     genericProviderOrder: [...DEFAULT_PROVIDER_ORDER],
+    searchUpstreamMode: "llm_first",
     defaultSearchModel: "grok-4-fast",
     logRetentionDays: 7,
     allowedOrigins: [],

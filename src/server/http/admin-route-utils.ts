@@ -7,6 +7,7 @@ import {
   REMOTE_PROVIDERS,
   SEARCH_ENGINE_API_FORMATS,
   SEARCH_ENGINE_PROVIDER,
+  SEARCH_UPSTREAM_MODES,
   type KeyListStatus,
   type KeyPoolProvider,
   type RemoteProvider,
@@ -75,6 +76,7 @@ const systemSettingsSchema = z
   .object({
     genericRoutingMode: z.enum(GENERIC_ROUTING_MODES),
     genericProviderOrder: genericProviderOrderSchema,
+    searchUpstreamMode: z.enum(SEARCH_UPSTREAM_MODES).default("llm_first"),
     defaultSearchModel: z.string().trim().min(1).max(MAX_MODEL_NAME_LENGTH),
     logRetentionDays: z.coerce.number().int().min(1).max(MAX_RETENTION_DAYS),
     allowedOrigins: z.array(z.string().trim().min(1)).max(MAX_ALLOWED_ORIGINS),

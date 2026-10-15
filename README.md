@@ -672,6 +672,19 @@ Set in the **Overview** workspace under **Generic Retrieval Routing**:
 
 Generic retrieval routing only affects `web_fetch`, `web_map`, and `web_search` extra sources. Provider-specific tools such as `tavily_crawl` and `firecrawl_*` always execute against their named provider and never fall back across providers.
 
+#### Search upstream routing (`web_search`)
+
+Set in the **Overview** workspace under **Search Upstream (web_search)**:
+
+| Mode | Behavior |
+|------|----------|
+| `llm_first` (default) | The `search_engine` LLM answers first; Tavily takes over on failure or an empty answer |
+| `llm_only` | Only the `search_engine` LLM; failures return an error |
+| `tavily_first` | The Tavily key pool answers first; the LLM takes over on failure or an empty answer |
+| `tavily_only` | Only the Tavily key pool; `web_search` works without any `search_engine` configuration |
+
+The Tavily upstream calls `POST /search` with `search_depth: "advanced"` (2 credits), `include_answer: "advanced"`, `max_results: 5`, and `chunks_per_source: 3`, iterating the Tavily key pool with LRU rotation. Tavily-specific status codes `432` (plan limit), `433` (PAYGO limit), and `401` (invalid key) move the request to the next key. When Tavily returns no summarized answer, the answer is assembled locally from the returned results. The `model` and `platform` parameters only apply to the `search_engine` upstream.
+
 #### MCP large result handling
 
 Many retrieval tools can produce more text than an MCP client can safely consume in one response. BitSearch stores the complete tool result server-side as a `bitsearch://results/{id}` artifact, returns a bounded preview first, and includes pagination metadata:
@@ -724,7 +737,7 @@ BitSearch exposes 20 tools to the LLM client, covering four main areas.
 <summary>Expand the full MCP tools reference</summary>
 
 #### 1. Search & Web Access
-- **`web_search`**: Performs AI-driven web search using the configured search engine model. Caches sources server-side and returns a bounded answer preview plus result pagination metadata.
+- **`web_search`**: Performs deep web search through the configured search upstream (`searchUpstreamMode`): the `search_engine` LLM, the Tavily Search API key pool, or ordered takeover between them. Caches sources server-side and returns a bounded answer preview plus result pagination metadata.
 - **`get_sources`**: Retrieves a bounded page of source links cached during a `web_search` call using the returned `session_id`.
 - **`web_fetch`**: Extracts Markdown content from a target URL, stores the full result server-side, and returns a bounded preview. Automatically fails over across Tavily and Firecrawl key pools.
 - **`web_map`**: Maps website structure and discovers URLs using Tavily Map or Firecrawl, returning a bounded preview plus pagination metadata.
