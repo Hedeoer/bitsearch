@@ -41,6 +41,9 @@ function classifyErrorType(error: unknown): string {
     if (error.statusCode === 429) {
       return "rate_limit";
     }
+    if (error.statusCode === 432 || error.statusCode === 433) {
+      return "rate_limit";
+    }
     if (error.statusCode === 408) {
       return "timeout";
     }
@@ -55,11 +58,14 @@ function classifyErrorType(error: unknown): string {
   return "network_error";
 }
 
-function isFailoverError(error: unknown): { retryable: boolean; statusCode: number | null; message: string } {
+export function isFailoverError(error: unknown): { retryable: boolean; statusCode: number | null; message: string } {
   if (error instanceof HttpRequestError) {
     const retryable =
       error.statusCode === 429 ||
       error.statusCode === 408 ||
+      error.statusCode === 401 ||
+      error.statusCode === 432 ||
+      error.statusCode === 433 ||
       (error.statusCode !== null && error.statusCode >= 500);
     return { retryable, statusCode: error.statusCode, message: error.message };
   }

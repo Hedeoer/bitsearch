@@ -3,6 +3,13 @@ export const GENERIC_ROUTING_MODES = [
   "ordered_failover",
 ] as const;
 
+export const SEARCH_UPSTREAM_MODES = [
+  "llm_first",
+  "llm_only",
+  "tavily_first",
+  "tavily_only",
+] as const;
+
 export const GENERIC_LAYER_TOOLS = [
   "web_search",
   "get_sources",
@@ -58,10 +65,12 @@ export type KnownMcpTool = (typeof KNOWN_MCP_TOOLS)[number];
 
 export type GenericRoutingMode = (typeof GENERIC_ROUTING_MODES)[number];
 export type ToolHiddenReason = (typeof TOOL_HIDDEN_REASONS)[number];
+export type SearchUpstreamMode = (typeof SEARCH_UPSTREAM_MODES)[number];
 
 export interface SystemSettings {
   genericRoutingMode: GenericRoutingMode;
   genericProviderOrder: Array<"tavily" | "firecrawl">;
+  searchUpstreamMode: SearchUpstreamMode;
   defaultSearchModel: string;
   logRetentionDays: number;
   allowedOrigins: string[];

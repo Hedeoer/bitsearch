@@ -4,6 +4,7 @@ export {
   META_LAYER_TOOLS,
   PLANNING_LAYER_TOOLS,
   PROVIDER_LAYER_TOOLS,
+  SEARCH_UPSTREAM_MODES,
   TOOL_HIDDEN_REASONS,
 } from "./tool-surface.js";
 export type {
@@ -12,6 +13,7 @@ export type {
   GenericRoutingSnapshot,
   HiddenToolRecord,
   ProviderCapabilitySnapshot,
+  SearchUpstreamMode,
   SystemSettings,
   ToolHiddenReason,
   ToolSurfaceSnapshot,

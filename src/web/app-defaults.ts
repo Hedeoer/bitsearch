@@ -8,6 +8,7 @@ import type {
 export const EMPTY_SYSTEM: SystemSettings = {
   genericRoutingMode: "ordered_failover",
   genericProviderOrder: ["tavily", "firecrawl"],
+  searchUpstreamMode: "llm_first",
   defaultSearchModel: "grok-4-fast",
   logRetentionDays: 7,
   allowedOrigins: [],

@@ -1,6 +1,6 @@
 import type { AppDatabase } from "../db/database.js";
 import type { KeyPoolProvider, SystemSettings } from "../../shared/contracts.js";
-import { KNOWN_MCP_TOOLS } from "../../shared/tool-surface.js";
+import { KNOWN_MCP_TOOLS, SEARCH_UPSTREAM_MODES } from "../../shared/tool-surface.js";
 import {
   createDefaultSystemSettings,
   mapLegacyRoutingSettings,
@@ -10,6 +10,7 @@ import {
 const DEFAULT_SEARCH_MODEL_KEY = "default_search_model";
 const GENERIC_PROVIDER_ORDER_KEY = "generic_provider_order";
 const GENERIC_ROUTING_MODE_KEY = "generic_routing_mode";
+const SEARCH_UPSTREAM_MODE_KEY = "search_upstream_mode";
 const MCP_BEARER_TOKEN_KEY = "mcp_bearer_token";
 const DISABLED_TOOLS_KEY = "disabled_tools";
 
@@ -35,6 +36,15 @@ function getStoredSetting<T>(
     return null;
   }
   return parseJson<T>(row.value);
+}
+
+function parseSearchUpstreamMode(
+  value: SystemSettings["searchUpstreamMode"] | null,
+): SystemSettings["searchUpstreamMode"] {
+  if (value && (SEARCH_UPSTREAM_MODES as readonly string[]).includes(value)) {
+    return value;
+  }
+  return createDefaultSystemSettings().searchUpstreamMode;
 }
 
 export function getSystemSettings(db: AppDatabase): SystemSettings {
@@ -71,7 +81,14 @@ export function getSystemSettings(db: AppDatabase): SystemSettings {
 
   return {
     ...routingSettings,
+    searchUpstreamMode: parseSearchUpstreamMode(
+      getStoredSetting<SystemSettings["searchUpstreamMode"]>(
+        db,
+        SEARCH_UPSTREAM_MODE_KEY,
+      ),
+    ),
     defaultSearchModel: parseJson<string>(
+
       map.get(DEFAULT_SEARCH_MODEL_KEY) ?? JSON.stringify(defaults.defaultSearchModel),
     ),
     logRetentionDays: parseJson<number>(
@@ -120,6 +137,9 @@ export function saveSystemSettings(db: AppDatabase, settings: Partial<SystemSett
       GENERIC_PROVIDER_ORDER_KEY,
       normalizeGenericProviderOrder(mode, settings.genericProviderOrder),
     );
+  }
+  if (settings.searchUpstreamMode) {
+    saveSystemSetting(db, SEARCH_UPSTREAM_MODE_KEY, settings.searchUpstreamMode);
   }
   if (settings.defaultSearchModel) {
     saveSystemSetting(db, DEFAULT_SEARCH_MODEL_KEY, settings.defaultSearchModel);

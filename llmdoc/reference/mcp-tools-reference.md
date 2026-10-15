@@ -10,6 +10,7 @@ The bitsearch MCP server exposes 20 tools across five categories: search (4), pr
 - **Result Artifacts:** `src/server/mcp/result-artifacts.ts` -- Artifact storage, bounded previews, pagination cursors, and resource manifests for large tool outputs.
 - **Provider-Specific Tools:** `src/server/mcp/provider-tools.ts` -- Tavily / Firecrawl crawl, batch scrape, and extract tools.
 - **Planning Engine:** `src/server/services/planning-engine.ts` -- Phase processing logic, complexity-level phase requirements.
+- **Search Upstream Routing:** `src/server/services/search-upstream-service.ts` -- `web_search` upstream order resolution, LLM / Tavily execution, automatic takeover, and empty-answer handling.
 - **Provider Routing:** `src/server/providers/fetch-router.ts` -- Key pool failover used by `web_fetch` and `web_map`.
 - **Related Architecture:** `/llmdoc/architecture/mcp-server-architecture.md` -- Full execution flow and session lifecycle.
 - **Manual Disabling:** Any tool can be disabled from the admin console (Providers page, MCP Tool Exposure card). Disabled tools disappear from `tools/list`, calls to them return "tool not found", and connected clients receive a `tools/list_changed` notification immediately — no reconnect required. Disabled tools appear in `get_config_info` output under `tool_surface.hidden_tools` with reason `manually_disabled`.
@@ -61,7 +62,7 @@ Reads one bounded page from a stored large BitSearch MCP tool result.
 ## 4. Search Tools
 
 ### `web_search`
-Deep web search via `search_engine`. The search layer can target OpenAI chat, OpenAI responses, Anthropic messages, or Google Gemini upstream formats. Optionally fetches extra sources from Tavily/Firecrawl. Returns a bounded answer preview plus `result_id` / `next_cursor` metadata for follow-up reads.
+Deep web search through the configured **search upstream routing**. The `searchUpstreamMode` system setting selects between two peer upstreams: the `search_engine` LLM (OpenAI chat, OpenAI responses, Anthropic messages, or Google Gemini upstream formats) and the **Tavily Search API** (`POST /search`, key pool with LRU rotation, `search_depth: "advanced"`, `include_answer: "advanced"`, `max_results: 5`). `*_first` modes take over automatically when the primary upstream fails or returns an empty answer; when Tavily's summarized answer is missing, the answer is assembled locally from the returned results. Optionally fetches extra sources from Tavily/Firecrawl key pools (skipping the Tavily pool when Tavily produced the primary answer). Returns a bounded answer preview plus `result_id` / `next_cursor` metadata for follow-up reads.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|

@@ -8,6 +8,7 @@ import { z } from "zod";
 import { nanoid } from "nanoid";
 import {
   type GenericRoutingSnapshot,
+  type KeyPoolProvider,
   REMOTE_PROVIDERS,
   SEARCH_ENGINE_PROVIDER,
   type ToolSurfaceSnapshot,
@@ -27,12 +28,8 @@ import {
   getSystemSettings,
   saveSystemSetting,
 } from "../repos/settings-repo.js";
-import { splitAnswerAndSources, mergeSources } from "../lib/source-utils.js";
-import {
-  buildSearchMessages,
-  listSearchEngineModels,
-  searchWithSearchEngine,
-} from "../providers/search-engine-client.js";
+import { mergeSources } from "../lib/source-utils.js";
+import { listSearchEngineModels } from "../providers/search-engine-client.js";
 import {
   tavilyExtract,
   tavilyMap,
@@ -48,6 +45,12 @@ import { processPlanningPhase } from "../services/planning-engine.js";
 import {
   requireSearchEngineConfig,
 } from "../services/search-engine-service.js";
+import {
+  resolveUpstreamOrder,
+  runUpstreamSearch,
+  UpstreamSearchError,
+  type UpstreamSearchOutcome,
+} from "../services/search-upstream-service.js";
 import {
   getCurrentGenericRoutingSnapshot,
   getToolSurfaceSnapshot,
@@ -83,6 +86,8 @@ function logSearchRequest(
     resultPreview?: string | null;
     messages?: Array<{ role: string; content: string }> | null;
     metadata?: Record<string, unknown>;
+    finalProvider?: string;
+    finalKeyFingerprint?: string | null;
   },
 ): void {
   insertRequestLog(context.db, {
@@ -90,8 +95,8 @@ function logSearchRequest(
     toolName: payload.toolName,
     targetUrl: payload.targetUrl ?? null,
     strategy: null,
-    finalProvider: SEARCH_ENGINE_PROVIDER,
-    finalKeyFingerprint: null,
+    finalProvider: payload.finalProvider ?? SEARCH_ENGINE_PROVIDER,
+    finalKeyFingerprint: payload.finalKeyFingerprint ?? null,
     attempts: 1,
     status: payload.status,
     durationMs: Date.now() - payload.startedAt,
@@ -114,6 +119,7 @@ async function getExtraSources(
   routing: GenericRoutingSnapshot,
   query: string,
   count: number,
+  skipProviders: KeyPoolProvider[] = [],
 ) {
   if (count <= 0) {
     return [];
@@ -122,6 +128,9 @@ async function getExtraSources(
   const results: Array<Record<string, unknown>> = [];
 
   for (const provider of providers) {
+    if (skipProviders.includes(provider)) {
+      continue;
+    }
     const config = getProviderConfig(context.db, provider);
     if (!config?.enabled) {
       continue;
@@ -322,98 +331,133 @@ export function createMcpRuntime(context: AppContext): McpRuntime {
       const startedAt = Date.now();
       const sessionId = Math.random().toString(16).slice(2, 14);
       const routing = getCurrentGenericRoutingSnapshot(context);
-      let searchEngineApiFormat: string | null = null;
-      try {
-        const searchEngineConfig = requireSearchEngineConfig(context, { model });
-        searchEngineApiFormat = searchEngineConfig.apiFormat;
-        if (model) {
-          const models = await listSearchEngineModels(searchEngineConfig);
-          if (models.length > 0 && !models.includes(model)) {
-            const invalidResult = {
-              session_id: sessionId,
-              content: `Invalid model: ${model}`,
-              sources_count: 0,
-            };
-            saveSearchSession(context.db, sessionId, invalidResult.content, []);
-            logSearchRequest(context, routing, {
-              toolName: "web_search",
-              status: "failed",
-              startedAt,
-              errorSummary: invalidResult.content,
-              inputJson: { query, platform, model, extra_sources },
-            });
-            return toolJsonResult(invalidResult);
-          }
-        }
+      const searchUpstreamMode = getSystemSettings(context.db).searchUpstreamMode;
+      const inputJson = { query, platform, model, extra_sources };
 
-        const messages = buildSearchMessages(query, platform);
-        const [answerText, extraSources] = await Promise.all([
-          searchWithSearchEngine(searchEngineConfig, messages),
-          getExtraSources(context, routing, query, extra_sources),
-        ]);
-        const { answer, sources } = splitAnswerAndSources(answerText);
-        const mergedSources = mergeSources(sources, extraSources);
-        saveSearchSession(context.db, sessionId, answer, mergedSources);
-        logSearchRequest(context, routing, {
-          toolName: "web_search",
-          status: "success",
-          startedAt,
-          inputJson: { query, platform, model, extra_sources },
-          resultPreview: answer.slice(0, 280),
-          messages,
-          metadata: {
-            searchEngineApiFormat: searchEngineConfig.apiFormat,
-            sourcesCount: mergedSources.length,
-            extraSourcesRequested: extra_sources,
-          },
-        });
-        const artifact = saveArtifact(context, {
-          toolName: "web_search",
-          kind: "text",
-          title: query,
-          summary: {
-            session_id: sessionId,
-            query,
-            sources_count: mergedSources.length,
-          },
-          content: answer,
-          totalItems: null,
-        });
-        const budget = readResultBudget(context);
-        const page = getResultPage(context, {
-          resultId: artifact.id,
-          maxChars: budget.firstResponseChars,
-        });
-        const preview = page?.text ?? "";
-        return toolJsonResult({
-          session_id: sessionId,
-          content: preview,
-          content_truncated: page?.truncated ?? false,
-          returned_chars: preview.length,
-          total_chars: artifact.totalChars,
-          result_id: artifact.id,
-          result_uri: artifact.uri,
-          next_cursor: page?.next_cursor ?? null,
-          sources_count: mergedSources.length,
+      let outcome: UpstreamSearchOutcome;
+      try {
+        outcome = await runUpstreamSearch(context, {
+          query,
+          platform,
+          model,
+          sessionId,
+          mode: searchUpstreamMode,
         });
       } catch (error) {
-        const message = error instanceof Error ? error.message : "Unknown error";
+        const message =
+          error instanceof UpstreamSearchError
+            ? error.message
+            : `Unexpected upstream search error: ${
+                error instanceof Error ? error.message : "Unknown error"
+              }`;
         saveSearchSession(context.db, sessionId, message, []);
         logSearchRequest(context, routing, {
           toolName: "web_search",
           status: "failed",
           startedAt,
           errorSummary: message,
-          inputJson: { query, platform, model, extra_sources },
-          messages: buildSearchMessages(query, platform),
-          metadata: searchEngineApiFormat ? { searchEngineApiFormat } : undefined,
+          inputJson,
+          messages: null,
+          metadata: {
+            searchUpstreamMode,
+            upstreams: resolveUpstreamOrder(searchUpstreamMode),
+          },
         });
         return toolJsonResult({
           session_id: sessionId,
-          content: `Configuration error: ${message}`,
+          content: message,
           sources_count: 0,
         });
       }
+
+      if (outcome.invalidModel) {
+        const content = `Invalid model: ${outcome.invalidModel}`;
+        saveSearchSession(context.db, sessionId, content, []);
+        logSearchRequest(context, routing, {
+          toolName: "web_search",
+          status: "failed",
+          startedAt,
+          errorSummary: content,
+          inputJson,
+          messages: null,
+          metadata: {
+            searchUpstreamMode,
+            upstream: outcome.upstream,
+            invalidModel: outcome.invalidModel,
+          },
+        });
+        return toolJsonResult({
+          session_id: sessionId,
+          content,
+          sources_count: 0,
+        });
+      }
+
+      // The Tavily upstream already consumed the Tavily key pool for the
+      // primary answer, so extra sources come from the remaining pools only.
+      const skipExtraProviders: KeyPoolProvider[] =
+        outcome.upstream === "tavily" ? ["tavily"] : [];
+      const extraSources = await getExtraSources(
+        context,
+        routing,
+        query,
+        extra_sources,
+        skipExtraProviders,
+      );
+      const mergedSources = mergeSources(outcome.sources, extraSources);
+      saveSearchSession(context.db, sessionId, outcome.answer, mergedSources);
+      logSearchRequest(context, routing, {
+        toolName: "web_search",
+        status: "success",
+        startedAt,
+        finalProvider:
+          outcome.upstream === "tavily" ? "tavily" : SEARCH_ENGINE_PROVIDER,
+        finalKeyFingerprint: outcome.keyFingerprint,
+        inputJson,
+        resultPreview: outcome.answer.slice(0, 280),
+        messages: outcome.messages,
+        metadata: {
+          searchUpstreamMode,
+          upstream: outcome.upstream,
+          takeover: outcome.takeover,
+          primaryUpstreamError: outcome.primaryUpstreamError,
+          usedLocalAssembly: outcome.usedLocalAssembly,
+          searchEngineApiFormat: outcome.searchEngineApiFormat ?? undefined,
+          tavilyRequestId: outcome.tavilyRequestId ?? undefined,
+          usageCredits: outcome.usageCredits ?? undefined,
+          sourcesCount: mergedSources.length,
+          extraSourcesRequested: extra_sources,
+        },
+      });
+      const artifact = saveArtifact(context, {
+        toolName: "web_search",
+        kind: "text",
+        title: query,
+        summary: {
+          session_id: sessionId,
+          query,
+          sources_count: mergedSources.length,
+        },
+        content: outcome.answer,
+        totalItems: null,
+      });
+      const budget = readResultBudget(context);
+      const page = getResultPage(context, {
+        resultId: artifact.id,
+        maxChars: budget.firstResponseChars,
+      });
+      const preview = page?.text ?? "";
+      return toolJsonResult({
+        session_id: sessionId,
+        content: preview,
+        content_truncated: page?.truncated ?? false,
+        returned_chars: preview.length,
+        total_chars: artifact.totalChars,
+        result_id: artifact.id,
+        result_uri: artifact.uri,
+        next_cursor: page?.next_cursor ?? null,
+        sources_count: mergedSources.length,
+      });
     },
   );
 

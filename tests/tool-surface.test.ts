@@ -44,6 +44,25 @@ test("saveSystemSettings persists disabledTools including an empty list", () => 
   assert.deepEqual(getSystemSettings(db).disabledTools, []);
 });
 
+test("getSystemSettings defaults searchUpstreamMode to llm_first", () => {
+  const db = createDb();
+  assert.equal(getSystemSettings(db).searchUpstreamMode, "llm_first");
+});
+
+test("saveSystemSettings persists searchUpstreamMode", () => {
+  const db = createDb();
+  saveSystemSettings(db, { searchUpstreamMode: "tavily_first" });
+  assert.equal(getSystemSettings(db).searchUpstreamMode, "tavily_first");
+  saveSystemSettings(db, { searchUpstreamMode: "tavily_only" });
+  assert.equal(getSystemSettings(db).searchUpstreamMode, "tavily_only");
+});
+
+test("getSystemSettings falls back to the default search upstream mode for unknown stored values", () => {
+  const db = createDb();
+  saveSystemSetting(db, "search_upstream_mode", "bogus_mode");
+  assert.equal(getSystemSettings(db).searchUpstreamMode, "llm_first");
+});
+
 test("tool surface snapshot moves manually disabled tools from exposed to hidden", () => {
   const db = createDb();
   saveSystemSettings(db, { disabledTools: ["web_map", "tavily_crawl", "plan_intent"] });
