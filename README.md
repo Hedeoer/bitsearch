@@ -1,5 +1,7 @@
 # BitSearch
 
+English | [简体中文](README.zh-CN.md)
+
 Self-hosted MCP search gateway and admin console for personal use, combining AI search, targeted crawling, and multi-round verification to reduce retrieval hallucinations.
 
 <p>
@@ -14,27 +16,27 @@ Self-hosted MCP search gateway and admin console for personal use, combining AI 
 
 ## About
 
-BitSearch packages two things into one deployable service: an HTTP-based Model Context Protocol server and a browser-based admin console. It is designed for individual users who want a single, self-hosted entrypoint for web search, fetch, and site-mapping workflows without giving up control over provider credentials, routing order, or request visibility.
+BitSearch combines two components into a single deployable service: an HTTP-based Model Context Protocol (MCP) server and a browser-based admin console. It is designed for individual users who want a unified, self-hosted entrypoint for web search, page extraction, and site-mapping workflows without giving up control over provider credentials, routing policies, or request observability.
 
-Its core differentiator is not just exposing search and crawl tools, but combining the strengths of a search-engine model with Tavily and Firecrawl into a more disciplined retrieval loop: use the search engine to plan and search broadly, use Tavily / Firecrawl to fetch or crawl the most relevant targets, then cross-check evidence across multiple rounds before presenting conclusions. This makes BitSearch especially suitable for workflows that need better grounding and lower hallucination risk than one-shot search or one-shot crawling alone.
+Its core differentiator is not merely exposing search and crawl tools, but orchestrating a search-engine model alongside Tavily and Firecrawl in a disciplined retrieval loop: use the search engine to plan and search broadly, use Tavily or Firecrawl to fetch or crawl the most relevant targets, and cross-check evidence across multiple rounds before presenting conclusions. This makes BitSearch well suited for workflows that require stronger factual grounding and lower hallucination risk than one-shot search or single-pass scraping alone.
 
-The backend exposes `20` MCP tools over streamable HTTP, routes generic fetch-like operations across Tavily and Firecrawl key pools, and also exposes provider-specific crawl / batch / extract tools for advanced workflows. It persists telemetry in SQLite. The frontend gives a single user one workspace for provider configuration, key imports, quota sync, MCP access details, dashboards, and request activity inspection. BitSearch does not implement team-facing collaboration or multi-user workspace features.
+The backend exposes `20` MCP tools over Streamable HTTP, routes `web_search` between the `search_engine` LLM and the Tavily key pool, routes generic page retrieval and site mapping across Tavily and Firecrawl key pools, and provides provider-specific crawl, batch scrape, and structured extraction tools for advanced workflows. All telemetry is persisted in SQLite. The frontend provides a single-user workspace for provider configuration, key pool management, quota synchronization, MCP access control, operational metrics, and request activity inspection. BitSearch does not include multi-user or team collaboration features.
 
-Project endpoints:
+**Project links:**
 
-- GitHub: `https://github.com/Hedeoer/bitsearch`
-- Docker Hub image: `docker.io/hedeoerwang/bitsearch`
+- **GitHub:** `https://github.com/Hedeoer/bitsearch`
+- **Docker Hub image:** `docker.io/hedeoerwang/bitsearch`
 
 ### Highlights
 
-- Exposes `20` MCP tools across search, provider-specific web extraction, result pagination, configuration, and planning workflows.
-- Combines `search_engine`, Tavily, and Firecrawl into a planned multi-round search, crawl, and verification workflow instead of treating them as isolated tools.
-- Uses broad search plus targeted fetch/crawl plus source cross-checking to reduce misinformation and retrieval hallucinations.
-- Supports multi-provider routing with ordered failover for Tavily and Firecrawl operations.
-- Manages provider key pools with bulk import, enable/disable controls, testing, notes, quota sync, and CSV export.
-- Includes a six-phase query planning engine for structured search execution.
-- Tracks request logs, per-attempt failures, dashboard metrics, and recent errors in a built-in admin console.
-- Supports two deployment paths: npm-based source deployment and Docker container deployment.
+- **20 MCP Tools:** Covers web search, provider-specific extraction, result pagination, server configuration, and query planning.
+- **Multi-Round Retrieval Loop:** Combines `search_engine`, Tavily, and Firecrawl into a coordinated search, crawl, and verification workflow rather than treating them as isolated tools.
+- **Reduced Hallucinations:** Pairs broad discovery with targeted content extraction and cross-source verification.
+- **Flexible Routing & Failover:** Supports configurable `web_search` upstream routing (`search_engine` and Tavily) as well as ordered failover across Tavily and Firecrawl for generic retrieval.
+- **Key Pool Management:** Supports bulk key import, enable/disable controls, health testing, notes, quota synchronization, and CSV export.
+- **Six-Phase Planning Engine:** Guides structured query decomposition and tool selection for complex research tasks.
+- **Built-In Observability:** Tracks request logs, per-attempt statuses, dashboard metrics, and recent failures in the admin console.
+- **Dual Deployment Modes:** Supports both native Node.js deployment from source and Docker Compose container deployment.
 
 ### Architecture
 
@@ -71,7 +73,7 @@ flowchart TB
     Repos --> SQLite
 
     Services -->|web_search| SearchEngine
-    Services -->|web_fetch / web_map<br/>ordered failover| Tavily
+    Services -->|web_search / web_fetch / web_map| Tavily
     Services -->|web_fetch / web_map<br/>ordered failover| Firecrawl
     Services -->|tavily_crawl| Tavily
     Services -->|firecrawl_*| Firecrawl
@@ -79,13 +81,15 @@ flowchart TB
 
 ![BitSearch architecture overview](docs/images/architecture.png)
 
-The MCP endpoint and admin API share the same Express application context. The browser never talks to SQLite directly; it goes through authenticated admin routes, services, and repositories. Generic `web_fetch` and `web_map` calls use ordered failover across Tavily and Firecrawl key pools, while provider-native tools call their matching upstream APIs directly.
+The MCP endpoint and Admin HTTP API share the same Express application context. The browser never accesses SQLite directly; all operations pass through authenticated admin routes, service modules, and repositories. `web_search` follows the configured search upstream routing (`search_engine`, Tavily, or automatic takeover between them), generic `web_fetch` and `web_map` calls use ordered failover across the Tavily and Firecrawl key pools, and provider-native tools invoke their respective upstream APIs directly.
 
 ### Why BitSearch
 
-- Use a search-engine model for broad discovery and planning, then hand off to Tavily and Firecrawl for targeted fetch, crawl, and extraction.
-- Validate across multiple rounds instead of trusting a single search pass or a single crawl result.
-- Keep the whole retrieval loop observable through one admin console for keys, routing, quotas, request logs, and failures.
+- **Discovery to Extraction:** Use a search-engine model for broad discovery and query planning, then hand off to Tavily and Firecrawl for targeted fetching, crawling, and structured extraction.
+- **Evidence Verification:** Cross-check claims across multiple rounds instead of relying on a single search pass or scrape result.
+- **Unified Control Plane:** Inspect keys, routing policies, quotas, request logs, and failure traces from one self-hosted admin console.
+
+---
 
 ## Quick Start
 
@@ -97,8 +101,8 @@ docker compose up -d
 docker exec -it bitsearch node -e "console.log(JSON.parse(require('fs').readFileSync('/app/data/runtime-secrets.json','utf8')).secrets.adminAuthKey)"
 ```
 
-- Admin Console: `http://127.0.0.1:8097`
-- MCP endpoint: `http://127.0.0.1:8097/mcp`
+- **Admin Console:** `http://127.0.0.1:8097`
+- **MCP Endpoint:** `http://127.0.0.1:8097/mcp`
 
 ### Native
 
@@ -113,41 +117,41 @@ bash scripts/start.sh
 
 ### Connect a Client
 
-Use the MCP endpoint with a Bearer token:
+Connect your MCP client to the `/mcp` endpoint using a Bearer token:
 
 ```text
 URL: http://127.0.0.1:8097/mcp
 Authorization: Bearer <MCP_BEARER_TOKEN>
 ```
 
-Detailed setup, reverse proxy examples, and long-form reference material are kept below.
+Detailed setup instructions, reverse proxy examples, and reference documentation are provided below.
 
-### MCP 调试工具
+### MCP Debugging Tools
 
-项目已经接入 3 个 MCP 工具：官方 MCP Inspector、官方 MCP Conformance，以及 MCPJam。
-本地门禁使用隔离的 SQLite 和固定测试 fixture，不会读取或修改 `data/` 中的生产数据；测试代理只监听 `127.0.0.1`，并自动注入 Bearer token。
+BitSearch integrates three MCP validation and debugging tools: the official **MCP Inspector**, the official **MCP Conformance** suite, and **MCPJam**.
+
+The local validation harness uses an isolated temporary SQLite database and deterministic test fixtures. It never reads or modifies production data in `data/`. The test proxy binds only to `127.0.0.1` and automatically injects the Bearer token.
 
 ```bash
-# 官方 MCP Inspector：启动 Web 调试界面
+# Official MCP Inspector: launch the interactive web debugging UI
 npm run mcp:inspect
 
-# 官方 MCP Inspector：无界面 CLI 冒烟测试
+# Official MCP Inspector: run headless CLI smoke tests
 npm run mcp:inspect:smoke
 
-# 官方 MCP Conformance：运行项目当前支持的核心协议场景
+# Official MCP Conformance: run the supported core protocol scenarios
 npm run mcp:conformance
 
-# MCPJam：检查 MCP 服务连接、初始化和工具发现
+# MCPJam: verify server connectivity, initialization, and tool discovery
 npm run mcpjam:doctor
 
-# CI 使用的本地门禁
+# Full local validation gate used by CI
 npm run mcp:tooling
 ```
 
-`mcp:inspect` 会启动 Inspector 的本地 Web UI，并连接到临时 BitSearch MCP 服务。
-生产服务仍然使用 `/mcp` 的真实认证配置；要调试已部署服务，可直接在 Inspector 中填写服务 URL 和 `Authorization: Bearer <MCP_BEARER_TOKEN>`。
+`mcp:inspect` launches the local Inspector web UI and connects it to an ephemeral BitSearch MCP instance. Production deployments continue to enforce `/mcp` authentication—to inspect a deployed server, enter its `/mcp` URL and `Authorization: Bearer <MCP_BEARER_TOKEN>` header directly in MCP Inspector.
 
-MCPJam 的模型评测需要外部 LLM，因此不进入默认 CI。对测试或预发布服务运行评测时，设置服务地址、MCP token、模型名称和对应的 LLM API key：
+MCPJam model evaluations require an external LLM API key and are excluded from the default CI workflow. To run evaluations against a test or staging server, export the target server URL, MCP token, model identifier, and LLM API key:
 
 ```bash
 export MCP_SERVER_URL="http://127.0.0.1:8097/mcp"
@@ -157,100 +161,103 @@ export MCPJAM_LLM_API_KEY="<LLM_API_KEY>"
 npm run mcpjam:eval
 ```
 
-可选变量：`MCPJAM_ITERATIONS`（默认 `10`）、`MCPJAM_MIN_ACCURACY`（默认 `0.9`），以及 `MCPJAM_API_KEY`（设置后把结果上报到 MCPJam）。评测脚本覆盖当前 BitSearch 的搜索、抓取、站点发现和结果分页工作流；请确保目标服务已配置相应 provider。
+Optional environment variables:
+
+- `MCPJAM_ITERATIONS` (default: `10`)
+- `MCPJAM_MIN_ACCURACY` (default: `0.9`)
+- `MCPJAM_API_KEY` (uploads evaluation results to MCPJam when set)
+
+The evaluation suite exercises BitSearch's search, page retrieval, site discovery, and result pagination workflows. Ensure the target instance has the required upstream providers configured before running it.
+
+---
 
 ## Installation & Detailed Setup
 
 ### Prerequisites
 
-| Mode | Requirement |
-|------|-------------|
-| npm deployment | Node.js `22+`, npm `10+` |
-| Docker deployment | Docker `24+`, Docker Compose v2 |
+| Deployment Mode | Requirements |
+|---|---|
+| **Native (npm)** | Node.js `22+`, npm `10+` |
+| **Container (Docker)** | Docker `24+`, Docker Compose v2 |
 
 ### Installation
 
-Shell examples below use `bash`. A PowerShell alternative is shown where the command differs.
+Shell examples below use `bash`. PowerShell equivalents are provided where commands differ.
 
-1. Clone the repository and install dependencies.
+1. **Clone the repository and install dependencies:**
 
-```bash
-git clone https://github.com/Hedeoer/bitsearch.git
-cd bitsearch
-npm ci
-```
+   ```bash
+   git clone https://github.com/Hedeoer/bitsearch.git
+   cd bitsearch
+   npm ci
+   ```
 
-2. Copy the example environment file.
+2. **Copy the example environment file:**
 
-```bash
-cp .env.example .env
-```
+   ```bash
+   cp .env.example .env
+   ```
 
-```powershell
-Copy-Item .env.example .env
-```
+   ```powershell
+   Copy-Item .env.example .env
+   ```
 
-3. Configure secrets (optional).
+3. **Configure secrets (optional):**
 
-BitSearch supports a low-ops default: if you leave the secret env vars empty, it
-generates them on first boot and persists them to `data/runtime-secrets.json`
-(next to your SQLite DB). You can still override any value via environment
-variables.
+   BitSearch defaults to zero-touch secret initialization: if secret variables in `.env` are left empty, the server automatically generates them on first boot and persists them to `data/runtime-secrets.json` alongside the SQLite database. Explicit environment variables always take precedence over persisted values.
 
-If you prefer to manage secrets externally, set these explicitly:
+   To manage secrets externally, set the following variables in `.env`:
 
-- `APP_ENCRYPTION_KEY` (must remain stable or stored secrets become unreadable)
-- `ADMIN_AUTH_KEY` (admin console login key)
-- `SESSION_SECRET` (admin session cookie signing secret)
-- `MCP_BEARER_TOKEN` (MCP `/mcp` bearer token)
+   - `APP_ENCRYPTION_KEY` — AES-256-GCM key used to encrypt stored provider credentials (must remain constant, or existing encrypted keys become unreadable)
+   - `ADMIN_AUTH_KEY` — authorization key used to sign in to the admin console
+   - `SESSION_SECRET` — secret used to sign admin session cookies
+   - `MCP_BEARER_TOKEN` — default Bearer token required by `/mcp` clients
 
-4. Generate random secrets when needed.
+4. **Generate random 32-byte hex secrets (if managing secrets manually):**
 
-```bash
-node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-```
+   ```bash
+   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+   ```
 
-5. If you plan to use npm deployment, create the local data directory.
+5. **Create the local data directory (for native npm deployment):**
 
-```bash
-mkdir -p data
-```
+   ```bash
+   mkdir -p data
+   ```
 
-```powershell
-New-Item -ItemType Directory -Force data | Out-Null
-```
+   ```powershell
+   New-Item -ItemType Directory -Force data | Out-Null
+   ```
 
-If you let BitSearch auto-generate secrets, start the app once and then read the
-admin login key from the persisted runtime secrets file:
+If you let BitSearch auto-generate secrets, start the service once and read the persisted runtime secrets file:
 
 ```bash
 cat data/runtime-secrets.json
 ```
 
-For Docker:
+For Docker deployments:
 
 ```bash
 docker exec -it bitsearch cat /app/data/runtime-secrets.json
 ```
 
-If you only need the generated admin console login key, read the `adminAuthKey`
-field directly:
+To print only the generated admin console login key (`secrets.adminAuthKey`):
 
 ```bash
 node -e "console.log(JSON.parse(require('fs').readFileSync('data/runtime-secrets.json','utf8')).secrets.adminAuthKey)"
 ```
 
-For Docker:
+For Docker deployments:
 
 ```bash
 docker exec -it bitsearch node -e "console.log(JSON.parse(require('fs').readFileSync('/app/data/runtime-secrets.json','utf8')).secrets.adminAuthKey)"
 ```
 
-> Docker Compose reads `.env` automatically. npm deployment does not; export the variables from `.env` into your shell before starting the server.
+> **Note:** Docker Compose loads `.env` automatically. Native npm deployment does not automatically load `.env`; export the variables in your shell before starting the server.
 
 ### Deployment Paths
 
-#### Option 1: npm deployment
+#### Option 1: Native Deployment (npm)
 
 ```bash
 npm run build
@@ -260,45 +267,44 @@ set +a
 bash scripts/start.sh
 ```
 
-This starts the production server from local source and serves the built admin UI from the same process.
+This builds both the frontend and backend bundles and serves the compiled admin UI and MCP server from a single Node.js process.
 
-#### Option 2: Docker deployment
+#### Option 2: Container Deployment (Docker Compose)
 
-The default Docker path uses one file only:
+The standard Docker setup uses two files:
 
-| File | Used for | Notes |
-|------|----------|-------|
-| `.env` | Runtime configuration | Copy from `.env.example`. Secrets can be left empty and will be generated + persisted on first boot |
-| `docker-compose.yml` | Run the published image | Pulls `BITSEARCH_IMAGE` directly and already includes restart policy, log rotation, and healthcheck |
+| File | Purpose | Notes |
+|---|---|---|
+| `.env` | Runtime configuration | Copy from `.env.example`. Empty secrets are generated and persisted on first boot. |
+| `docker-compose.yml` | Service definition | Pulls `BITSEARCH_IMAGE` and configures restart policy, log rotation, named volume, and `/healthz` checks. |
 
-Container runtime variables:
+**Container runtime variables:**
 
-| Variable | Required | Default / Example | Purpose |
-|----------|----------|-------------------|---------|
-| `APP_PORT` | No | `8097` | Container port exposed on the host |
+| Variable | Required | Default / Example | Description |
+|---|---|---|---|
+| `APP_PORT` | No | `8097` | TCP port exposed on the host and inside the container |
 | `APP_HOST` | No | `0.0.0.0` | Bind address inside the container |
 | `TRUST_PROXY` | No | `false` | Set to `true` when running behind Nginx, Caddy, Traefik, or another reverse proxy |
-| `DATABASE_PATH` | No | `/app/data/bitsearch.db` | SQLite file path inside the container; compose already points it to the mounted volume |
-| `RUNTIME_SECRETS_FILE` | No | `/app/data/runtime-secrets.json` | Optional override for the persisted runtime secrets file path |
-| `APP_ENCRYPTION_KEY` | No (auto) | random 32-byte hex string | Encrypts stored provider credentials (must remain stable) |
-| `ADMIN_AUTH_KEY` | No (auto) | custom bearer token | Used to sign in to the admin console |
-| `SESSION_SECRET` | No (auto) | random 32-byte hex string | Signs the admin session cookie |
-| `MCP_BEARER_TOKEN` | No (auto) | custom bearer token | Required by MCP clients calling `/mcp` |
-| `BITSEARCH_IMAGE` | No | `docker.io/hedeoerwang/bitsearch:latest` | Image reference used by `docker-compose.yml` |
-| `NODE_ENV` | No | `production` | Already set by the compose files; normally no manual change is needed |
+| `DATABASE_PATH` | No | `/app/data/bitsearch.db` | SQLite database file path inside the container (mounted to the `bitsearch_data` volume) |
+| `RUNTIME_SECRETS_FILE` | No | `/app/data/runtime-secrets.json` | Optional override path for persisted runtime secrets |
+| `APP_ENCRYPTION_KEY` | No (auto) | 32-byte hex string | Encrypts stored provider API keys (must remain stable across restarts) |
+| `ADMIN_AUTH_KEY` | No (auto) | custom auth key | Authorization key used to sign in to the admin console |
+| `SESSION_SECRET` | No (auto) | 32-byte hex string | Secret used to sign admin session cookies |
+| `MCP_BEARER_TOKEN` | No (auto) | custom bearer token | Bearer token required by MCP clients calling `/mcp` |
+| `BITSEARCH_IMAGE` | No | `docker.io/hedeoerwang/bitsearch:latest` | Container image reference used by `docker-compose.yml` |
+| `NODE_ENV` | No | `production` | Preconfigured in `docker-compose.yml`; normally requires no change |
 
-Recommended Docker start:
+**Start with Docker Compose:**
 
 ```bash
 cp .env.example .env
-# edit .env
+# Edit .env as needed
 docker compose up -d
 ```
 
-If you want to pin a different published tag, change `BITSEARCH_IMAGE` in `.env`
-instead of using alternate compose files.
+To pin a specific image tag, set `BITSEARCH_IMAGE` in `.env` rather than maintaining separate Compose files.
 
-Common Docker commands:
+**Common Docker Compose commands:**
 
 ```bash
 docker compose logs -f
@@ -307,36 +313,39 @@ docker compose pull
 docker compose up -d
 ```
 
-The GitHub Actions Docker publish workflow pushes:
+**Published Docker Hub tags (via GitHub Actions):**
 
-- `latest` and `main` on successful pushes to `main`
-- `sha-*` tags for traceability
-- semantic version tags when you push tags matching `v*.*.*`
+- `latest` and `main` on pushes to the `main` branch
+- `sha-<commit>` tags for exact commit traceability and rollback
+- Semantic version tags (`X.Y.Z`, `X.Y`, `X`) when pushing Git tags matching `v*.*.*`
 
-#### Option 3: Development mode
-For day-to-day local development, use the Vite frontend as the fixed browser entrypoint and let it proxy API traffic to the TSX backend:
+#### Option 3: Development Mode
+
+For local development, run the Vite dev server and TSX backend watcher together:
+
 ```bash
 # Starts the Express backend on 127.0.0.1:8098 and the Vite dev server on 5176
 npm run dev
 ```
-- Admin Console: `http://localhost:5176` (端口被占时 Vite 会静默 +1，以终端输出为准)
-- Backend API/MCP (dev service): `http://127.0.0.1:8098`
 
-Useful dev endpoints:
+- **Admin Console (Vite):** `http://localhost:5176` (if port `5176` is in use, Vite automatically increments to the next available port; check terminal output for the active URL)
+- **Backend API & MCP (TSX):** `http://127.0.0.1:8098`
 
-- Browser entrypoint: `http://localhost:5176`
-- Health check: `http://127.0.0.1:8098/healthz`
-- MCP endpoint: `http://127.0.0.1:8098/mcp`
+**Development endpoints:**
 
-For local development, prefer `http://localhost:5176` for browser verification. Temporary standalone ports are for isolated debugging only and should not be treated as the default dev entrypoint.
+- **Browser UI entrypoint:** `http://localhost:5176`
+- **Health check:** `http://127.0.0.1:8098/healthz`
+- **MCP endpoint:** `http://127.0.0.1:8098/mcp`
+
+Use `http://localhost:5176` for browser verification during development; Vite proxies `/api` requests to `http://127.0.0.1:8098`.
 
 ### Reverse Proxy Example (Nginx)
 
-For production deployments behind Nginx, set `TRUST_PROXY=true` in `.env` so BitSearch can derive the correct external protocol and host for the Admin Console and MCP access panel.
+When exposing BitSearch behind Nginx in production, set `TRUST_PROXY=true` in `.env` so the server derives the external scheme and host accurately for the Admin Console and MCP access panel.
 
-It is recommended to expose BitSearch at the site root of a dedicated domain such as `https://bitsearch.example.com`, because the frontend router and backend endpoints use root-based paths like `/`, `/api/admin`, and `/mcp`.
+Deploy BitSearch at the root of a dedicated domain (such as `https://bitsearch.example.com`), as the frontend router and backend routes use root-relative paths (`/`, `/api/admin`, and `/mcp`).
 
-The full Nginx example below includes the MCP-specific proxy settings that were required to make `notifications/initialized` and other Streamable HTTP requests work reliably behind reverse proxying.
+The Nginx configuration below includes the header forwarding and buffering directives required for `notifications/initialized` and long-lived Streamable HTTP MCP sessions.
 
 <details>
 <summary>Expand the full Nginx reverse proxy example</summary>
@@ -415,11 +424,13 @@ server {
 
 </details>
 
-For full deployment options, see [DEPLOYMENT.md](DEPLOYMENT.md).
+For additional deployment details, see [DEPLOYMENT.md](DEPLOYMENT.md).
+
+---
 
 ## Usage
 
-### 1. Verify the service is running
+### 1. Verify the Service Is Running
 
 ```bash
 curl http://127.0.0.1:8097/healthz
@@ -431,9 +442,9 @@ Expected response:
 {"ok":true}
 ```
 
-### 2. Connect an MCP client
+### 2. Connect an MCP Client
 
-Example streamable HTTP client configuration. The exact field names vary by client, but the endpoint and bearer token are the important parts:
+Below is a generic Streamable HTTP MCP client configuration. Field names vary across clients, but the endpoint URL and `Authorization` header are standard:
 
 ```json
 {
@@ -449,18 +460,18 @@ Example streamable HTTP client configuration. The exact field names vary by clie
 }
 ```
 
-If BitSearch is deployed behind a reverse proxy, replace the local URL with the public MCP endpoint, for example `https://bitsearch.example.com/mcp`.
+When deployed behind a reverse proxy, replace the local URL with your public endpoint (for example, `https://bitsearch.example.com/mcp`).
 
 #### Claude Code
 
-Claude Code should connect to BitSearch as a remote HTTP MCP server:
+Register BitSearch as a remote HTTP MCP server in Claude Code:
 
 ```bash
 claude mcp add --scope user --transport http bitsearch https://bitsearch.example.com/mcp \
   --header "Authorization: Bearer <MCP_BEARER_TOKEN>"
 ```
 
-If you prefer a project-local config, you can also place a matching entry in `.mcp.json`:
+For project-scoped configuration, add a matching entry to `.mcp.json`:
 
 ```json
 {
@@ -476,7 +487,7 @@ If you prefer a project-local config, you can also place a matching entry in `.m
 }
 ```
 
-Export the token in the shell before launching Claude Code:
+Export the token in your shell before launching Claude Code:
 
 ```bash
 export BITSEARCH_MCP_TOKEN="<MCP_BEARER_TOKEN>"
@@ -484,7 +495,7 @@ export BITSEARCH_MCP_TOKEN="<MCP_BEARER_TOKEN>"
 
 #### Codex
 
-Codex should connect to BitSearch as a remote streamable HTTP MCP server:
+Register BitSearch as a remote Streamable HTTP MCP server in Codex:
 
 ```bash
 export BITSEARCH_MCP_TOKEN="<MCP_BEARER_TOKEN>"
@@ -504,15 +515,15 @@ bearer_token_env_var = "BITSEARCH_MCP_TOKEN"
 
 #### Agent Skills-Compatible Clients
 
-If your client supports the open Agent Skills standard, prefer `skill + mcp` over copying the long BitSearch companion prompt into every session.
+If your client supports the open Agent Skills specification, prefer `skill + mcp` over pasting the long companion prompt into every session.
 
-This repository ships one standard BitSearch skill template in `skills/bitsearch-research/`. It merges routing rules, evidence rules, retrieval workflow, and Planning Engine escalation into one coherent skill that can be reused across Agent Skills-compatible clients.
+This repository includes a standard skill package in `skills/bitsearch-research/`. It consolidates tool routing rules, source quality standards, retrieval workflows, and Planning Engine escalation criteria into a single reusable skill.
 
-The MCP server also returns a concise protocol-level usage hint. That hint supplements the Skill with server-specific tool routing; it is advisory and client-controlled, so it does not replace the Skill or host-owned system and security policies.
+The MCP server also provides a concise protocol-level instruction block at initialization. That block supplements the Skill with live server routing context; it is advisory and does not replace the Skill or host-level security policies.
 
-#### Option A: Install via the `skills` CLI (recommended)
+#### Option A: Install via the `skills` CLI (Recommended)
 
-The [`skills`](https://github.com/vercel-labs/skills) CLI automatically clones this repo, discovers `skills/bitsearch-research/`, detects installed agents, and writes the skill into the correct directory for each one.
+The [`skills`](https://github.com/vercel-labs/skills) CLI clones this repository, discovers `skills/bitsearch-research/`, detects installed coding agents, and installs the skill into each agent's target directory:
 
 ```bash
 # Project-level install (interactive agent selection)
@@ -528,11 +539,11 @@ npx skills add Hedeoer/bitsearch --skill bitsearch-research -a claude-code -g -y
 npx skills add Hedeoer/bitsearch --list
 ```
 
-`--skill bitsearch-research` matches the `name` field declared in `skills/bitsearch-research/SKILL.md`. Use `-a` once per target agent (for example `-a claude-code -a cursor -a codex`) or run without `-a` to pick from the interactive list.
+`--skill bitsearch-research` matches the `name` field in `skills/bitsearch-research/SKILL.md`. Pass `-a` for each target agent (for example, `-a claude-code -a cursor -a codex`), or omit `-a` to select agents interactively.
 
-#### Option B: Manual copy
+#### Option B: Manual Copy
 
-If you prefer not to use the CLI, copy the skill folder directly.
+To install without the CLI, copy the skill directory directly:
 
 ```bash
 # Project-level
@@ -544,29 +555,27 @@ mkdir -p ~/.agents/skills
 cp -R skills/bitsearch-research ~/.agents/skills/
 ```
 
-If your client does not scan `.agents/skills/`, copy the same folder into its native skills directory instead, such as `.claude/skills/`, `~/.claude/skills/`, or `~/.codex/skills/`.
+If your client does not scan `.agents/skills/`, copy the directory into its native skills path (such as `.claude/skills/`, `~/.claude/skills/`, or `~/.codex/skills/`).
 
-See [skills/README.md](skills/README.md) and [llmdoc/guides/using-bitsearch-with-agent-skills.md](llmdoc/guides/using-bitsearch-with-agent-skills.md) for the standard template structure, compatibility notes, and the local snapshot of the Agent Skills specification.
+See [skills/README.md](skills/README.md) and [llmdoc/guides/using-bitsearch-with-agent-skills.md](llmdoc/guides/using-bitsearch-with-agent-skills.md) for template structure, client compatibility notes, and the local Agent Skills specification reference.
 
-If you want a realistic end-to-end validation flow after connecting a client, see [llmdoc/guides/testing-bitsearch-with-natural-chat-prompts.md](llmdoc/guides/testing-bitsearch-with-natural-chat-prompts.md). It provides a single-session natural chat script that exercises source-backed search, source follow-up, fetch, map, crawl, batch scrape, extract, and optional Planning Engine behavior.
+For an end-to-end verification walkthrough after connecting a client, see [llmdoc/guides/testing-bitsearch-with-natural-chat-prompts.md](llmdoc/guides/testing-bitsearch-with-natural-chat-prompts.md), which provides a natural-language test script covering search, source inspection, fetch, map, crawl, batch scrape, extraction, and Planning Engine escalation.
 
 #### Disable Native Web Tools When Using BitSearch
 
-Some clients ship with built-in web tools such as `WebSearch` or `WebFetch`. Even if BitSearch MCP and the `bitsearch-research` skill are installed, the client may still prefer its own native web tools unless you disable them locally. If that happens, BitSearch cannot enforce its routing, evidence, or Planning Engine behavior.
+Some clients include built-in web tools such as `WebSearch` or `WebFetch`. Unless those native tools are disabled locally, the client may bypass BitSearch MCP and its routing, citation, and planning rules.
 
-Important constraints:
-
-- Disable native web tools in the client itself. BitSearch cannot do this remotely.
+- Always disable conflicting native web tools in the client configuration; BitSearch cannot disable host-owned tools remotely.
 
 ##### Claude Code
 
-For a one-off session, deny the built-in web tools on the command line:
+For a single session, disallow built-in web tools via CLI flags:
 
 ```bash
 claude --disallowedTools WebSearch WebFetch
 ```
 
-For persistent configuration, add a deny rule in Claude Code settings. You can place this in `~/.claude/settings.json`, `.claude/settings.json`, or `.claude/settings.local.json`:
+For persistent configuration, add a deny rule to `~/.claude/settings.json`, `.claude/settings.json`, or `.claude/settings.local.json`:
 
 ```json
 {
@@ -578,9 +587,7 @@ For persistent configuration, add a deny rule in Claude Code settings. You can p
 
 ##### Codex
 
-Current Codex CLI help documents native live web search via the `--search` flag. When using BitSearch, do not launch Codex with `--search`, and remove that flag from any shell alias, wrapper script, launcher, or profile that adds it automatically.
-
-Minimal BitSearch-oriented launch examples:
+Codex CLI enables native live web search when launched with the `--search` flag. When using BitSearch, launch Codex without `--search` and remove the flag from any shell aliases, wrapper scripts, or profiles:
 
 ```bash
 codex
@@ -590,121 +597,127 @@ codex
 codex -C /path/to/project
 ```
 
-If you previously enabled native search in a wrapper or shortcut, remove `--search` there. In the current Codex CLI help, no separate documented native `WebFetch` toggle is exposed; the practical safeguard is to keep native search disabled so BitSearch remains the only web-capable path.
+Keeping native search disabled ensures that BitSearch remains the sole web retrieval path in Codex.
 
-### 3. Operate the admin console
+### 3. Operate the Admin Console
 
-1. Start the app with one of the deployment modes above.
-2. Open `http://127.0.0.1:8097`.
-3. Sign in with `ADMIN_AUTH_KEY` (from `.env`, or from `data/runtime-secrets.json` if auto-generated; the exact JSON field is `secrets.adminAuthKey`).
-4. Configure provider base URLs, import Tavily / Firecrawl keys, and review the Admin/MCP access panels.
-5. Use the Overview, Providers, Keys, and Activity workspaces to monitor routing behavior and failures.
+1. Start BitSearch using one of the deployment modes above.
+2. Open `http://127.0.0.1:8097` in your browser.
+3. Sign in with `ADMIN_AUTH_KEY` (configured in `.env`, or stored in `data/runtime-secrets.json` under `secrets.adminAuthKey` if auto-generated).
+4. Configure upstream provider URLs, import Tavily and Firecrawl API keys, and review the Admin and MCP access panels.
+5. Use the **Overview**, **Providers**, **Keys**, and **Activity** workspaces to monitor routing posture, key health, and request traces.
 
-### 4. Configure providers
+### 4. Configure Providers
 
-#### search_engine (multi-format AI endpoint)
+#### `search_engine` (Multi-Format AI Endpoint)
 
-`search_engine` is the core search provider. It supports four upstream API formats behind one configuration entry:
+`search_engine` is the LLM search provider. A single configuration entry supports four upstream API protocols:
 
 - `openai_chat_completions`
 - `openai_responses`
 - `anthropic_messages`
 - `google_gemini`
 
-In the **Providers** workspace, set:
+In the **Providers** workspace, configure:
 
-- **Base URL** — the root of the upstream API. Common patterns:
+- **Base URL** — Root URL of the upstream API:
   - OpenAI: `https://api.openai.com/v1`
   - Ollama (local): `http://localhost:11434/v1`
   - Anthropic: `https://api.anthropic.com`
-  - Gemini API: `https://generativelanguage.googleapis.com/v1beta`
-  - Third-party relays can also work. Common compatible prefixes include `/v1`, `/anthropic`, and `/gemini`.
-- **API Format** — choose the protocol that matches the upstream endpoint:
+  - Google Gemini: `https://generativelanguage.googleapis.com/v1beta`
+  - Compatible third-party relays are also supported (common path prefixes include `/v1`, `/anthropic`, and `/gemini`).
+- **API Format** — Protocol matching the upstream endpoint:
   - `OpenAI Chat Completions`
   - `OpenAI Responses`
   - `Anthropic Messages`
   - `Google Gemini API`
-- **API Key** — the API key for the service (stored encrypted, never logged)
-- **Model** — the model ID to use for search; can also be switched at runtime via the `switch_model` MCP tool
-- **Timeout** — set to ≥ 120 000 ms; search completions take longer than regular chat requests
-- **Probe models** — runs a provider-specific model probe without saving changes:
-  - OpenAI formats use `/models`
-  - Anthropic uses its Models API
-  - Gemini uses `models.list`
-- **Run live test** — sends a real staged request using the selected API format without saving changes so you can verify Base URL, API key, timeout, and model together
+- **API Key** — Upstream API credential (encrypted at rest with AES-256-GCM and never written to logs).
+- **Model** — Default model identifier for LLM search (can be changed at runtime via the `switch_model` MCP tool).
+- **Timeout** — Per-request timeout in milliseconds (`1,000`–`120,000`). Search completion calls automatically enforce an internal minimum of `120,000` ms so lower values do not truncate long-running searches.
+- **Probe models** — Queries the upstream model list using the current staged settings without saving:
+  - OpenAI formats query `/models`
+  - Anthropic queries the Models API
+  - Gemini queries `models.list`
+- **Run live test** — Sends a live test search request using the staged Base URL, API format, API key, timeout, and model without saving changes.
 
-#### Tavily (key pool)
+#### Tavily (Key Pool)
 
-Tavily supplies extra sources for `web_search`, handles `web_fetch` / `web_map` failover requests, and powers the provider-specific `tavily_crawl` tool.
+Tavily powers the `web_search` answer upstream (in `tavily_first` and `tavily_only` modes), supplies extra sources for `web_search` (skipped when Tavily already produced the primary answer), handles `web_fetch` and `web_map` requests under generic routing, and backs the provider-specific `tavily_crawl` tool.
 
-1. Get a key at <https://tavily.com> — the free tier includes 1 000 API calls/month.
+1. Obtain an API key at <https://tavily.com> (the free tier includes `1,000` API credits/month).
 2. Open the **Keys** workspace, select **Tavily**, paste one or more keys (one per line), and click **Import**.
-3. Keys are deduplicated automatically. View health status and quota in the same workspace.
-4. Base URL default: `https://api.tavily.com` — leave unchanged unless you use a proxy.
+3. Keys are deduplicated automatically by fingerprint. Health status and credit quotas can be inspected and synced in the same workspace.
+4. Default Base URL: `https://api.tavily.com` (leave unchanged unless routing through a custom proxy).
 
-#### Firecrawl (key pool)
+#### Firecrawl (Key Pool)
 
-Firecrawl handles `web_fetch` (page scrape → Markdown), `web_map` (site URL graph), `web_search` extra sources, and the provider-specific async tools `firecrawl_crawl`, `firecrawl_batch_scrape`, and `firecrawl_extract`.
+Firecrawl handles `web_fetch` (page scrape to Markdown), `web_map` (site URL discovery), `web_search` extra sources, and the asynchronous provider-specific tools `firecrawl_crawl`, `firecrawl_batch_scrape`, and `firecrawl_extract`.
 
-1. Get a key at <https://www.firecrawl.dev> — the free tier includes 500 credits/month.
-2. Open the **Keys** workspace, select **Firecrawl**, paste the key, and click **Import**.
-3. Firecrawl quota display assumes each imported key belongs to a different Firecrawl team. Do not import multiple keys from the same team into the same pool if you want accurate pool totals.
-4. Base URL default: `https://api.firecrawl.dev/v2` — leave unchanged unless you use a proxy.
+1. Obtain an API key at <https://www.firecrawl.dev> (the free tier includes `500` credits/month).
+2. Open the **Keys** workspace, select **Firecrawl**, paste one or more keys, and click **Import**.
+3. Firecrawl quota aggregation assumes each imported key belongs to a distinct Firecrawl team. Avoid importing multiple keys from the same team if you rely on aggregate pool totals.
+4. Default Base URL: `https://api.firecrawl.dev/v2` (leave unchanged unless routing through a custom proxy).
 
-When you run **Sync** for Firecrawl keys, BitSearch reads:
-- `GET /team/credit-usage` for team remaining credits
-- `GET /team/credit-usage/historical` for the latest billing-period used credits
+When you run **Sync** for Firecrawl keys, BitSearch queries:
 
-The admin UI currently displays Firecrawl quota in a compact `used/remaining` style:
-- key card: `usedCredits / remainingCredits`
-- pool summary: `sum(usedCredits) / sum(remainingCredits)`
+- `GET /team/credit-usage` for remaining team credits
+- `GET /team/credit-usage/historical` for credits used in the current billing period
 
-Internally, BitSearch derives a Firecrawl total as `usedCredits + remainingCredits` for summary math, but the visible UI keeps the compact `used/remaining` format for consistency with Tavily cards.
+The admin UI displays Firecrawl quota in a compact `used / remaining` format:
 
-#### Generic retrieval routing
+- **Key card:** `usedCredits / remainingCredits`
+- **Pool summary:** `sum(usedCredits) / sum(remainingCredits)`
 
-Set in the **Overview** workspace under **Generic Retrieval Routing**:
+Internally, BitSearch derives total credits as `usedCredits + remainingCredits` for summary calculations while keeping the `used / remaining` display consistent with Tavily key cards.
 
-| Mode | Behavior |
-|------|----------|
-| `single_provider` | Uses one provider for `web_fetch`, `web_map`, and `web_search` extra sources |
-| `ordered_failover` | Tries the primary provider first, then falls back to the second provider on failure or unusable keys |
+#### Generic Retrieval Routing
 
-Generic retrieval routing only affects `web_fetch`, `web_map`, and `web_search` extra sources. Provider-specific tools such as `tavily_crawl` and `firecrawl_*` always execute against their named provider and never fall back across providers.
-
-#### Search upstream routing (`web_search`)
-
-Set in the **Overview** workspace under **Search Upstream (web_search)**:
+Configured in the **Overview** workspace under **Configuration & Access → Routing**:
 
 | Mode | Behavior |
-|------|----------|
-| `llm_first` (default) | The `search_engine` LLM answers first; Tavily takes over on failure or an empty answer |
-| `llm_only` | Only the `search_engine` LLM; failures return an error |
-| `tavily_first` | The Tavily key pool answers first; the LLM takes over on failure or an empty answer |
-| `tavily_only` | Only the Tavily key pool; `web_search` works without any `search_engine` configuration |
+|---|---|
+| `single_provider` | Uses a single configured provider for `web_fetch`, `web_map`, and `web_search` extra sources |
+| `ordered_failover` | Tries the primary provider first and fails over to the secondary provider when keys are unavailable or requests fail |
 
-The Tavily upstream calls `POST /search` with `search_depth: "advanced"` (2 credits), `include_answer: "advanced"`, `max_results: 5`, and `chunks_per_source: 3`, iterating the Tavily key pool with LRU rotation. Tavily-specific status codes `432` (plan limit), `433` (PAYGO limit), and `401` (invalid key) move the request to the next key. When Tavily returns no summarized answer, the answer is assembled locally from the returned results. The `model` and `platform` parameters only apply to the `search_engine` upstream.
+Generic retrieval routing applies only to `web_fetch`, `web_map`, and `web_search` extra sources. Provider-specific tools (`tavily_crawl` and `firecrawl_*`) always target their named provider and never fail over across providers.
 
-#### MCP large result handling
+#### Search Upstream Routing (`web_search`)
 
-Many retrieval tools can produce more text than an MCP client can safely consume in one response. BitSearch stores the complete tool result server-side as a `bitsearch://results/{id}` artifact, returns a bounded preview first, and includes pagination metadata:
+Configured in the **Providers** workspace under **Search Upstream**. Saving this card updates only the `web_search` answer routing mode without modifying generic retrieval routing or result-budget settings:
 
-- `result_id` / `result_uri` identify the stored result.
-- `next_cursor` points to the next bounded page when more content is available.
-- `truncated` indicates whether the returned preview/page is incomplete.
-- `returned_chars`, `total_chars`, `returned_items`, and `total_items` describe page and result size where applicable.
+| Mode | Behavior |
+|---|---|
+| `llm_first` (default) | Queries the `search_engine` LLM first; Tavily takes over automatically on request failure or an empty answer |
+| `llm_only` | Queries only the `search_engine` LLM; failures return an error directly |
+| `tavily_first` | Queries the Tavily key pool first; the `search_engine` LLM takes over automatically on failure or an empty answer |
+| `tavily_only` | Queries only the Tavily key pool; `web_search` operates without any `search_engine` configuration |
 
-To continue reading a large result, call `get_result_page` with the `result_id` and the latest `next_cursor`. For array-like results with one oversized item, call `get_result_page` with `item_index` to read that item as bounded text pages.
+The Tavily search upstream calls `POST /search` with `search_depth: "advanced"` (2 credits), `include_answer: "advanced"`, `max_results: 5`, `chunks_per_source: 3`, and a dedicated `60,000` ms timeout, rotating across enabled Tavily keys in least-recently-used (LRU) order. HTTP status codes `432` (plan/key quota limit), `433` (PayGo limit), and `401` (invalid key) advance immediately to the next key in the pool. If Tavily returns no summarized answer, BitSearch assembles an answer locally only when usable HTTP(S) result items are present; if both the answer and usable sources are empty, the upstream attempt fails so takeover can proceed. LLM answers are validated after stripping `<think>` blocks and source-only sections. The `model` and `platform` parameters apply only to the `search_engine` upstream.
+
+`PUT /api/admin/search-upstream` accepts `{ "searchUpstreamMode": "<mode>" }` and requires an authenticated admin session. Full-system `PUT /api/admin/system` requests that omit `searchUpstreamMode` preserve the currently stored mode, falling back to `llm_first` only when no mode has been saved yet.
+
+Search request logs record every upstream and key attempt along with its HTTP status code, error category, and duration. When all attempts fail, `finalProvider` is recorded as `null`, and the per-attempt log entries drive Activity filters and key-pool request/failure counters.
+
+#### MCP Large Result Handling
+
+Retrieval tools can return payloads larger than an MCP client context window should consume in a single response. BitSearch persists complete tool outputs in SQLite as `bitsearch://results/{id}` artifacts, returns a bounded initial preview, and attaches pagination metadata:
+
+- `result_id` / `result_uri` — Identifier and resource URI of the stored artifact
+- `next_cursor` — Opaque cursor for the next page, or `null` when complete
+- `truncated` — Whether the current preview or page is truncated
+- `returned_chars`, `total_chars`, `returned_items`, `total_items` — Character and item counts for the current page and full artifact
+
+To read subsequent pages, call `get_result_page` with `result_id` and `next_cursor`. For list-like artifacts containing an oversized individual item, pass `item_index` to `get_result_page` to page through that item's text.
 
 The **MCP result budget** controls response sizing:
 
-| Setting | Default | Controls |
-|---------|---------|----------|
-| `First Response Chars` | `20000` | Maximum preview size returned by the original tool call |
-| `Page Chars` | `50000` | Default page size for follow-up `get_result_page` calls |
-| `Hard Response Chars` | `200000` | Absolute per-response cap, including explicit `max_chars` requests |
+| Setting | Default | Description |
+|---|---|---|
+| `First Response Chars` | `20000` | Maximum character budget for the initial preview returned by a tool call |
+| `Page Chars` | `50000` | Default character budget for follow-up `get_result_page` calls |
+| `Hard Response Chars` | `200000` | Absolute per-response character ceiling, including explicit `max_chars` requests |
 
-These settings limit the size returned to the MCP client. They do not limit how much an upstream provider crawls, scrapes, or extracts, and they do not impose a maximum size for the server-side artifact stored in SQLite.
+These budgets cap only the payload size returned per MCP response; they do not restrict how much content an upstream provider fetches or the size of the complete artifact stored in SQLite.
 
 ### Screenshots
 
@@ -716,57 +729,69 @@ These settings limit the size returned to the MCP client. They do not limit how 
 
 ![BitSearch activity](docs/images/activity.png)
 
+---
+
 ## FAQ & Troubleshooting
 
-- **Q: MCP connection times out / fails?**
-  A: Ensure `TRUST_PROXY=true` in your `.env` if exposing behind an NGinX/Caddy reverse proxy, and make sure `MCP_BEARER_TOKEN` matches your client config.
-- **Q: MCP tools start failing after I changed provider/tool settings in BitSearch?**
-  A: BitSearch may change the exposed MCP tool surface when routing or provider configuration changes. If your MCP client does not support MCP tool-change notifications, reload the MCP server configuration in the client, or start a fresh conversation/context so the client re-reads the current tool list.
-- **Q: What happens when Tavily keys run out of quota?**
-  A: The Failover Router will mark the exhausted key as invalid for a timeout period and rotate to the next active Tavily key. If no Tavily keys remain, it gracefully downgrades to Firecrawl.
-- **Q: I lost my `APP_ENCRYPTION_KEY`. Can I recover my API keys?**
-  A: No. Keys are stored encrypted (AES-256-GCM). Restore `data/runtime-secrets.json` (or set `APP_ENCRYPTION_KEY`) to regain access. If encrypted provider secrets exist and the key is missing, BitSearch refuses to start to avoid silently generating a new key. If you cannot recover the key, you must wipe the stored provider secrets and re-import them.
+- **Q: MCP connections time out or fail behind a reverse proxy?**
+  **A:** Set `TRUST_PROXY=true` in `.env` when running behind Nginx, Caddy, or Traefik, confirm that proxy buffering is disabled on `/mcp`, and verify that the client's `Authorization: Bearer <MCP_BEARER_TOKEN>` header matches the active token.
+
+- **Q: MCP tool calls fail after changing provider or tool exposure settings?**
+  **A:** BitSearch dynamically updates the exposed tool surface when provider readiness or manual tool exposure changes and broadcasts `notifications/tools/list_changed`. If your MCP client does not handle dynamic tool-list notifications, reload the MCP server connection or start a new session so the client refreshes its tool list.
+
+- **Q: What happens when a Tavily key runs out of quota?**
+  **A:** When a Tavily key returns HTTP `429`, `432` (plan/key limit), `433` (PayGo limit), `401`, or `5xx`, BitSearch records the failure status on that key, rotates to the next enabled Tavily key in LRU order, and logs each attempt. If all Tavily keys fail, generic retrieval (`web_fetch`, `web_map`, and extra sources) fails over to Firecrawl when `ordered_failover` is active, while `web_search` in `tavily_first` mode fails over to `search_engine`.
+
+- **Q: I lost `APP_ENCRYPTION_KEY`. Can I recover my stored API keys?**
+  **A:** No. Provider keys are encrypted at rest with AES-256-GCM. Restore `data/runtime-secrets.json` or supply the original `APP_ENCRYPTION_KEY` to decrypt existing records. If encrypted credentials exist in SQLite but the encryption key is missing, BitSearch refuses to boot rather than silently generating a new key. If the key is permanently lost, clear the stored provider credentials and re-import your keys.
+
+---
 
 ## Reference
 
 ### MCP Tools Reference
 
-BitSearch exposes 20 tools to the LLM client, covering four main areas.
+BitSearch exposes `20` MCP tools across four functional categories.
 
 <details>
 <summary>Expand the full MCP tools reference</summary>
 
 #### 1. Search & Web Access
-- **`web_search`**: Performs deep web search through the configured search upstream (`searchUpstreamMode`): the `search_engine` LLM, the Tavily Search API key pool, or ordered takeover between them. Caches sources server-side and returns a bounded answer preview plus result pagination metadata.
-- **`get_sources`**: Retrieves a bounded page of source links cached during a `web_search` call using the returned `session_id`.
-- **`web_fetch`**: Extracts Markdown content from a target URL, stores the full result server-side, and returns a bounded preview. Automatically fails over across Tavily and Firecrawl key pools.
-- **`web_map`**: Maps website structure and discovers URLs using Tavily Map or Firecrawl, returning a bounded preview plus pagination metadata.
+
+- **`web_search`** — Executes deep web search via the configured search upstream (`searchUpstreamMode`: `search_engine` LLM, Tavily Search API key pool, or automatic takeover between them). Caches sources server-side and returns a bounded answer preview with pagination metadata.
+- **`get_sources`** — Retrieves a bounded page of cached source links from a prior `web_search` call using its `session_id`.
+- **`web_fetch`** — Extracts clean Markdown from a target URL, stores the full result as a server-side artifact, and returns a bounded preview. Supports ordered failover across Tavily and Firecrawl key pools.
+- **`web_map`** — Discovers and maps URLs on a target site via Tavily Map or Firecrawl Map, returning a bounded preview and pagination metadata.
 
 #### 2. Provider-Specific Advanced Retrieval
-- **`tavily_crawl`**: Synchronously traverses a site and returns extracted page content from Tavily in one call.
-- **`firecrawl_crawl`** / **`firecrawl_crawl_status`**: Submit and monitor asynchronous Firecrawl crawl jobs.
-- **`firecrawl_batch_scrape`** / **`firecrawl_batch_scrape_status`**: Submit and monitor asynchronous multi-URL scrape jobs.
-- **`firecrawl_extract`** / **`firecrawl_extract_status`**: Submit and monitor asynchronous structured extraction jobs driven by prompt and JSON schema.
+
+- **`tavily_crawl`** — Synchronously crawls a website with Tavily and returns extracted page content in a single call.
+- **`firecrawl_crawl`** / **`firecrawl_crawl_status`** — Submits and polls asynchronous Firecrawl site-crawl jobs.
+- **`firecrawl_batch_scrape`** / **`firecrawl_batch_scrape_status`** — Submits and polls asynchronous multi-URL Firecrawl batch-scrape jobs.
+- **`firecrawl_extract`** / **`firecrawl_extract_status`** — Submits and polls asynchronous structured extraction jobs driven by a prompt and/or JSON schema.
 
 #### 3. Planning Engine
-A scaffold for LLMs to generate structured search strategies for highly complex tasks:
-- **`plan_intent`**: Phase 1 - Analyze user intent and ambiguities.
-- **`plan_complexity`**: Phase 2 - Assess if the task requires simple or multi-level planning.
-- **`plan_sub_query`**: Phase 3 - Break down the task into sub-queries.
-- **`plan_search_term`**: Phase 4 - Devise targeted search terms.
-- **`plan_tool_mapping`**: Phase 5 - Map sub-queries to specific web tools.
-- **`plan_execution`**: Phase 6 - Determine parallel vs. sequential execution.
+
+A six-phase scaffold for decomposing complex, multi-hop research queries into structured execution plans:
+
+- **`plan_intent`** — Phase 1: Analyze user intent, domain, time sensitivity, and ambiguities.
+- **`plan_complexity`** — Phase 2: Assess query complexity (`1`–`3`) and estimate sub-queries and tool calls.
+- **`plan_sub_query`** — Phase 3: Decompose the research task into self-contained sub-queries with clear boundaries.
+- **`plan_search_term`** — Phase 4: Define targeted search phrases for each sub-query and round.
+- **`plan_tool_mapping`** — Phase 5: Map each sub-query to the appropriate retrieval tool.
+- **`plan_execution`** — Phase 6: Organize parallel execution groups and sequential dependencies.
 
 #### 4. System Management
-- **`get_result_page`**: Reads one bounded page from a stored large tool result using `result_id`, `next_cursor`, and optional `item_index`.
-- **`get_config_info`**: Retrieves current server settings, key pool status, and tests search engine connectivity.
-- **`switch_model`**: Toggles the default AI model used for `web_search`.
+
+- **`get_result_page`** — Reads a bounded page from a stored artifact using `result_id`, `next_cursor`, and optional `item_index`.
+- **`get_config_info`** — Returns active server settings, tool surface status, key pool summaries, and a `search_engine` connectivity check.
+- **`switch_model`** — Switches the default AI model used by the `search_engine` upstream in `web_search`.
 
 </details>
 
 ### Fallback Companion Prompt (for clients without Agent Skills)
 
-If your MCP client does not support Agent Skills, the following companion prompt is a compatibility fallback. It preserves the project's evidence and expression standards while adding BitSearch-specific rules for choosing only currently exposed tools and using generic vs. provider-specific tools correctly. Keep it available because clients may ignore or differently place protocol-level server instructions.
+If your MCP client does not support Agent Skills, use the companion prompt below as a system-prompt fallback. It preserves BitSearch's evidence verification and output standards while enforcing rules for tool availability, generic vs. provider-specific selection, and asynchronous job polling.
 
 <details>
 <summary>Expand the full recommended companion prompt</summary>
@@ -923,32 +948,36 @@ Content tools retrieve or extract data, but credibility still depends on the sou
 ```text
 src/
 ├── server/
-│   ├── db/              # SQLite database schema and instantiation
-│   ├── http/            # Express admin routes, session, and middleware
-│   ├── lib/             # Crypto, auth, HTTP helpers, admin session store
-│   ├── mcp/             # MCP SDK tool registrations and input schemas
-│   ├── providers/       # Fetch adapters (Tavily, Firecrawl, Search Engine)
-│   ├── repos/           # Database repositories (logs, keys, queries)
-│   ├── services/        # Core logic (Planning Engine, access controllers)
-│   ├── app-context.ts   # AppContext interface shared across server modules
-│   ├── main.ts          # Service entry point
-│   ├── app.ts           # Express app layout
-│   └── bootstrap.ts     # Runtime environment validation
+│   ├── db/                 # SQLite database schema and instantiation
+│   ├── http/               # Express admin routes, session auth, and middleware
+│   ├── lib/                # Crypto, auth, HTTP helpers, and admin session store
+│   ├── mcp/                # MCP SDK tool registrations, artifacts, and transports
+│   ├── providers/          # Upstream adapters (Search Engine, Tavily, Firecrawl)
+│   ├── repos/              # SQLite repositories (logs, keys, settings, artifacts)
+│   ├── services/           # Core logic (search routing, key pools, planning, access)
+│   ├── app-context.ts      # Shared AppContext interface across server modules
+│   ├── main.ts             # Backend service entry point
+│   ├── app.ts              # Express application assembly
+│   └── bootstrap.ts        # Environment and runtime secret resolution
 ├── shared/
-│   └── contracts.ts     # Zod schemas and API payloads shared via ESM
+│   ├── contracts.ts        # Shared Zod schemas and API contracts
+│   ├── tool-surface.ts     # Tool lists, routing modes, and SystemSettings contract
+│   └── firecrawl-quota.ts  # Firecrawl quota calculation helpers
 └── web/
-    ├── components/      # Console chrome, provider panels, charts, activity UI
-    ├── hooks/           # Custom React hooks (useTheme, useKeyWorkspace)
-    ├── pages/           # Main workspace views (Overview, Providers, Keys, Activity)
-    ├── api.ts           # Frontend fetch client
-    ├── format.ts        # Display formatting utilities
-    ├── types.ts         # Frontend type definitions
-    ├── toast-store.ts   # Toast notification state
-    ├── LoginView.tsx    # Admin login view
-    ├── AppShell.tsx     # Route table (mounts ConsoleLayout)
-    ├── app.css          # Tailwind v4 entry + custom atmosphere styles
-    ├── admin-theme.css  # tweakcn oklch design tokens (@theme inline)
-    └── main.tsx         # React UI entry point
+    ├── components/         # Console layout, provider cards, charts, and activity UI
+    ├── hooks/              # Custom React hooks (use-theme)
+    ├── pages/              # Workspace views (Overview, Providers, Keys, Activity)
+    ├── api.ts              # Frontend HTTP client
+    ├── app-defaults.ts     # Default frontend state snapshots
+    ├── format.ts           # Display formatting helpers
+    ├── types.ts            # Frontend state and draft type definitions
+    ├── toast-store.ts      # Toast notification store
+    ├── LoginView.tsx       # Admin console login view
+    ├── AppShell.tsx        # Top-level route table and layout shell
+    ├── App.tsx             # Root application state and data synchronization
+    ├── app.css             # Tailwind CSS v4 entry and custom styles
+    ├── admin-theme.css     # Theme design tokens (@theme inline)
+    └── main.tsx            # React DOM entry point
 ```
 
 ### Built With
@@ -961,22 +990,24 @@ src/
 - [Zod](https://zod.dev/)
 - [Model Context Protocol SDK](https://github.com/modelcontextprotocol/typescript-sdk)
 - SQLite (`node:sqlite`)
-- Docker and Docker Compose
+- Docker & Docker Compose
+
+---
 
 ## Acknowledgments
 
-This project is heavily inspired by [GrokSearch](https://github.com/GuDaStudio/GrokSearch) by GuDaStudio. BitSearch builds upon their AI-search + scraping fallback architecture, adding an Admin Console and Key Pooling capabilities.
+BitSearch is inspired by [GrokSearch](https://github.com/GuDaStudio/GrokSearch) by GuDaStudio, building upon its AI-search and scraping fallback architecture with a self-hosted Admin Console, multi-provider Key Pools, and structured result pagination.
 
 ## Roadmap
 
-- Add more provider adapters and per-tool routing policies.
-- Increase automated coverage for MCP transport, failover logic, and admin flows.
-- Add release notes and documented image version channels for Docker Hub consumers.
-- Expand dashboard analytics and operational audit views.
+- Add additional upstream provider adapters and per-tool routing policies.
+- Expand automated test coverage for MCP transports, failover edge cases, and admin workflows.
+- Publish structured release notes and versioned image channels for Docker Hub users.
+- Extend dashboard telemetry and operational audit views.
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for issue reporting, pull request flow, coding standards, and verification requirements.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for issue reporting guidelines, pull request workflow, coding conventions, and verification requirements.
 
 ## License
 

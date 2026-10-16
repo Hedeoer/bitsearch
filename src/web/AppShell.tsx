@@ -36,6 +36,7 @@ type AppShellProps = Readonly<{
   onSaveSystem: () => void;
   onToast: (type: ToastTone, message: string) => void;
   onToolSurfaceChange: (snapshot: ToolSurfaceSnapshot) => void;
+  onSearchUpstreamChange: (mode: SystemSettings["searchUpstreamMode"]) => void;
   providerDrafts: ProviderDrafts;
   providerSaveErrors: ProviderSaveErrors;
   providers: ProviderConfigRecord[];
@@ -90,6 +91,7 @@ export function AppShell(props: AppShellProps) {
               onSaveAll={props.onSaveAllProviderChanges}
               onToast={props.onToast}
               onToolSurfaceChange={props.onToolSurfaceChange}
+              onSearchUpstreamChange={props.onSearchUpstreamChange}
               providers={props.providers}
               saveErrors={props.providerSaveErrors}
               saving={props.savingProviders}

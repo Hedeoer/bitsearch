@@ -1,6 +1,7 @@
 import type { SearchUpstreamMode } from "../../shared/tool-surface.js";
+import type { RequestAttemptRecord } from "../../shared/contracts.js";
+import { isFailoverError } from "../providers/fetch-router.js";
 import type { AppContext } from "../app-context.js";
-import { HttpRequestError } from "../lib/http.js";
 import { splitAnswerAndSources } from "../lib/source-utils.js";
 import {
   getCandidateKeys,
@@ -28,13 +29,42 @@ const TAVILY_UPSTREAM_MAX_RESULTS = 5;
 const TAVILY_UPSTREAM_CHUNKS_PER_SOURCE = 3;
 const TAVILY_UPSTREAM_TIMEOUT_MS = 60_000;
 
-// Parameter-level errors mean the same request would fail with every key: abort.
-const TAVILY_ABORT_STATUS_CODES = new Set([400, 422]);
+class EmptySearchResultError extends Error {}
 
 export type SearchUpstream = "llm" | "tavily";
 
+export type SearchAttemptLog = Omit<RequestAttemptRecord, "id" | "requestLogId" | "createdAt">;
+
+function searchErrorDetails(error: unknown): Pick<SearchAttemptLog, "statusCode" | "errorType" | "errorSummary"> {
+  const errorSummary = error instanceof Error ? error.message : "Unknown upstream error";
+  if (error instanceof EmptySearchResultError) {
+    return { statusCode: 200, errorType: "empty_result", errorSummary };
+  }
+  const code = error && typeof error === "object" && "statusCode" in error ? error.statusCode : null;
+  const statusCode = typeof code === "number" ? code : null;
+  const errorType = error instanceof DOMException && error.name === "TimeoutError" || statusCode === 408
+    ? "timeout"
+    : statusCode === 429 || statusCode === 432 || statusCode === 433
+      ? "rate_limit"
+      : statusCode !== null && statusCode >= 500
+        ? "upstream_5xx"
+        : statusCode !== null
+          ? "http_error"
+          : "network_error";
+  return { statusCode, errorType, errorSummary };
+}
+
+function recordAttempt(
+  logs: SearchAttemptLog[],
+  startedAt: number,
+  detail: Omit<SearchAttemptLog, "attemptNo" | "durationMs">,
+): void {
+  logs.push({ ...detail, attemptNo: logs.length + 1, durationMs: Date.now() - startedAt });
+}
+
 export interface UpstreamSearchOutcome {
   upstream: SearchUpstream;
+  attemptLogs: SearchAttemptLog[];
   answer: string;
   sources: Array<Record<string, unknown>>;
   messages: Array<{ role: string; content: string }> | null;
@@ -50,8 +80,9 @@ export interface UpstreamSearchOutcome {
 
 export class UpstreamSearchError extends Error {
   readonly attempts: Array<{ upstream: SearchUpstream; error: string }>;
+  readonly attemptLogs: SearchAttemptLog[];
 
-  constructor(attempts: Array<{ upstream: SearchUpstream; error: string }>) {
+  constructor(attempts: Array<{ upstream: SearchUpstream; error: string }>, attemptLogs: SearchAttemptLog[] = []) {
     super(
       `Upstream search failed: ${attempts
         .map((attempt) => `${attempt.upstream}: ${attempt.error}`)
@@ -59,6 +90,7 @@ export class UpstreamSearchError extends Error {
     );
     this.name = "UpstreamSearchError";
     this.attempts = attempts;
+    this.attemptLogs = [...attemptLogs];
   }
 }
 
@@ -103,20 +135,37 @@ export async function runUpstreamSearch(
 ): Promise<UpstreamSearchOutcome> {
   const order = resolveUpstreamOrder(input.mode);
   const attempts: Array<{ upstream: SearchUpstream; error: string }> = [];
+  const attemptLogs: SearchAttemptLog[] = [];
   let primaryUpstreamError: string | null = null;
 
   for (const [index, upstream] of order.entries()) {
+    const startedAt = Date.now();
+    const priorAttempts = attemptLogs.length;
+    const provider = upstream === "llm" ? "search_engine" : "tavily";
+    const providerBaseUrl = getProviderConfig(context.db, provider)?.baseUrl ?? null;
     try {
       const attempt =
         upstream === "llm"
           ? await runLlmUpstream(context, input)
-          : await runTavilyUpstream(context, input);
+          : await runTavilyUpstream(context, input, attemptLogs);
 
+      if (upstream === "llm") {
+        recordAttempt(attemptLogs, startedAt, {
+          provider,
+          providerBaseUrl,
+          keyFingerprint: null,
+          status: attempt.invalidModel ? "failed" : "success",
+          statusCode: attempt.invalidModel ? null : 200,
+          errorType: attempt.invalidModel ? "invalid_model" : null,
+          errorSummary: attempt.invalidModel ? `Invalid model: ${attempt.invalidModel}` : null,
+        });
+      }
       if (attempt.invalidModel) {
         // Caller error: surface the invalid model without silently
         // switching upstreams.
         return {
           upstream,
+          attemptLogs,
           answer: "",
           sources: [],
           messages: null,
@@ -133,6 +182,7 @@ export async function runUpstreamSearch(
 
       return {
         upstream,
+        attemptLogs,
         ...attempt,
         takeover: index > 0,
         primaryUpstreamError,
@@ -141,13 +191,27 @@ export async function runUpstreamSearch(
       const message =
         error instanceof Error ? error.message : "Unknown upstream error";
       attempts.push({ upstream, error: message });
+      // Per-key failures are already recorded by Tavily. Record one upstream
+      // attempt for LLM failures or preflight failures (disabled/no keys/config).
+      if (attemptLogs.length === priorAttempts) {
+        recordAttempt(attemptLogs, startedAt, {
+          provider,
+          providerBaseUrl,
+          keyFingerprint: null,
+          status: "failed",
+          ...searchErrorDetails(error),
+          ...(upstream === "tavily" || message.startsWith("Configuration error:")
+            ? { errorType: "configuration_error" }
+            : {}),
+        });
+      }
       if (index === 0) {
         primaryUpstreamError = message;
       }
     }
   }
 
-  throw new UpstreamSearchError(attempts);
+  throw new UpstreamSearchError(attempts, attemptLogs);
 }
 
 async function runLlmUpstream(
@@ -177,11 +241,10 @@ async function runLlmUpstream(
 
   const messages = buildSearchMessages(input.query, input.platform);
   const answerText = await searchWithSearchEngine(searchEngineConfig, messages);
-  if (!answerText.trim()) {
-    throw new Error("search_engine returned an empty answer");
-  }
-
   const { answer, sources } = splitAnswerAndSources(answerText);
+  if (!answer.trim()) {
+    throw new EmptySearchResultError("search_engine returned an empty answer");
+  }
   return {
     answer,
     sources,
@@ -198,6 +261,7 @@ async function runLlmUpstream(
 async function runTavilyUpstream(
   context: AppContext,
   input: { query: string; sessionId: string },
+  attemptLogs: SearchAttemptLog[],
 ): Promise<UpstreamAttemptOutcome> {
   const providerConfig = getProviderConfig(context.db, "tavily");
   if (!providerConfig?.enabled) {
@@ -214,6 +278,7 @@ async function runTavilyUpstream(
 
   let lastError = "unknown tavily search error";
   for (const key of keys) {
+    const startedAt = Date.now();
     try {
       const result = await tavilyUpstreamSearch(
         {
@@ -239,10 +304,19 @@ async function runTavilyUpstream(
         ? assembleTavilyAnswer(input.query, result.results)
         : remoteAnswer;
       if (!answer.trim()) {
-        throw new Error("tavily returned neither an answer nor results");
+        throw new EmptySearchResultError("tavily returned neither an answer nor results");
       }
 
       markKeyUsage(context.db, key.id, 200, null);
+      recordAttempt(attemptLogs, startedAt, {
+        provider: "tavily",
+        providerBaseUrl: providerConfig.baseUrl,
+        keyFingerprint: key.fingerprint,
+        status: "success",
+        statusCode: 200,
+        errorType: null,
+        errorSummary: null,
+      });
       return {
         answer,
         sources: result.results.map((item) => ({
@@ -261,21 +335,19 @@ async function runTavilyUpstream(
         usedLocalAssembly,
       };
     } catch (error) {
-      if (
-        error instanceof HttpRequestError &&
-        error.statusCode !== null &&
-        TAVILY_ABORT_STATUS_CODES.has(error.statusCode)
-      ) {
-        markKeyUsage(context.db, key.id, error.statusCode, error.message);
+      const detail = searchErrorDetails(error);
+      markKeyUsage(context.db, key.id, detail.statusCode, detail.errorSummary);
+      recordAttempt(attemptLogs, startedAt, {
+        provider: "tavily",
+        providerBaseUrl: providerConfig.baseUrl,
+        keyFingerprint: key.fingerprint,
+        status: "failed",
+        ...detail,
+      });
+      if (error instanceof EmptySearchResultError || !isFailoverError(error).retryable) {
         throw error;
       }
-      markKeyUsage(
-        context.db,
-        key.id,
-        error instanceof HttpRequestError ? error.statusCode : null,
-        error instanceof Error ? error.message : "Unknown tavily search error",
-      );
-      lastError = error instanceof Error ? error.message : String(error);
+      lastError = detail.errorSummary ?? "Unknown tavily search error";
     }
   }
 
@@ -286,6 +358,9 @@ function assembleTavilyAnswer(
   query: string,
   results: Array<{ title: string; url: string; content: string }>,
 ): string {
+  if (results.length === 0) {
+    return "";
+  }
   const lines = [
     `No summarized answer was available for "${query}". Top search results:`,
   ];

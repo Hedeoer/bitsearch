@@ -184,41 +184,6 @@ export function StrategyRoutingTab(props: StrategyPanelProps) {
 
       <div className="rounded-lg border border-border/70 bg-muted/20 p-4">
         <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-          Search upstream (web_search)
-        </div>
-        <div className="mt-3 grid gap-2">
-          <Label className="text-sm font-medium">Upstream Mode</Label>
-          <Select
-            disabled={props.loading}
-            value={props.system.searchUpstreamMode}
-            onValueChange={(value) => {
-              const nextMode = value as SystemSettings["searchUpstreamMode"];
-              props.setSystem((current) => ({
-                ...current,
-                searchUpstreamMode: nextMode,
-              }));
-            }}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select search upstream mode" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="llm_first">llm_first</SelectItem>
-              <SelectItem value="llm_only">llm_only</SelectItem>
-              <SelectItem value="tavily_first">tavily_first</SelectItem>
-              <SelectItem value="tavily_only">tavily_only</SelectItem>
-            </SelectContent>
-          </Select>
-          <p className="text-xs text-muted-foreground">
-            web_search answers come from the search_engine LLM, the Tavily key
-            pool, or both. *_first modes take over automatically when the
-            primary upstream fails or returns an empty answer.
-          </p>
-        </div>
-      </div>
-
-      <div className="rounded-lg border border-border/70 bg-muted/20 p-4">
-        <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
           MCP result budget
         </div>
         <div className="mt-3 grid gap-3 xl:grid-cols-3">

@@ -13,6 +13,7 @@ import { ProviderDetailPanel } from "../components/providers/ProviderDetailPanel
 import { ProbeModelsDialog } from "../components/providers/ProbeModelsDialog";
 import { SearchEngineRequestTestDialog } from "../components/providers/SearchEngineRequestTestDialog";
 import { ToolSurfaceCard } from "../components/providers/ToolSurfaceCard";
+import { SearchUpstreamCard } from "../components/providers/SearchUpstreamCard";
 import type { ToastTone } from "../components/Feedback";
 import {
   buildSearchEngineConnectionPayload,
@@ -35,6 +36,7 @@ type ProvidersWorkspaceProps = Readonly<{
   toolSurface: ToolSurfaceSnapshot;
   onToast: (type: ToastTone, message: string) => void;
   onToolSurfaceChange: (snapshot: ToolSurfaceSnapshot) => void;
+  onSearchUpstreamChange: (mode: SystemSettings["searchUpstreamMode"]) => void;
 }>;
 
 function createRequestTestFailure(
@@ -203,6 +205,14 @@ export function ProvidersWorkspace(props: ProvidersWorkspaceProps) {
           apiKeyRevealError={apiKeyRevealError}
         />
       )}
+
+      <SearchUpstreamCard
+        key={props.system.searchUpstreamMode}
+        mode={props.system.searchUpstreamMode}
+        loading={props.loading}
+        onSaved={props.onSearchUpstreamChange}
+        onToast={props.onToast}
+      />
 
       {/* Tool Surface Exposure Card */}
       <ToolSurfaceCard

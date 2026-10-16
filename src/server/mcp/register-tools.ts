@@ -9,6 +9,7 @@ import { nanoid } from "nanoid";
 import {
   type GenericRoutingSnapshot,
   type KeyPoolProvider,
+  type SearchUpstreamMode,
   REMOTE_PROVIDERS,
   SEARCH_ENGINE_PROVIDER,
   type ToolSurfaceSnapshot,
@@ -16,6 +17,7 @@ import {
 import type { AppContext } from "../app-context.js";
 import { MCP_INSTRUCTIONS } from "./instructions.js";
 import {
+  insertAttemptLogs,
   insertRequestLog,
 } from "../repos/log-repo.js";
 import {
@@ -50,6 +52,7 @@ import {
   runUpstreamSearch,
   UpstreamSearchError,
   type UpstreamSearchOutcome,
+  type SearchAttemptLog,
 } from "../services/search-upstream-service.js";
 import {
   getCurrentGenericRoutingSnapshot,
@@ -86,25 +89,28 @@ function logSearchRequest(
     resultPreview?: string | null;
     messages?: Array<{ role: string; content: string }> | null;
     metadata?: Record<string, unknown>;
-    finalProvider?: string;
+    finalProvider: string | null;
     finalKeyFingerprint?: string | null;
+    searchUpstreamMode: SearchUpstreamMode;
+    attemptLogs: SearchAttemptLog[];
   },
 ): void {
+  const requestId = nanoid();
   insertRequestLog(context.db, {
-    id: nanoid(),
+    id: requestId,
     toolName: payload.toolName,
     targetUrl: payload.targetUrl ?? null,
-    strategy: null,
-    finalProvider: payload.finalProvider ?? SEARCH_ENGINE_PROVIDER,
+    strategy: payload.searchUpstreamMode,
+    finalProvider: payload.finalProvider,
     finalKeyFingerprint: payload.finalKeyFingerprint ?? null,
-    attempts: 1,
+    attempts: payload.attemptLogs.length,
     status: payload.status,
     durationMs: Date.now() - payload.startedAt,
     errorSummary: payload.errorSummary ?? null,
     inputJson: payload.inputJson ?? null,
     resultPreview: payload.resultPreview ?? null,
     messages: payload.messages ?? null,
-    providerOrder: routing.effectiveProviderOrder,
+    providerOrder: resolveUpstreamOrder(payload.searchUpstreamMode).map((upstream) => upstream === "llm" ? "search_engine" : "tavily"),
     metadata: {
       genericRoutingMode: routing.mode,
       requestedProviderOrder: routing.requestedProviderOrder,
@@ -112,6 +118,10 @@ function logSearchRequest(
       ...(payload.metadata ?? {}),
     },
   });
+  insertAttemptLogs(context.db, payload.attemptLogs.map((attempt) => ({
+    ...attempt,
+    requestLogId: requestId,
+  })));
 }
 
 async function getExtraSources(
@@ -354,6 +364,9 @@ export function createMcpRuntime(context: AppContext): McpRuntime {
         logSearchRequest(context, routing, {
           toolName: "web_search",
           status: "failed",
+          finalProvider: null,
+          searchUpstreamMode,
+          attemptLogs: error instanceof UpstreamSearchError ? error.attemptLogs : [],
           startedAt,
           errorSummary: message,
           inputJson,
@@ -376,6 +389,9 @@ export function createMcpRuntime(context: AppContext): McpRuntime {
         logSearchRequest(context, routing, {
           toolName: "web_search",
           status: "failed",
+          finalProvider: null,
+          searchUpstreamMode,
+          attemptLogs: outcome.attemptLogs,
           startedAt,
           errorSummary: content,
           inputJson,
@@ -409,6 +425,8 @@ export function createMcpRuntime(context: AppContext): McpRuntime {
       logSearchRequest(context, routing, {
         toolName: "web_search",
         status: "success",
+        searchUpstreamMode,
+        attemptLogs: outcome.attemptLogs,
         startedAt,
         finalProvider:
           outcome.upstream === "tavily" ? "tavily" : SEARCH_ENGINE_PROVIDER,
