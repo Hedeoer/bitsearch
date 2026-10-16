@@ -76,7 +76,7 @@ const systemSettingsSchema = z
   .object({
     genericRoutingMode: z.enum(GENERIC_ROUTING_MODES),
     genericProviderOrder: genericProviderOrderSchema,
-    searchUpstreamMode: z.enum(SEARCH_UPSTREAM_MODES).default("llm_first"),
+    searchUpstreamMode: z.enum(SEARCH_UPSTREAM_MODES).optional(),
     defaultSearchModel: z.string().trim().min(1).max(MAX_MODEL_NAME_LENGTH),
     logRetentionDays: z.coerce.number().int().min(1).max(MAX_RETENTION_DAYS),
     allowedOrigins: z.array(z.string().trim().min(1)).max(MAX_ALLOWED_ORIGINS),
@@ -387,7 +387,7 @@ export function parseRequiredId(raw: unknown, code: string): string {
 export function parseSystemSettingsPayload(
   raw: unknown,
   allowHttpLocal: boolean,
-): Omit<SystemSettings, "disabledTools"> & Partial<Pick<SystemSettings, "disabledTools">> {
+): Omit<SystemSettings, "disabledTools" | "searchUpstreamMode"> & Partial<Pick<SystemSettings, "disabledTools" | "searchUpstreamMode">> {
   const parsed = parseSchema(systemSettingsSchema, raw, "invalid_system_settings");
 
   const allowedOrigins = [...new Set(parsed.allowedOrigins.map((origin) => {
@@ -407,6 +407,14 @@ export function parseSystemSettingsPayload(
     allowedOrigins,
     mcpResultBudget: parsed.mcpResultBudget ?? DEFAULT_MCP_RESULT_BUDGET,
   };
+}
+
+const searchUpstreamSettingsSchema = z.object({
+  searchUpstreamMode: z.enum(SEARCH_UPSTREAM_MODES),
+}).strict();
+
+export function parseSearchUpstreamSettingsPayload(raw: unknown): Pick<SystemSettings, "searchUpstreamMode"> {
+  return parseSchema(searchUpstreamSettingsSchema, raw, "invalid_search_upstream_settings");
 }
 
 export function parseDisabledToolsPayload(

@@ -61,6 +61,7 @@ import {
   parseSearchEngineProbePayload,
   parseSearchEngineRequestTestPayload,
   parseSystemSettingsPayload,
+  parseSearchUpstreamSettingsPayload,
   parseTags,
 } from "./admin-route-utils.js";
 
@@ -113,6 +114,12 @@ export function createAdminRouter(context: AppContext): Router {
   router.put("/system", (req, res) => {
     saveSystemSettings(context.db, parseSystemSettingsPayload(req.body ?? {}, allowHttpLocal));
     res.json(getSystemSettings(context.db));
+  });
+
+  router.put("/search-upstream", (req, res) => {
+    const payload = parseSearchUpstreamSettingsPayload(req.body ?? {});
+    saveSystemSettings(context.db, payload);
+    res.json({ searchUpstreamMode: getSystemSettings(context.db).searchUpstreamMode });
   });
 
   router.get("/tool-surface", (_req, res) => {

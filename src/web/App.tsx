@@ -235,6 +235,7 @@ export function App() {
         onSaveSystem={() => void saveSystem()}
         onToast={(type, message) => enqueueToast(type, message)}
         onToolSurfaceChange={setToolSurface}
+        onSearchUpstreamChange={(mode) => setSystem((current) => ({ ...current, searchUpstreamMode: mode }))}
         providerDrafts={providerWorkspace.drafts}
         providerSaveErrors={providerWorkspace.saveErrors}
         providers={providers}

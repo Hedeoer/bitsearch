@@ -64,11 +64,13 @@ Reads one bounded page from a stored large BitSearch MCP tool result.
 ### `web_search`
 Deep web search through the configured **search upstream routing**. The `searchUpstreamMode` system setting selects between two peer upstreams: the `search_engine` LLM (OpenAI chat, OpenAI responses, Anthropic messages, or Google Gemini upstream formats) and the **Tavily Search API** (`POST /search`, key pool with LRU rotation, `search_depth: "advanced"`, `include_answer: "advanced"`, `max_results: 5`). `*_first` modes take over automatically when the primary upstream fails or returns an empty answer; when Tavily's summarized answer is missing, the answer is assembled locally from the returned results. Optionally fetches extra sources from Tavily/Firecrawl key pools (skipping the Tavily pool when Tavily produced the primary answer). Returns a bounded answer preview plus `result_id` / `next_cursor` metadata for follow-up reads.
 
+Configure this policy in **Providers → Search Upstream**; the independent admin `PUT /api/admin/search-upstream` endpoint changes only the mode. Omitting `searchUpstreamMode` from the existing full-system endpoint preserves the stored value. Empty Tavily responses without usable sources and LLM answers that become empty after cleaning fail the upstream and permit takeover. Each logical upstream/key attempt is persisted for Activity and key-pool statistics; `finalProvider` is `null` when every upstream fails.
+
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
 | `query` | string | yes | -- | Search query |
-| `platform` | string | no | `""` | Platform hint for search context |
-| `model` | string | no | `""` | Override the default search model (uses system default if empty) |
+| `platform` | string | no | `""` | Platform hint for the LLM upstream only; ignored by Tavily |
+| `model` | string | no | `""` | Override the LLM model (uses system default if empty); ignored by Tavily |
 | `extra_sources` | integer | no | `0` | Number of extra sources from Tavily/Firecrawl (min: 0) |
 
 **Returns:** `{ session_id, content, content_truncated, returned_chars, total_chars, result_id, result_uri, next_cursor, sources_count }`

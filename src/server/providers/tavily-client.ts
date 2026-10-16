@@ -223,6 +223,23 @@ export interface TavilyUpstreamSearchResult {
   requestId: string | null;
 }
 
+function normalizeSearchResults(value: unknown): TavilyUpstreamSearchResult["results"] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item) => {
+    const record = asObject(item);
+    const url = asString(record?.url)?.trim() ?? "";
+    const title = asString(record?.title)?.trim() ?? "";
+    const content = asString(record?.content)?.trim() ?? "";
+    if (!url || (!title && !content)) return [];
+    try {
+      if (!["http:", "https:"].includes(new URL(url).protocol)) return [];
+    } catch {
+      return [];
+    }
+    return [{ title, url, content, score: asNumber(record?.score) ?? 0 }];
+  });
+}
+
 export async function tavilyUpstreamSearch(
   config: TavilyClientConfig,
   input: TavilyUpstreamSearchInput,
@@ -263,12 +280,7 @@ export async function tavilyUpstreamSearch(
     answer: typeof data.answer === "string" && data.answer.trim().length > 0
       ? data.answer
       : null,
-    results: (data.results ?? []).map((item) => ({
-      title: item.title ?? "",
-      url: item.url ?? "",
-      content: item.content ?? "",
-      score: item.score ?? 0,
-    })),
+    results: normalizeSearchResults(data.results),
     usageCredits: typeof data.usage?.credits === "number" ? data.usage.credits : null,
     requestId: typeof data.request_id === "string" ? data.request_id : null,
   };
